@@ -1,6 +1,7 @@
-```html
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>RIZVISIONS</title>
@@ -13,31 +14,42 @@
             padding: 0;
         }
 
-        /* News ticker container */
         .announcement-container {
-            position: relative;
-            width: 100%;
-            overflow: hidden;
             border-bottom: 1px solid black;
+            overflow: hidden;
         }
-        /* Individual ticker strip */
+
         .announcement {
             display: flex;
-            position: relative;
-            white-space: nowrap;
             background-color: white;
             color: black;
             text-align: center;
-            /* fallback animation until JS sets correct duration */
-            animation: marquee 20s linear infinite;
+            white-space: nowrap;
         }
+
         .announcement div {
             flex-shrink: 0;
             padding: 0 2%;
         }
+
+        .announcement a {
+            color: black;
+            text-decoration: none;
+            margin-right: 0px;
+        }
+
+        .announcement a:hover {
+            text-decoration: underline;
+        }
+
         @keyframes marquee {
-            from { transform: translateX(0); }
-            to   { transform: translateX(calc(-1 * var(--text-width))); }
+            0% {
+                transform: translateX(0);
+            }
+
+            100% {
+                transform: translateX(calc(-1 * var(--text-width)));
+            }
         }
 
         header {
@@ -100,31 +112,37 @@
             display: block;
         }
 
+        .hidden {
+            display: none;
+        }
+
         /* Dark mode adjustments */
         body.darkmode--activated .announcement {
             background-color: #333;
             color: white;
         }
+
         body.darkmode--activated .announcement a {
             color: white;
         }
 
-        /* Moon icon on dark mode toggle */
+        /* Add this style to position the moon symbol on the dark mode button */
         .darkmode-toggle {
             position: relative;
         }
+
         .darkmode-toggle::before {
-            content: '\1F319';
+            content: '\1F319'; /* Unicode for crescent moon */
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 0.8em;
-            color: white;
+            font-size: 0.8em; /* Adjust size of the moon symbol */
+            color: white; /* Color of the moon symbol */
         }
-
     </style>
 </head>
+
 <body>
 
     <div class="announcement-container">
@@ -157,25 +175,11 @@
             <div class="sub-greeting" id="sub-greeting-text"></div>
         </div>
 
-        <!-- About the Vision Section -->
+        <!-- About Section -->
         <div id="about-section" class="page-section">
-            <h2>About the Vision</h2>
+            <h2>About</h2>
             <p>Your personal story and journey about what inspired you to start RIZVISIONS.</p>
             <p>Your mission statement and the core values that guide your work and decisions.</p>
-        </div>
-
-        <!-- Client Work Section -->
-        <div id="client-work-section" class="page-section">
-            <h2>Client Work</h2>
-            <p>A showcase of your client projects in categories like TikTok, Graphic Design, and Photography.</p>
-            <p>Feedback from satisfied clients and detailed case studies of select projects.</p>
-        </div>
-
-        <!-- Personal Projects Section -->
-        <div id="personal-projects-section" class="page-section">
-            <h2>Personal Projects</h2>
-            <p>A gallery of your personal projects, passion projects, and experimental work.</p>
-            <p>Insights into your creative process and behind-the-scenes looks at how projects came to be.</p>
         </div>
 
         <!-- Contact Section -->
@@ -188,110 +192,84 @@
 
     <script src="https://cdn.jsdelivr.net/npm/darkmode-js@1.5.7/lib/darkmode-js.min.js"></script>
     <script>
-      // Dark mode widget
-      function addDarkmodeWidget() {
-        new Darkmode().showWidget();
-      }
-      window.addEventListener('load', addDarkmodeWidget);
+        function addDarkmodeWidget() {
+            new Darkmode().showWidget();
+        }
+        window.addEventListener('load', addDarkmodeWidget);
 
-      document.addEventListener('DOMContentLoaded', () => {
-        // --- News ticker logic ---
-        const container = document.getElementById('news-headline');
-        const API_KEY = 'sY1Fz2DI7iKBP-bje3DpJVwVqs354UZPswviUl6ZswKuOTuz';
+        function fetchNews() {
+            const API_KEY = 'sY1Fz2DI7iKBP-bje3DpJVwVqs354UZPswviUl6ZswKuOTuz';
+            const ENDPOINT = `https://api.currentsapi.services/v1/latest-news?category=business&apiKey=${API_KEY}`;
 
-        async function loadNews() {
-          try {
-            console.log('📰 Fetching latest business news…');
-            const res = await fetch(
-              `https://api.currentsapi.services/v1/latest-news?category=business&apiKey=${API_KEY}`
-            );
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            console.log('🗞️ News payload:', data);
-            if (!Array.isArray(data.news) || !data.news.length) {
-              throw new Error('No news items in response');
-            }
+            fetch(ENDPOINT)
+                .then(response => response.json())
+                .then(data => {
+                    const headlines = data.news.map(article => `<a href="${article.url}" target="_blank">${article.title}</a>`);
+                    const combinedHeadlines = headlines.join(' | ');
+                    const announcementBar = document.querySelector('.announcement');
+                    announcementBar.innerHTML = `<div>${combinedHeadlines}</div><div>${combinedHeadlines}</div>`;
 
-            const itemsHTML = data.news
-              .map(n => `<a href="${n.url}" target="_blank">${n.title}</a>`)
-              .join(' | ');
-
-            // replace the loading placeholders
-            container.innerHTML = '';
-            for (let i = 0; i < 2; i++) {
-              const slide = document.createElement('div');
-              slide.innerHTML = itemsHTML;
-              container.appendChild(slide);
-            }
-
-            // measure & animate on next frame
-            requestAnimationFrame(() => {
-              const textWidth = container.children[0].offsetWidth;
-              console.log('▶️ Calculated text width:', textWidth);
-              container.style.setProperty('--text-width', `${textWidth}px`);
-              const duration = Math.max(15, textWidth / 50);
-              console.log('⌛ Animation duration:', duration, 'seconds');
-              container.style.animation = `marquee ${duration}s linear infinite`;
-            });
-          } catch (err) {
-            console.error('❌ Error loading news:', err);
-            const msg = 'Unable to load news';
-            container.innerHTML = `<div>${msg}</div><div>${msg}</div>`;
-          }
+                    const textWidth = announcementBar.children[0].offsetWidth;
+                    const duration = Math.max(15, combinedHeadlines.length * 0.05);
+                    announcementBar.style.setProperty('--text-width', `${textWidth}px`);
+                    announcementBar.style.animation = `marquee ${duration}s linear infinite`;
+                })
+                .catch(error => console.error('Error fetching news:', error));
         }
 
-        if (container) loadNews();
+        fetchNews();
 
-        // --- Time & greeting logic ---
         function updateTime() {
-          const now = new Date();
-          const hours = now.getHours();
-          document.getElementById('time').textContent = now.toLocaleTimeString();
+            const now = new Date();
+            const hours = now.getHours();
+            const timeString = now.toLocaleTimeString();
+            document.getElementById('time').textContent = timeString;
 
-          const greetingEl = document.getElementById('greeting-text');
-          let greeting;
-          if (hours >= 6 && hours < 12) {
-            greeting = 'GOOD MORNING';
-          } else if (hours >= 12 && hours < 18) {
-            greeting = 'GOOD AFTERNOON';
-          } else if (hours >= 18 && hours < 24) {
-            greeting = 'GOOD EVENING';
-          } else {
-            greeting = 'GO TO SLEEP';
-          }
-          greetingEl.textContent = greeting;
+            // Greeting based on time
+            const greetingText = document.getElementById('greeting-text');
+            if (hours >= 6 && hours < 12) {
+                greetingText.textContent = "GOOD MORNING";
+            } else if (hours >= 12 && hours < 18) {
+                greetingText.textContent = "GOOD AFTERNOON";
+            } else if (hours >= 18 && hours < 24) {
+                greetingText.textContent = "GOOD EVENING";
+            } else {
+                greetingText.textContent = "GO TO SLEEP";
+            }
         }
         setInterval(updateTime, 1000);
         updateTime();
 
-        // --- Geolocation ---
         if ('geolocation' in navigator) {
-          navigator.geolocation.getCurrentPosition(
-            pos => {
-              const lat = pos.coords.latitude.toFixed(2);
-              const lon = pos.coords.longitude.toFixed(2);
-              document.getElementById('location').textContent = `Lat: ${lat}, Long: ${lon}`;
-            },
-            err => {
-              console.error('Geolocation error:', err.message);
-              document.getElementById('location').textContent = 'Location not available';
-            }
-          );
+            navigator.geolocation.getCurrentPosition(position => {
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
+                document.getElementById('location').textContent = `Lat: ${latitude.toFixed(2)}, Long: ${longitude.toFixed(2)}`;
+            }, error => {
+    console.error("Geolocation error:", error.message);
+    document.getElementById('location').textContent = 'Location not available';
+});
         } else {
-          document.getElementById('location').textContent = 'Location not available';
+            document.getElementById('location').textContent = 'Location not available';
         }
 
-        // --- Single-page nav behavior ---
-        document.querySelector('nav').addEventListener('click', event => {
-          if (event.target.tagName === 'A') {
-            document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
-            const id = event.target.getAttribute('href').substring(1) + '-section';
-            document.getElementById(id).classList.add('active');
-            event.preventDefault();
-          }
+        // Navigation logic for single-page application behavior
+        document.querySelector('nav').addEventListener('click', function(event) {
+            if (event.target.tagName === 'A') {
+                // Hide all sections
+                document.querySelectorAll('.page-section').forEach(function(section) {
+                    section.classList.remove('active');
+                });
+
+                // Show the clicked section
+                const sectionId = event.target.getAttribute('href').substring(1) + '-section';
+                document.getElementById(sectionId).classList.add('active');
+
+                event.preventDefault(); // Prevent the default link behavior
+            }
         });
-      });
     </script>
+
 </body>
+
 </html>
-```
