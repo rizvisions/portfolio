@@ -20,7 +20,6 @@
 
         .announcement {
             display: flex;
-            width: 100%;
             background-color: white;
             color: black;
             text-align: center;
@@ -191,7 +190,7 @@
                     const duration = Math.max(15, combined.length * 0.05);
                     announcementBar.style.animation = `marquee ${duration}s linear infinite`;
                 })
-                .catch(error => console.error('Error fetching news:', error));
+                .catch(err => console.error('Error fetching news:', err));
         }
         fetchNews();
 
@@ -200,10 +199,15 @@
             document.getElementById('time').textContent = now.toLocaleTimeString();
             const hours = now.getHours();
             const greet = document.getElementById('greeting-text');
-            if (hours >= 6 && hours < 12) greet.textContent = "GOOD MORNING";
-            else if (hours < 18) greet.textContent = "GOOD AFTERNOON";
-            else if (hours < 24) greet.textContent = "GOOD EVENING";
-            else greet.textContent = "GO TO SLEEP";
+            if (hours >= 6 && hours < 12) {
+                greet.textContent = "GOOD MORNING";
+            } else if (hours >= 12 && hours < 18) {
+                greet.textContent = "GOOD AFTERNOON";
+            } else if (hours >= 18 && hours < 24) {
+                greet.textContent = "GOOD EVENING";
+            } else {
+                greet.textContent = "GO TO SLEEP.";
+            }
         }
         setInterval(updateTime, 1000);
         updateTime();
@@ -218,7 +222,7 @@
             document.getElementById('location').textContent = 'Location not available';
         }
 
-        document.querySelector('nav').addEventListener('click', e => {
+        document.querySelector('nav').addEventListener('click', function(e) {
             if (e.target.tagName === 'A') {
                 document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
                 document.getElementById(e.target.getAttribute('href').substring(1) + '-section').classList.add('active');
