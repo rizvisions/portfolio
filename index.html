@@ -34,7 +34,6 @@
         .announcement a {
             color: black;
             text-decoration: none;
-            margin-right: 0px;
         }
 
         .announcement a:hover {
@@ -42,13 +41,8 @@
         }
 
         @keyframes marquee {
-            0% {
-                transform: translateX(0);
-            }
-
-            100% {
-                transform: translateX(calc(-1 * var(--text-width)));
-            }
+            0% { transform: translateX(0); }
+            100% { transform: translateX(calc(-1 * var(--text-width))); }
         }
 
         header {
@@ -84,7 +78,7 @@
         }
 
         .container {
-            max-width: 100000px;
+            max-width: 10000px;
             margin: auto;
             text-align: center;
         }
@@ -103,47 +97,26 @@
             margin-top: 20px;
         }
 
-        .page-section {
-            display: none;
-        }
-
-        .page-section.active {
-            display: block;
-        }
-
-        .hidden {
-            display: none;
-        }
+        .page-section { display: none; }
+        .page-section.active { display: block; }
 
         /* Dark mode adjustments */
-        body.darkmode--activated .announcement {
-            background-color: #333;
-            color: white;
-        }
+        body.darkmode--activated .announcement { background-color: #333; color: white; }
+        body.darkmode--activated .announcement a { color: white; }
 
-        body.darkmode--activated .announcement a {
-            color: white;
-        }
-
-        /* Add this style to position the moon symbol on the dark mode button */
-        .darkmode-toggle {
-            position: relative;
-        }
-
+        .darkmode-toggle { position: relative; }
         .darkmode-toggle::before {
-            content: '\1F319'; /* Unicode for crescent moon */
+            content: '\1F319';
             position: absolute;
-            top: 50%;
-            left: 50%;
+            top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 0.8em; /* Adjust size of the moon symbol */
-            color: white; /* Color of the moon symbol */
+            font-size: 0.8em;
+            color: white;
         }
     </style>
 </head>
 
 <body>
-
     <div class="announcement-container">
         <div class="announcement" id="news-headline">
             <div>Loading latest business news...</div>
@@ -161,9 +134,7 @@
 
     <nav>
         <a href="#home">Home</a>
-        <a href="#about">About the Vision</a>
-        <a href="#client-work">Client Work</a>
-        <a href="#personal-projects">Personal Projects</a>
+        <a href="#about">About</a>
         <a href="#contact">Contact</a>
     </nav>
 
@@ -174,116 +145,83 @@
             <div class="sub-greeting" id="sub-greeting-text"></div>
         </div>
 
-        <!-- About the Vision Section -->
+        <!-- About Section -->
         <div id="about-section" class="page-section">
-            <h2>About the Vision</h2>
-            <p>Your personal story and journey about what inspired you to start RIZVISIONS.</p>
-            <p>Your mission statement and the core values that guide your work and decisions.</p>
-        </div>
-
-        <!-- Client Work Section -->
-        <div id="client-work-section" class="page-section">
-            <h2>Client Work</h2>
-            <p>A showcase of your client projects in categories like TikTok, Graphic Design, and Photography.</p>
-            <p>Feedback from satisfied clients and detailed case studies of select projects.</p>
-        </div>
-
-        <!-- Personal Projects Section -->
-        <div id="personal-projects-section" class="page-section">
-            <h2>Personal Projects</h2>
-            <p>A gallery of your personal projects, passion projects, and experimental work.</p>
-            <p>Insights into your creative process and behind-the-scenes looks at how projects came to be.</p>
+            <h2>About</h2>
+            <p>Hey, I’m Riz Zaheer—a Chicago-based marketer and entrepreneur with a passion for storytelling and content creation. I love helping brands build authentic narratives and grow their online presence through video, design, and strategic campaigns.</p>
         </div>
 
         <!-- Contact Section -->
         <div id="contact-section" class="page-section">
             <h2>Contact</h2>
-            <p>A contact form for visitors to get in touch with you directly.</p>
-            <p>Links to your social media profiles and a note about your base location in Chicago.</p>
+            <p>Email me at <a href="mailto:rzaheer002@gmail.com">rzaheer002@gmail.com</a></p>
+            <p>
+                <a href="https://www.linkedin.com/in/riz-zaheer/" target="_blank">LinkedIn</a> | 
+                <a href="https://x.com/rizvisions" target="_blank">X</a> | 
+                <a href="https://www.instagram.com/rizvisions/" target="_blank">Instagram</a> | 
+                <a href="https://www.tiktok.com/@riz.com" target="_blank">TikTok</a>
+            </p>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/darkmode-js@1.5.7/lib/darkmode-js.min.js"></script>
     <script>
-        function addDarkmodeWidget() {
-            new Darkmode().showWidget();
-        }
+        function addDarkmodeWidget() { new Darkmode().showWidget(); }
         window.addEventListener('load', addDarkmodeWidget);
 
         function fetchNews() {
             const API_KEY = 'sY1Fz2DI7iKBP-bje3DpJVwVqs354UZPswviUl6ZswKuOTuz';
             const ENDPOINT = `https://api.currentsapi.services/v1/latest-news?category=business&apiKey=${API_KEY}`;
-
             fetch(ENDPOINT)
                 .then(response => response.json())
                 .then(data => {
-                    const headlines = data.news.map(article => `<a href="${article.url}" target="_blank">${article.title}</a>`);
-                    const combinedHeadlines = headlines.join(' | ');
-                    const announcementBar = document.querySelector('.announcement');
-                    announcementBar.innerHTML = `<div>${combinedHeadlines}</div><div>${combinedHeadlines}</div>`;
-
-                    const textWidth = announcementBar.children[0].offsetWidth;
-                    const duration = Math.max(15, combinedHeadlines.length * 0.05);
-                    announcementBar.style.setProperty('--text-width', `${textWidth}px`);
-                    announcementBar.style.animation = `marquee ${duration}s linear infinite`;
+                    const headlines = data.news.map(a => `<a href="${a.url}" target="_blank">${a.title}</a>`);
+                    const combined = headlines.join(' | ');
+                    const bar = document.querySelector('.announcement');
+                    bar.innerHTML = `<div>${combined}</div><div>${combined}</div>`;
+                    const width = bar.children[0].offsetWidth;
+                    const duration = Math.max(15, combined.length * 0.05);
+                    bar.style.setProperty('--text-width', `${width}px`);
+                    bar.style.animation = `marquee ${duration}s linear infinite`;
                 })
-                .catch(error => console.error('Error fetching news:', error));
+                .catch(err => console.error('Error fetching news:', err));
         }
-
         fetchNews();
 
         function updateTime() {
             const now = new Date();
+            document.getElementById('time').textContent = now.toLocaleTimeString();
             const hours = now.getHours();
-            const timeString = now.toLocaleTimeString();
-            document.getElementById('time').textContent = timeString;
-
-            // Greeting based on time
-            const greetingText = document.getElementById('greeting-text');
-            if (hours >= 6 && hours < 12) {
-                greetingText.textContent = "GOOD MORNING";
-            } else if (hours >= 12 && hours < 18) {
-                greetingText.textContent = "GOOD AFTERNOON";
-            } else if (hours >= 18 && hours < 24) {
-                greetingText.textContent = "GOOD EVENING";
-            } else {
-                greetingText.textContent = "GO TO SLEEP.";
-            }
+            const greet = document.getElementById('greeting-text');
+            if (hours >= 6 && hours < 12) greet.textContent = "GOOD MORNING";
+            else if (hours < 18) greet.textContent = "GOOD AFTERNOON";
+            else if (hours < 24) greet.textContent = "GOOD EVENING";
+            else greet.textContent = "GO TO SLEEP.";
         }
         setInterval(updateTime, 1000);
         updateTime();
 
         if ('geolocation' in navigator) {
-            navigator.geolocation.getCurrentPosition(position => {
-                const latitude = position.coords.latitude;
-                const longitude = position.coords.longitude;
-                document.getElementById('location').textContent = `Lat: ${latitude.toFixed(2)}, Long: ${longitude.toFixed(2)}`;
-            }, error => {
-    console.error("Geolocation error:", error.message);
-    document.getElementById('location').textContent = 'Location not available';
-});
+            navigator.geolocation.getCurrentPosition(pos => {
+                const lat = pos.coords.latitude.toFixed(2);
+                const lon = pos.coords.longitude.toFixed(2);
+                document.getElementById('location').textContent = `Lat: ${lat}, Long: ${lon}`;
+            }, () => {
+                document.getElementById('location').textContent = 'Location not available';
+            });
         } else {
             document.getElementById('location').textContent = 'Location not available';
         }
 
-        // Navigation logic for single-page application behavior
-        document.querySelector('nav').addEventListener('click', function(event) {
-            if (event.target.tagName === 'A') {
-                // Hide all sections
-                document.querySelectorAll('.page-section').forEach(function(section) {
-                    section.classList.remove('active');
-                });
-
-                // Show the clicked section
-                const sectionId = event.target.getAttribute('href').substring(1) + '-section';
+        document.querySelector('nav').addEventListener('click', e => {
+            if (e.target.tagName === 'A') {
+                document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+                const sectionId = e.target.getAttribute('href').substring(1) + '-section';
                 document.getElementById(sectionId).classList.add('active');
-
-                event.preventDefault(); // Prevent the default link behavior
+                e.preventDefault();
             }
         });
     </script>
-
 </body>
 
 </html>
-
