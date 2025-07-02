@@ -185,10 +185,12 @@
                     const combined = headlines.join(' | ');
                     announcementBar.innerHTML = `<div>${combined}</div><div>${combined}</div>`;
 
-                    const textWidth = announcementBar.children[0].offsetWidth;
-                    announcementBar.style.setProperty('--text-width', `${textWidth}px`);
-                    const duration = Math.max(15, combined.length * 0.05);
-                    announcementBar.style.animation = `marquee ${duration}s linear infinite`;
+                    setTimeout(() => {
+                        const textWidth = announcementBar.children[0].offsetWidth;
+                        announcementBar.style.setProperty('--text-width', `${textWidth}px`);
+                        const duration = Math.max(15, combined.length * 0.05);
+                        announcementBar.style.animation = `marquee ${duration}s linear infinite`;
+                    }, 100);
                 })
                 .catch(err => console.error('Error fetching news:', err));
         }
@@ -196,8 +198,9 @@
 
         function updateTime() {
             const now = new Date();
-            document.getElementById('time').textContent = now.toLocaleTimeString();
-            const hours = now.getHours();
+            const timeString = now.toLocaleTimeString('en-US', { timeZone: 'America/Chicago' });
+            document.getElementById('time').textContent = timeString;
+            const hours = parseInt(new Intl.DateTimeFormat('en-US', { hour12: false, hour: '2-digit', timeZone: 'America/Chicago' }).format(new Date()), 10);
             const greet = document.getElementById('greeting-text');
             if (hours >= 6 && hours < 12) {
                 greet.textContent = "GOOD MORNING";
