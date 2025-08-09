@@ -23,8 +23,7 @@
         .announcement {
             display: inline-block;
             white-space: nowrap;
-            padding-left: 100%;
-            animation: marquee 20s linear infinite;
+            animation: marquee 50s linear infinite;
         }
 
         @keyframes marquee {
@@ -33,7 +32,7 @@
             }
 
             100% {
-                transform: translateX(-100%);
+                transform: translateX(-50%);
             }
         }
 
@@ -192,19 +191,28 @@
         async function fetchNews() {
     const container = document.querySelector('.announcement-container');
 
-    // Primary source: Google News (Business) via rss2json (CORS-friendly JSON)
+    // keep your existing source URLs here if you changed them earlier
     const GOOGLE_BUSINESS_RSS = 'https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en';
     const RSS2JSON = 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(GOOGLE_BUSINESS_RSS);
-
-    // Fallback: fetch raw RSS via a CORS proxy and parse XML
     const REUTERS_RSS = 'https://feeds.reuters.com/reuters/businessNews';
     const ALLORIGINS = 'https://api.allorigins.win/get?url=' + encodeURIComponent(REUTERS_RSS);
 
     function renderLinks(pairs) {
-      const html = pairs.map(([title, link]) =>
+      // duplicate once to make a seamless 50% loop with the CSS above
+      const once = pairs.map(([title, link]) =>
         `<a href="${link}" target="_blank" rel="noopener">${title}</a>`
       ).join('');
-      container.innerHTML = `<div class="announcement">${html}</div>`;
+      const doubled = once + once;
+      container.innerHTML = `<div class="announcement">${doubled}</div>`;
+    }
+
+    // light shuffle for variety
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
     }
 
     try {
@@ -213,7 +221,11 @@
       if (!r1.ok) throw new Error('rss2json network error');
       const j = await r1.json();
       if (!j.items || !j.items.length) throw new Error('rss2json empty');
-      const pairs = j.items.slice(0, 10).map(it => [it.title || 'Untitled', it.link || '#']);
+
+      // take more items for variety, then shuffle
+      const pairs = shuffle(j.items.slice(0, 25))
+        .map(it => [it.title || 'Untitled', it.link || '#']);
+
       renderLinks(pairs);
       return;
     } catch (e1) {
@@ -221,32 +233,37 @@
     }
 
     try {
-      // Fallback to XML via allorigins
+      // Fallback to XML via AllOrigins
       const r2 = await fetch(ALLORIGINS, { cache: 'no-store' });
       if (!r2.ok) throw new Error('allorigins network error');
       const { contents } = await r2.json();
       const doc = new DOMParser().parseFromString(contents, 'text/xml');
-      const items = Array.from(doc.querySelectorAll('item')).slice(0, 10);
-      if (!items.length) throw new Error('no items in XML');
-      const pairs = items.map(item => [
+      const items = Array.from(doc.querySelectorAll('item'));
+
+      const pairs = shuffle(items.slice(0, 25)).map(item => [
         (item.querySelector('title')?.textContent || 'Untitled').trim(),
         (item.querySelector('link')?.textContent || '#').trim()
       ]);
+
       renderLinks(pairs);
       return;
     } catch (e2) {
       console.warn('XML fallback failed:', e2);
     }
 
-    // Last resort: small local list so UI still works
+    // Last-resort: keep marquee alive
     renderLinks([
-      ['Unable to load live news — try again soon', '#'],
-      ['RIZVISIONS is live', '#'],
-      ['Building cool stuff in Chicago', '#']
+      ['Unable to load live news — retry later', '#'],
+      ['RIZVISIONS — Chicago based', '#'],
+      ['Building, learning, shipping', '#']
     ]);
   }
 
+  // run once on load
   window.addEventListener('DOMContentLoaded', fetchNews);
+
+  // refresh every 10 minutes for more variety (600000 ms). Change if you want.
+  setInterval(fetchNews, 600000);
 
         function updateTime() {
             const now = new Date();
