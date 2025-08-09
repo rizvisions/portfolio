@@ -13,6 +13,40 @@
             padding: 0;
         }
 
+        .announcement-container {
+            border-bottom: 1px solid black;
+            overflow: hidden;
+            position: relative;
+            background: white;
+        }
+
+        .announcement {
+            display: inline-block;
+            white-space: nowrap;
+            padding-left: 100%;
+            animation: marquee 20s linear infinite;
+        }
+
+        @keyframes marquee {
+            0% {
+                transform: translateX(0);
+            }
+
+            100% {
+                transform: translateX(-100%);
+            }
+        }
+
+        .announcement a {
+            color: black;
+            text-decoration: none;
+            margin: 0 2rem;
+        }
+
+        .announcement a:hover {
+            text-decoration: underline;
+        }
+
         header {
             padding: 20px;
             text-align: center;
@@ -77,6 +111,16 @@
             display: none;
         }
 
+        /* Dark mode adjustments */
+        body.darkmode--activated .announcement {
+            background-color: #333;
+            color: white;
+        }
+
+        body.darkmode--activated .announcement a {
+            color: white;
+        }
+
         /* Dark mode button moon symbol */
         .darkmode-toggle {
             position: relative;
@@ -96,6 +140,12 @@
 
 <body>
 
+    <div class="announcement-container">
+        <div class="announcement" id="news-headline">
+            Loading latest business news...
+        </div>
+    </div>
+
     <header>
         <h1>RIZVISIONS</h1>
     </header>
@@ -112,4 +162,99 @@
 
     <div class="container">
         <!-- Home Section -->
-        <div id="home-section" class="p
+        <div id="home-section" class="page-section active">
+            <div class="greeting" id="greeting-text">GOOD MORNING</div>
+            <div class="sub-greeting" id="sub-greeting-text"></div>
+        </div>
+
+        <!-- About Section -->
+        <div id="about-section" class="page-section">
+            <h2>About</h2>
+            <p>Your personal story and journey about what inspired you to start RIZVISIONS.</p>
+            <p>Your mission statement and the core values that guide your work and decisions.</p>
+        </div>
+
+        <!-- Contact Section -->
+        <div id="contact-section" class="page-section">
+            <h2>Contact</h2>
+            <p>A contact form for visitors to get in touch with you directly.</p>
+            <p>Links to your social media profiles and a note about your base location in Chicago.</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/darkmode-js@1.5.7/lib/darkmode-js.min.js"></script>
+    <script>
+        function addDarkmodeWidget() {
+            new Darkmode().showWidget();
+        }
+        window.addEventListener('load', addDarkmodeWidget);
+
+        async function fetchNews() {
+            const API_KEY = 'c164d3d7bb554f0c8e66228bc37852fe';
+            const ENDPOINT = `https://newsapi.org/v2/top-headlines?country=us&category=business&apiKey=${API_KEY}`;
+            const container = document.querySelector('.announcement-container');
+            try {
+                const res = await fetch(ENDPOINT);
+                const data = await res.json();
+                if (!data.articles || data.articles.length === 0) {
+                    throw new Error('No articles found');
+                }
+                const html = data.articles
+                    .map(a => `<a href="${a.url}" target="_blank">${a.title}</a>`)
+                    .join('');
+                container.innerHTML = `<div class="announcement">${html}</div>`;
+            } catch (err) {
+                console.error('Error fetching news:', err);
+                container.innerHTML = `
+        <div class="announcement">
+          <span>Unable to load news.</span>
+        </div>`;
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', fetchNews);
+
+        function updateTime() {
+            const now = new Date();
+            const hours = now.getHours();
+            document.getElementById('time').textContent = now.toLocaleTimeString();
+            const greetingText = document.getElementById('greeting-text');
+            if (hours >= 6 && hours < 12) {
+                greetingText.textContent = "GOOD MORNING";
+            } else if (hours >= 12 && hours < 18) {
+                greetingText.textContent = "GOOD AFTERNOON";
+            } else if (hours >= 18 && hours < 24) {
+                greetingText.textContent = "GOOD EVENING";
+            } else {
+                greetingText.textContent = "GO TO SLEEP";
+            }
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(position => {
+                const lat = position.coords.latitude.toFixed(2);
+                const lon = position.coords.longitude.toFixed(2);
+                document.getElementById('location').textContent = `Lat: ${lat}, Long: ${lon}`;
+            }, err => {
+                console.error('Geolocation error:', err.message);
+                document.getElementById('location').textContent = 'Location not available';
+            });
+        } else {
+            document.getElementById('location').textContent = 'Location not available';
+        }
+
+        document.querySelector('nav').addEventListener('click', event => {
+            if (event.target.tagName === 'A') {
+                document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+                const sectionId = event.target.getAttribute('href').substring(1) + '-section';
+                document.getElementById(sectionId).classList.add('active');
+                event.preventDefault();
+            }
+        });
+    </script>
+
+</body>
+
+</html>
