@@ -190,35 +190,60 @@
         window.addEventListener('load', addDarkmodeWidget);
 
         async function fetchNews() {
-    const FEED_URL = 'https://feeds.reuters.com/reuters/businessNews';
-    const PROXY = 'https://api.allorigins.win/get?url=' + encodeURIComponent(FEED_URL);
     const container = document.querySelector('.announcement-container');
 
-    try {
-      const res = await fetch(PROXY);
-      if (!res.ok) throw new Error('Network response was not ok');
-      const { contents } = await res.json();
+    // Primary source: Google News (Business) via rss2json (CORS-friendly JSON)
+    const GOOGLE_BUSINESS_RSS = 'https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en';
+    const RSS2JSON = 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(GOOGLE_BUSINESS_RSS);
 
-      // Parse RSS XML
+    // Fallback: fetch raw RSS via a CORS proxy and parse XML
+    const REUTERS_RSS = 'https://feeds.reuters.com/reuters/businessNews';
+    const ALLORIGINS = 'https://api.allorigins.win/get?url=' + encodeURIComponent(REUTERS_RSS);
+
+    function renderLinks(pairs) {
+      const html = pairs.map(([title, link]) =>
+        `<a href="${link}" target="_blank" rel="noopener">${title}</a>`
+      ).join('');
+      container.innerHTML = `<div class="announcement">${html}</div>`;
+    }
+
+    try {
+      // Try JSON endpoint first
+      const r1 = await fetch(RSS2JSON, { cache: 'no-store' });
+      if (!r1.ok) throw new Error('rss2json network error');
+      const j = await r1.json();
+      if (!j.items || !j.items.length) throw new Error('rss2json empty');
+      const pairs = j.items.slice(0, 10).map(it => [it.title || 'Untitled', it.link || '#']);
+      renderLinks(pairs);
+      return;
+    } catch (e1) {
+      console.warn('rss2json failed:', e1);
+    }
+
+    try {
+      // Fallback to XML via allorigins
+      const r2 = await fetch(ALLORIGINS, { cache: 'no-store' });
+      if (!r2.ok) throw new Error('allorigins network error');
+      const { contents } = await r2.json();
       const doc = new DOMParser().parseFromString(contents, 'text/xml');
       const items = Array.from(doc.querySelectorAll('item')).slice(0, 10);
-
-      if (items.length === 0) throw new Error('No articles found');
-
-      const html = items.map(item => {
-        const title = item.querySelector('title')?.textContent?.trim() || 'Untitled';
-        const link = item.querySelector('link')?.textContent?.trim() || '#';
-        return `<a href="${link}" target="_blank" rel="noopener">${title}</a>`;
-      }).join('');
-
-      container.innerHTML = `<div class="announcement">${html}</div>`;
-    } catch (err) {
-      console.error('Error fetching news:', err);
-      container.innerHTML = `
-        <div class="announcement">
-          <span>Unable to load news.</span>
-        </div>`;
+      if (!items.length) throw new Error('no items in XML');
+      const pairs = items.map(item => [
+        (item.querySelector('title')?.textContent || 'Untitled').trim(),
+        (item.querySelector('link')?.textContent || '#').trim()
+      ]);
+      renderLinks(pairs);
+      return;
+    } catch (e2) {
+      console.warn('XML fallback failed:', e2);
     }
+
+    // Last resort: small local list so UI still works
+    renderLinks([
+      ['Unable to load live news — try again soon', '#'],
+      ['RIZVISIONS is live', '#'],
+      ['Building cool stuff in Chicago', '#']
+    ]);
   }
 
   window.addEventListener('DOMContentLoaded', fetchNews);
