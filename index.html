@@ -190,29 +190,38 @@
         window.addEventListener('load', addDarkmodeWidget);
 
         async function fetchNews() {
-            const API_KEY = 'c164d3d7bb554f0c8e66228bc37852fe';
-            const ENDPOINT = `https://newsapi.org/v2/top-headlines?country=us&category=business&apiKey=${API_KEY}`;
-            const container = document.querySelector('.announcement-container');
-            try {
-                const res = await fetch(ENDPOINT);
-                const data = await res.json();
-                if (!data.articles || data.articles.length === 0) {
-                    throw new Error('No articles found');
-                }
-                const html = data.articles
-                    .map(a => `<a href="${a.url}" target="_blank">${a.title}</a>`)
-                    .join('');
-                container.innerHTML = `<div class="announcement">${html}</div>`;
-            } catch (err) {
-                console.error('Error fetching news:', err);
-                container.innerHTML = `
+    const FEED_URL = 'https://feeds.reuters.com/reuters/businessNews';
+    const PROXY = 'https://api.allorigins.win/get?url=' + encodeURIComponent(FEED_URL);
+    const container = document.querySelector('.announcement-container');
+
+    try {
+      const res = await fetch(PROXY);
+      if (!res.ok) throw new Error('Network response was not ok');
+      const { contents } = await res.json();
+
+      // Parse RSS XML
+      const doc = new DOMParser().parseFromString(contents, 'text/xml');
+      const items = Array.from(doc.querySelectorAll('item')).slice(0, 10);
+
+      if (items.length === 0) throw new Error('No articles found');
+
+      const html = items.map(item => {
+        const title = item.querySelector('title')?.textContent?.trim() || 'Untitled';
+        const link = item.querySelector('link')?.textContent?.trim() || '#';
+        return `<a href="${link}" target="_blank" rel="noopener">${title}</a>`;
+      }).join('');
+
+      container.innerHTML = `<div class="announcement">${html}</div>`;
+    } catch (err) {
+      console.error('Error fetching news:', err);
+      container.innerHTML = `
         <div class="announcement">
           <span>Unable to load news.</span>
         </div>`;
-            }
-        }
+    }
+  }
 
-        window.addEventListener('DOMContentLoaded', fetchNews);
+  window.addEventListener('DOMContentLoaded', fetchNews);
 
         function updateTime() {
             const now = new Date();
