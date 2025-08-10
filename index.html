@@ -57,20 +57,20 @@
       margin-bottom: 0;
     }
     h1 {
-      font-size: clamp(28px, 6vw, 50px);
+      font-size: clamp(28px, 6vw, 50px); /* desktop/tablet unchanged */
       text-transform: uppercase;
       margin-top: 30px;
       margin-bottom: -10px;
     }
     .time-location {
-      display: block;        /* margin:auto centering */
+      display: block;        /* allows margin:auto centering */
       text-align: center;
       margin-top: -10px;
       margin-bottom: 40px;
       margin-left: auto;
       margin-right: auto;
-      white-space: nowrap;   /* NEW: keep one line */
-      overflow: hidden;      /* NEW: forbid spillover */
+      white-space: nowrap;   /* keep one line */
+      overflow: hidden;      /* forbid spillover */
       text-overflow: clip;
       /* JS sets exact width to match <h1> and tweaks font-size */
     }
@@ -107,9 +107,6 @@
       font-size: clamp(48px, 12vw, 260px); /* bigger on desktop */
       margin-top: clamp(40px, 12vw, 150px);
     }
-    @media (max-width: 480px){
-      .greeting{ font-size: 18vw; } /* fill mobile width more aggressively */
-    }
 
     .sub-greeting {
       font-size: clamp(14px, 3.4vw, 24px);
@@ -142,10 +139,13 @@
     @media (max-width: 768px) {
       .time-location { margin-bottom: 24px; }
     }
-    /* Small phones */
+
+    /* Small phones — ONLY mobile changes */
     @media (max-width: 480px) {
       nav { padding: 8px; }
       .announcement .sep { padding: 0 0.5rem; }
+      .greeting{ font-size: 18vw; } /* fill mobile width more aggressively */
+      h1 { font-size: clamp(42px, 15vw, 65px); } /* make RIZVISIONS bigger on mobile only */
     }
   </style>
 </head>
