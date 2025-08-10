@@ -16,7 +16,7 @@
     }
 
     /* keep core wrappers from exceeding viewport due to rounding */
-    header, nav, .announcement-container, .container {
+    header, nav, .announcement-container, .container, #masthead {
       max-width: 100%;
       box-sizing: border-box;
     }
@@ -47,6 +47,11 @@
     .announcement .sep {
       padding: 0 0.8rem;
       opacity: 0.6;
+    }
+
+    /* ===== Masthead (title + time) ===== */
+    #masthead {
+      display: block; /* becomes flex on mobile via media query */
     }
 
     /* ===== Header / Nav ===== */
@@ -142,10 +147,21 @@
 
     /* Small phones — ONLY mobile changes */
     @media (max-width: 480px) {
+      /* Center the masthead between ticker and nav */
+      #masthead {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;   /* vertical centering */
+        /* JS sets min-height so it perfectly fills the space */
+      }
+
+      header { padding: 12px 12px 4px; } /* tighter */
+      h1 { font-size: clamp(42px, 15vw, 65px); margin-top: 6px; margin-bottom: 0; }
+      .time-location { margin-top: 4px; margin-bottom: 10px; }
+
       nav { padding: 8px; }
       .announcement .sep { padding: 0 0.5rem; }
       .greeting{ font-size: 18vw; } /* fill mobile width more aggressively */
-      h1 { font-size: clamp(42px, 15vw, 65px); } /* make RIZVISIONS bigger on mobile only */
     }
   </style>
 </head>
@@ -158,12 +174,15 @@
     </div>
   </div>
 
-  <header>
-    <h1>RIZVISIONS</h1>
-  </header>
+  <!-- NEW wrapper for vertical centering on mobile -->
+  <div id="masthead">
+    <header>
+      <h1>RIZVISIONS</h1>
+    </header>
 
-  <div class="time-location">
-    <span id="time"></span> | <span id="location"></span>
+    <div class="time-location">
+      <span id="time"></span> | <span id="location"></span>
+    </div>
   </div>
 
   <nav>
@@ -285,11 +304,36 @@
       }
     }
 
+    // NEW: on mobile, center masthead vertically between ticker and nav
+    function sizeMasthead() {
+      const mast = document.getElementById('masthead');
+      const ticker = document.querySelector('.announcement-container');
+      const nav = document.querySelector('nav');
+      if (!mast || !ticker || !nav) return;
+
+      // Only apply on small screens
+      if (window.innerWidth > 480) {
+        mast.style.minHeight = '';
+        return;
+      }
+
+      const vh = window.innerHeight;
+      const tickerH = ticker.getBoundingClientRect().height;
+      const navH = nav.getBoundingClientRect().height;
+
+      // Space available between ticker & nav (minus a small buffer)
+      const buffer = 4;
+      const target = Math.max(0, vh - tickerH - navH - buffer);
+
+      mast.style.minHeight = target + 'px';
+    }
+
     window.addEventListener('resize', () => {
       setMarqueeSpeed();
       syncTimeWidth();
       fitTimeLine();
       fitGreeting();
+      sizeMasthead();
     });
 
     /* ===== News ===== */
@@ -402,6 +446,7 @@
       syncTimeWidth();
       fitTimeLine();
       fitGreeting();
+      sizeMasthead();
     }
     setInterval(updateTime, 1000);
 
@@ -435,17 +480,19 @@
       syncTimeWidth();
       fitTimeLine();
       fitGreeting();
+      sizeMasthead();
 
       // Re-run width sync after fonts render (prevents Safari/iOS drift)
       if (document.fonts && document.fonts.ready) {
         document.fonts.ready.then(() => {
           syncTimeWidth();
           fitTimeLine();
+          sizeMasthead();
         }).catch(()=>{});
       }
       // Tiny delays catch late layout shifts
-      setTimeout(() => { syncTimeWidth(); fitTimeLine(); }, 0);
-      setTimeout(() => { syncTimeWidth(); fitTimeLine(); }, 150);
+      setTimeout(() => { syncTimeWidth(); fitTimeLine(); sizeMasthead(); }, 0);
+      setTimeout(() => { syncTimeWidth(); fitTimeLine(); sizeMasthead(); }, 150);
     });
   </script>
 </body>
