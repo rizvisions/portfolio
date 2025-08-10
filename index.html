@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
   <title>RIZVISIONS</title>
   <style>
-    html, body { width: 100%; overflow-x: hidden; } /* stop horizontal scroll */
+    html, body { width: 100%; overflow-x: hidden; }
 
     body {
       font-family: Arial, sans-serif;
@@ -15,101 +15,91 @@
       padding: 0;
     }
 
-    /* keep core wrappers from exceeding viewport due to rounding */
-    header, nav, .announcement-container, .container {
-      max-width: 100%;
-      box-sizing: border-box;
-    }
-
-    /* ===== Announcement Ticker ===== */
     .announcement-container {
       border-bottom: 1px solid black;
       overflow: hidden;
       position: relative;
       background: white;
+      max-width: 100%;
+      box-sizing: border-box;
     }
+
     .announcement {
       display: inline-block;
       white-space: nowrap;
-      animation: marquee 75s linear infinite; /* baseline; JS will slow further if needed */
+      animation: marquee 75s linear infinite;
     }
+
     @keyframes marquee {
-      0%   { transform: translateX(0); }
-      100% { transform: translateX(-50%); } /* seamless loop (we duplicate content) */
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
     }
+
     .announcement a {
       color: black;
       text-decoration: none;
-      margin: 0; /* no gaps; we use a pipe separator */
-      font-size: clamp(12px, 2.8vw, 16px);
+      margin: 0;
     }
+
     .announcement a:hover { text-decoration: underline; }
+
     .announcement .sep {
       padding: 0 0.8rem;
       opacity: 0.6;
     }
 
-    /* ===== Header / Nav ===== */
     header {
       padding: 20px;
       text-align: center;
       background: white;
       margin-bottom: 0;
     }
+
     h1 {
-      font-size: clamp(28px, 6vw, 50px); /* desktop/tablet unchanged */
+      font-size: 50px;
       text-transform: uppercase;
       margin-top: 30px;
       margin-bottom: -10px;
     }
+
     .time-location {
-      display: block;        /* allows margin:auto centering */
       text-align: center;
-      margin-top: -10px;
-      margin-bottom: 40px;
-      margin-left: auto;
-      margin-right: auto;
-      white-space: nowrap;   /* keep one line */
-      overflow: hidden;      /* forbid spillover */
-      text-overflow: clip;
-      /* JS sets exact width to match <h1> and tweaks font-size */
+      margin: 0 auto 40px auto;
+      white-space: nowrap;
     }
 
     nav {
       background-color: black;
       text-align: center;
       padding: 5px;
+      max-width: 100%;
+      box-sizing: border-box;
     }
+
     nav a {
       margin: 0 15px;
       text-decoration: none;
       color: white;
-      display: inline-block;
-      padding: 10px 6px; /* tap-friendly */
     }
 
-    /* ===== Layout ===== */
     .container {
-      max-width: 100000px;
+      max-width: 100%;
       margin: auto;
       text-align: center;
-      padding: 0 16px; /* breathing room on phones */
+      box-sizing: border-box;
     }
 
-    /* ===== Greeting (applies to all messages) ===== */
-    .greeting{
-      white-space: nowrap; /* force single line */
-      overflow: hidden;    /* guard against fractional overflow */
-      text-overflow: clip;
-      line-height: 1;
+    .greeting {
+      font-size: 125px;
       font-weight: bold;
       text-align: center;
-      font-size: clamp(48px, 12vw, 260px); /* bigger on desktop */
-      margin-top: clamp(40px, 12vw, 150px);
+      margin-top: 150px;
+      overflow: hidden;
+      text-overflow: clip;
     }
 
     .sub-greeting {
-      font-size: clamp(14px, 3.4vw, 24px);
+      font-size: 24px;
       color: black;
       text-align: center;
       margin-top: 20px;
@@ -117,52 +107,47 @@
 
     .page-section { display: none; }
     .page-section.active { display: block; }
-
     .hidden { display: none; }
 
-    /* ===== Dark mode adjustments ===== */
-    body.darkmode--activated .announcement { background-color: #333; color: white; }
+    body.darkmode--activated .announcement {
+      background-color: #333;
+      color: white;
+    }
+
     body.darkmode--activated .announcement a { color: white; }
 
-    /* Dark mode button moon symbol */
     .darkmode-toggle { position: relative; }
+
     .darkmode-toggle::before {
       content: '\1F319';
       position: absolute;
-      top: 50%; left: 50%;
+      top: 50%;
+      left: 50%;
       transform: translate(-50%, -50%);
       font-size: 0.8em;
       color: white;
     }
 
-    /* Tablet tweaks */
-    @media (max-width: 768px) {
-      .time-location { margin-bottom: 24px; }
-    }
-
-    /* Small phones — ONLY mobile changes */
+    /* Mobile tweaks */
     @media (max-width: 480px) {
       nav { padding: 8px; }
       .announcement .sep { padding: 0 0.5rem; }
-      .greeting{ font-size: 18vw; } /* fill mobile width more aggressively */
-      h1 { font-size: clamp(42px, 15vw, 65px); } /* make RIZVISIONS bigger on mobile only */
+      .greeting { font-size: 18vw; }
+      h1 { font-size: clamp(34px, 12vw, 50px); } /* mobile bump without overshoot */
     }
   </style>
 </head>
 
 <body>
-
   <div class="announcement-container">
-    <div class="announcement" id="news-headline">
-      Loading latest business news...
-    </div>
+    <div class="announcement" id="news-headline">Loading latest business news...</div>
   </div>
 
   <header>
-    <h1>RIZVISIONS</h1>
+    <h1 id="site-title">RIZVISIONS</h1>
   </header>
 
-  <div class="time-location">
+  <div class="time-location" id="time-location">
     <span id="time"></span> | <span id="location"></span>
   </div>
 
@@ -173,27 +158,24 @@
   </nav>
 
   <div class="container">
-    <!-- Home Section -->
     <div id="home-section" class="page-section active">
       <div class="greeting" id="greeting-text">GOOD MORNING</div>
       <div class="sub-greeting" id="sub-greeting-text"></div>
     </div>
 
-    <!-- About Section -->
     <div id="about-section" class="page-section">
       <h2>About</h2>
       <p>Trying things until one of them changes everything.</p>
     </div>
 
-    <!-- Contact Section -->
     <div id="contact-section" class="page-section">
       <h2>Come Say Hi</h2>
       <p>
-        <a href="https://www.instagram.com/rizvisions/" target="_blank" rel="noopener">Instagram</a> ·
-        <a href="https://x.com/rizvisions" target="_blank" rel="noopener">X</a> ·
-        <a href="https://www.linkedin.com/in/riz-zaheer/" target="_blank" rel="noopener">LinkedIn</a> ·
-        <a href="https://www.tiktok.com/@riz.com" target="_blank" rel="noopener">TikTok</a> ·
-        <a href="https://www.youtube.com/@rizzaheer/videos" target="_blank" rel="noopener">YouTube</a>
+        <a href="https://www.instagram.com/rizvisions/" target="_blank">Instagram</a> ·
+        <a href="https://x.com/rizvisions" target="_blank">X</a> ·
+        <a href="https://www.linkedin.com/in/riz-zaheer/" target="_blank">LinkedIn</a> ·
+        <a href="https://www.tiktok.com/@riz.com" target="_blank">TikTok</a> ·
+        <a href="https://www.youtube.com/@rizzaheer/videos" target="_blank">YouTube</a>
       </p>
     </div>
   </div>
@@ -203,106 +185,11 @@
     function addDarkmodeWidget() { new Darkmode().showWidget(); }
     window.addEventListener('load', addDarkmodeWidget);
 
-    /* ===== Helpers ===== */
-
-    // Slow ticker based on total distance; never faster than 75s
-    function setMarqueeSpeed() {
-      const el = document.querySelector('.announcement');
-      if (!el) return;
-
-      // Distance is half the scrollWidth since content is duplicated
-      const distancePx = el.scrollWidth / 2;
-
-      // pixels per second (smaller => slower). Tune here if you want slower/faster.
-      const pxPerSec =
-        window.innerWidth <= 480 ? 25 :
-        window.innerWidth <= 768 ? 30 : 35;
-
-      let duration = distancePx / pxPerSec; // seconds
-      duration = Math.max(duration, 75);    // never faster than baseline 75s
-      el.style.animationDuration = duration + 's';
-    }
-
-    // Match time/coords exact width to the H1 width (fractional px for perfect centering)
-    function syncTimeWidth() {
-      const h1 = document.querySelector('header h1');
-      const tl = document.querySelector('.time-location');
-      if (!h1 || !tl) return;
-
-      const rect = h1.getBoundingClientRect(); // sub-pixel precision
-      const px = rect.width;
-      const safety = 1; // shave a pixel to avoid iOS rounding overflow
-
-      tl.style.width = (px - safety) + 'px';
-      tl.style.marginLeft = 'auto';
-      tl.style.marginRight = 'auto';
-      tl.style.textAlign = 'center';
-      tl.style.display = 'block';
-    }
-
-    // Shrink the time/coords text to fit exactly inside the H1 width
-    function fitTimeLine() {
-      const tl = document.querySelector('.time-location');
-      const h1 = document.querySelector('header h1');
-      if (!tl || !h1) return;
-
-      // Reset to CSS size first
-      tl.style.fontSize = '';
-
-      // Use the same measured width (minus safety) for fitting
-      const target = h1.getBoundingClientRect().width - 1; // px
-
-      let tries = 3;
-      while (tl.scrollWidth > target && tries-- > 0) {
-        const current = parseFloat(getComputedStyle(tl).fontSize) || 16;
-        const ratio = target / tl.scrollWidth; // < 1 when too big
-        tl.style.fontSize = (current * ratio * 0.985) + 'px'; // tiny buffer
-      }
-    }
-
-    // Ensure the greeting (any text) fits one line across the device
-    function fitGreeting() {
-      const g = document.getElementById('greeting-text');
-      if (!g) return;
-
-      // Reset to CSS-defined size first (so it can grow when rotating, etc.)
-      g.style.fontSize = '';
-
-      // Use viewport width minus container padding and a small safety buffer (iOS rounding)
-      const container = document.querySelector('.container');
-      const cs = getComputedStyle(container);
-      const paddingLeft  = parseFloat(cs.paddingLeft)  || 0;
-      const paddingRight = parseFloat(cs.paddingRight) || 0;
-      const safety = 2; // px
-      const containerWidth = Math.max(0, (window.innerWidth - paddingLeft - paddingRight - safety));
-
-      // If it overflows, shrink proportionally a couple of times
-      let tries = 3;
-      while (g.scrollWidth > containerWidth && tries-- > 0) {
-        const current = parseFloat(getComputedStyle(g).fontSize);
-        const ratio = containerWidth / g.scrollWidth; // < 1 when too big
-        g.style.fontSize = (current * ratio * 0.985) + 'px'; // tiny extra buffer
-      }
-    }
-
-    window.addEventListener('resize', () => {
-      setMarqueeSpeed();
-      syncTimeWidth();
-      fitTimeLine();
-      fitGreeting();
-    });
-
-    /* ===== News ===== */
     async function fetchNews() {
       const container = document.querySelector('.announcement-container');
-
-      // Sources
       const GNEWS_BUSINESS = 'https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en';
-      const GNEWS_TECH     = 'https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en';
-      const RSS2JSON = (rss) => 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(rss);
-
-      const REUTERS_RSS = 'https://feeds.reuters.com/reuters/businessNews';
-      const ALLORIGINS = 'https://api.allorigins.win/get?url=' + encodeURIComponent(REUTERS_RSS);
+      const GNEWS_TECH = 'https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en';
+      const RSS2JSON = rss => 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(rss);
 
       function shuffle(arr) {
         for (let i = arr.length - 1; i > 0; i--) {
@@ -316,24 +203,19 @@
         const once = pairs.map(([title, link]) =>
           `<a href="${link}" target="_blank" rel="noopener">${title}</a><span class="sep" aria-hidden="true">|</span>`
         ).join('');
-        const doubled = once + once; // seamless with translateX(-50%)
+        const doubled = once + once;
         container.innerHTML = `<div class="announcement">${doubled}</div>`;
-        setMarqueeSpeed(); // adjust to content length + device
       }
 
       try {
-        // Try Google News (Business + Tech) via rss2json for variety
         const [rBiz, rTech] = await Promise.all([
           fetch(RSS2JSON(GNEWS_BUSINESS), { cache: 'no-store' }),
-          fetch(RSS2JSON(GNEWS_TECH),     { cache: 'no-store' })
+          fetch(RSS2JSON(GNEWS_TECH), { cache: 'no-store' })
         ]);
-        if (!rBiz.ok || !rTech.ok) throw new Error('rss2json network error');
 
         const [jBiz, jTech] = await Promise.all([rBiz.json(), rTech.json()]);
         const items = [...(jBiz.items || []), ...(jTech.items || [])];
-        if (!items.length) throw new Error('rss2json empty');
 
-        // Dedupe by normalized title
         const seen = new Set();
         const pairs = [];
         for (const it of items) {
@@ -346,47 +228,41 @@
 
         renderLinks(shuffle(pairs).slice(0, 40));
         return;
-      } catch (e1) {
-        console.warn('Google News rss2json failed:', e1);
+      } catch {
+        renderLinks([['Unable to load live news — retry later', '#']]);
       }
-
-      try {
-        // Fallback: Reuters via AllOrigins (XML)
-        const r2 = await fetch(ALLORIGINS, { cache: 'no-store' });
-        if (!r2.ok) throw new Error('allorigins network error');
-        const { contents } = await r2.json();
-        const doc = new DOMParser().parseFromString(contents, 'text/xml');
-        const items = Array.from(doc.querySelectorAll('item'));
-
-        const pairs = items.map(item => [
-          (item.querySelector('title')?.textContent || 'Untitled').trim(),
-          (item.querySelector('link')?.textContent || '#').trim()
-        ]);
-
-        renderLinks(shuffle(pairs).slice(0, 40));
-        return;
-      } catch (e2) {
-        console.warn('XML fallback failed:', e2);
-      }
-
-      // Last-resort: keep marquee alive
-      renderLinks([
-        ['Unable to load live news — retry later', '#'],
-        ['RIZVISIONS — Chicago based', '#'],
-        ['Building, learning, shipping', '#']
-      ]);
     }
 
-    // Refresh headlines every 10 minutes WITHOUT reloading the page
+    window.addEventListener('DOMContentLoaded', fetchNews);
     setInterval(fetchNews, 600000);
 
-    /* ===== Time, Greeting, Nav ===== */
+    function fitGreeting() {
+      const g = document.getElementById('greeting-text');
+      if (!g) return;
+      g.style.fontSize = '';
+      const container = document.querySelector('.container');
+      const paddingLeft = parseFloat(getComputedStyle(container).paddingLeft) || 0;
+      const paddingRight = parseFloat(getComputedStyle(container).paddingRight) || 0;
+      const safety = 2;
+      const containerWidth = Math.max(0, (window.innerWidth - paddingLeft - paddingRight - safety));
+      let tries = 3;
+      while (g.scrollWidth > containerWidth && tries-- > 0) {
+        const current = parseFloat(getComputedStyle(g).fontSize);
+        const ratio = containerWidth / g.scrollWidth;
+        g.style.fontSize = (current * ratio * 0.985) + 'px';
+      }
+    }
+
+    function syncTimeWidth() {
+      const siteTitle = document.getElementById('site-title');
+      const timeLoc = document.getElementById('time-location');
+      timeLoc.style.width = siteTitle.offsetWidth + 'px';
+    }
+
     function updateTime() {
       const now = new Date();
       const hours = now.getHours();
-
       document.getElementById('time').textContent = now.toLocaleTimeString();
-
       const greetingText = document.getElementById('greeting-text');
       if (hours >= 6 && hours < 12) {
         greetingText.textContent = "GOOD MORNING";
@@ -397,21 +273,19 @@
       } else {
         greetingText.textContent = "GO TO SLEEP";
       }
-
-      // Keep visuals aligned/sized each tick
-      syncTimeWidth();
-      fitTimeLine();
       fitGreeting();
+      syncTimeWidth();
     }
+
     setInterval(updateTime, 1000);
+    updateTime();
 
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(position => {
         const lat = position.coords.latitude.toFixed(2);
         const lon = position.coords.longitude.toFixed(2);
         document.getElementById('location').textContent = `Lat: ${lat}, Long: ${lon}`;
-      }, err => {
-        console.error('Geolocation error:', err.message);
+      }, () => {
         document.getElementById('location').textContent = 'Location not available';
       });
     } else {
@@ -427,25 +301,9 @@
       }
     });
 
-    // Initial boot
-    window.addEventListener('DOMContentLoaded', () => {
-      fetchNews();
-      updateTime();
-      setMarqueeSpeed();
-      syncTimeWidth();
-      fitTimeLine();
+    window.addEventListener('resize', () => {
       fitGreeting();
-
-      // Re-run width sync after fonts render (prevents Safari/iOS drift)
-      if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(() => {
-          syncTimeWidth();
-          fitTimeLine();
-        }).catch(()=>{});
-      }
-      // Tiny delays catch late layout shifts
-      setTimeout(() => { syncTimeWidth(); fitTimeLine(); }, 0);
-      setTimeout(() => { syncTimeWidth(); fitTimeLine(); }, 150);
+      syncTimeWidth();
     });
   </script>
 </body>
