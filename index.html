@@ -63,13 +63,16 @@
       margin-bottom: -10px;
     }
     .time-location {
-      display: block;        /* allows margin:auto centering */
+      display: block;        /* margin:auto centering */
       text-align: center;
       margin-top: -10px;
       margin-bottom: 40px;
       margin-left: auto;
       margin-right: auto;
-      /* JS sets exact width to match <h1> */
+      white-space: nowrap;   /* NEW: keep one line */
+      overflow: hidden;      /* NEW: forbid spillover */
+      text-overflow: clip;
+      /* JS sets exact width to match <h1> and tweaks font-size */
     }
 
     nav {
@@ -228,12 +231,33 @@
 
       const rect = h1.getBoundingClientRect(); // sub-pixel precision
       const px = rect.width;
+      const safety = 1; // shave a pixel to avoid iOS rounding overflow
 
-      tl.style.width = px + 'px';
+      tl.style.width = (px - safety) + 'px';
       tl.style.marginLeft = 'auto';
       tl.style.marginRight = 'auto';
       tl.style.textAlign = 'center';
       tl.style.display = 'block';
+    }
+
+    // Shrink the time/coords text to fit exactly inside the H1 width
+    function fitTimeLine() {
+      const tl = document.querySelector('.time-location');
+      const h1 = document.querySelector('header h1');
+      if (!tl || !h1) return;
+
+      // Reset to CSS size first
+      tl.style.fontSize = '';
+
+      // Use the same measured width (minus safety) for fitting
+      const target = h1.getBoundingClientRect().width - 1; // px
+
+      let tries = 3;
+      while (tl.scrollWidth > target && tries-- > 0) {
+        const current = parseFloat(getComputedStyle(tl).fontSize) || 16;
+        const ratio = target / tl.scrollWidth; // < 1 when too big
+        tl.style.fontSize = (current * ratio * 0.985) + 'px'; // tiny buffer
+      }
     }
 
     // Ensure the greeting (any text) fits one line across the device
@@ -264,6 +288,7 @@
     window.addEventListener('resize', () => {
       setMarqueeSpeed();
       syncTimeWidth();
+      fitTimeLine();
       fitGreeting();
     });
 
@@ -375,6 +400,7 @@
 
       // Keep visuals aligned/sized each tick
       syncTimeWidth();
+      fitTimeLine();
       fitGreeting();
     }
     setInterval(updateTime, 1000);
@@ -407,15 +433,19 @@
       updateTime();
       setMarqueeSpeed();
       syncTimeWidth();
+      fitTimeLine();
       fitGreeting();
 
       // Re-run width sync after fonts render (prevents Safari/iOS drift)
       if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(syncTimeWidth).catch(()=>{});
+        document.fonts.ready.then(() => {
+          syncTimeWidth();
+          fitTimeLine();
+        }).catch(()=>{});
       }
       // Tiny delays catch late layout shifts
-      setTimeout(syncTimeWidth, 0);
-      setTimeout(syncTimeWidth, 150);
+      setTimeout(() => { syncTimeWidth(); fitTimeLine(); }, 0);
+      setTimeout(() => { syncTimeWidth(); fitTimeLine(); }, 150);
     });
   </script>
 </body>
