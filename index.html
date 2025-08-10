@@ -57,7 +57,7 @@
       margin-bottom: 0;
     }
     h1 {
-      font-size: clamp(28px, 6vw, 50px); /* desktop/tablet unchanged */
+      font-size: clamp(28px, 6vw, 50px);
       text-transform: uppercase;
       margin-top: 30px;
       margin-bottom: -10px;
@@ -69,10 +69,7 @@
       margin-bottom: 40px;
       margin-left: auto;
       margin-right: auto;
-      white-space: nowrap;   /* keep one line */
-      overflow: hidden;      /* forbid spillover */
-      text-overflow: clip;
-      /* JS sets exact width to match <h1> and tweaks font-size */
+      /* JS sets exact width to match <h1> */
     }
 
     nav {
@@ -107,6 +104,9 @@
       font-size: clamp(48px, 12vw, 260px); /* bigger on desktop */
       margin-top: clamp(40px, 12vw, 150px);
     }
+    @media (max-width: 480px){
+      .greeting{ font-size: 18vw; } /* fill mobile width more aggressively */
+    }
 
     .sub-greeting {
       font-size: clamp(14px, 3.4vw, 24px);
@@ -139,13 +139,10 @@
     @media (max-width: 768px) {
       .time-location { margin-bottom: 24px; }
     }
-
-    /* Small phones — ONLY mobile changes */
+    /* Small phones */
     @media (max-width: 480px) {
       nav { padding: 8px; }
       .announcement .sep { padding: 0 0.5rem; }
-      .greeting{ font-size: 18vw; } /* fill mobile width more aggressively */
-      h1 { font-size: clamp(42px, 15vw, 65px); } /* make RIZVISIONS bigger on mobile only */
     }
   </style>
 </head>
@@ -231,33 +228,12 @@
 
       const rect = h1.getBoundingClientRect(); // sub-pixel precision
       const px = rect.width;
-      const safety = 1; // shave a pixel to avoid iOS rounding overflow
 
-      tl.style.width = (px - safety) + 'px';
+      tl.style.width = px + 'px';
       tl.style.marginLeft = 'auto';
       tl.style.marginRight = 'auto';
       tl.style.textAlign = 'center';
       tl.style.display = 'block';
-    }
-
-    // Shrink the time/coords text to fit exactly inside the H1 width
-    function fitTimeLine() {
-      const tl = document.querySelector('.time-location');
-      const h1 = document.querySelector('header h1');
-      if (!tl || !h1) return;
-
-      // Reset to CSS size first
-      tl.style.fontSize = '';
-
-      // Use the same measured width (minus safety) for fitting
-      const target = h1.getBoundingClientRect().width - 1; // px
-
-      let tries = 3;
-      while (tl.scrollWidth > target && tries-- > 0) {
-        const current = parseFloat(getComputedStyle(tl).fontSize) || 16;
-        const ratio = target / tl.scrollWidth; // < 1 when too big
-        tl.style.fontSize = (current * ratio * 0.985) + 'px'; // tiny buffer
-      }
     }
 
     // Ensure the greeting (any text) fits one line across the device
@@ -288,7 +264,6 @@
     window.addEventListener('resize', () => {
       setMarqueeSpeed();
       syncTimeWidth();
-      fitTimeLine();
       fitGreeting();
     });
 
@@ -314,10 +289,10 @@
 
       function renderLinks(pairs) {
         const once = pairs.map(([title, link]) =>
-          <a href="${link}" target="_blank" rel="noopener">${title}</a><span class="sep" aria-hidden="true">|</span>
+          `<a href="${link}" target="_blank" rel="noopener">${title}</a><span class="sep" aria-hidden="true">|</span>`
         ).join('');
         const doubled = once + once; // seamless with translateX(-50%)
-        container.innerHTML = <div class="announcement">${doubled}</div>;
+        container.innerHTML = `<div class="announcement">${doubled}</div>`;
         setMarqueeSpeed(); // adjust to content length + device
       }
 
@@ -400,7 +375,6 @@
 
       // Keep visuals aligned/sized each tick
       syncTimeWidth();
-      fitTimeLine();
       fitGreeting();
     }
     setInterval(updateTime, 1000);
@@ -409,7 +383,7 @@
       navigator.geolocation.getCurrentPosition(position => {
         const lat = position.coords.latitude.toFixed(2);
         const lon = position.coords.longitude.toFixed(2);
-        document.getElementById('location').textContent = Lat: ${lat}, Long: ${lon};
+        document.getElementById('location').textContent = `Lat: ${lat}, Long: ${lon}`;
       }, err => {
         console.error('Geolocation error:', err.message);
         document.getElementById('location').textContent = 'Location not available';
@@ -433,19 +407,15 @@
       updateTime();
       setMarqueeSpeed();
       syncTimeWidth();
-      fitTimeLine();
       fitGreeting();
 
       // Re-run width sync after fonts render (prevents Safari/iOS drift)
       if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(() => {
-          syncTimeWidth();
-          fitTimeLine();
-        }).catch(()=>{});
+        document.fonts.ready.then(syncTimeWidth).catch(()=>{});
       }
       // Tiny delays catch late layout shifts
-      setTimeout(() => { syncTimeWidth(); fitTimeLine(); }, 0);
-      setTimeout(() => { syncTimeWidth(); fitTimeLine(); }, 150);
+      setTimeout(syncTimeWidth, 0);
+      setTimeout(syncTimeWidth, 150);
     });
   </script>
 </body>
