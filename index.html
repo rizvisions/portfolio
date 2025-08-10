@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1"> <!-- mobile scaling -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RIZVISIONS</title>
   <style>
     body {
@@ -13,56 +13,54 @@
       padding: 0;
     }
 
+    /* ===== Announcement Ticker ===== */
     .announcement-container {
       border-bottom: 1px solid black;
       overflow: hidden;
       position: relative;
       background: white;
     }
-
     .announcement {
       display: inline-block;
       white-space: nowrap;
-      animation: marquee 75s linear infinite; /* base speed; JS will tweak on mobile */
+      animation: marquee 75s linear infinite; /* baseline; JS will slow further if needed */
     }
-
     @keyframes marquee {
       0%   { transform: translateX(0); }
-      100% { transform: translateX(-50%); } /* seamless loop with duplicated content */
+      100% { transform: translateX(-50%); } /* seamless loop (we duplicate content) */
     }
-
     .announcement a {
       color: black;
       text-decoration: none;
-      margin: 0 0; /* no gaps between links; we use a visual pipe */
-      font-size: clamp(12px, 2.8vw, 16px); /* readable on phones */
+      margin: 0; /* no extra gaps; we use a pipe separator */
+      font-size: clamp(12px, 2.8vw, 16px);
     }
-
     .announcement a:hover { text-decoration: underline; }
-
     .announcement .sep {
-      padding: 0 0.8rem; /* space around the | */
-      opacity: 0.6;      /* a bit subtle */
+      padding: 0 0.8rem;
+      opacity: 0.6;
     }
 
+    /* ===== Header / Nav ===== */
     header {
       padding: 20px;
       text-align: center;
       background: white;
       margin-bottom: 0;
     }
-
     h1 {
-      font-size: clamp(28px, 6vw, 50px); /* fluid heading */
+      font-size: clamp(28px, 6vw, 50px);
       text-transform: uppercase;
       margin-top: 30px;
       margin-bottom: -10px;
     }
-
     .time-location {
       text-align: center;
       margin-top: -10px;
       margin-bottom: 40px;
+      /* JS will set width to match <h1>; this keeps it centered */
+      margin-left: auto;
+      margin-right: auto;
     }
 
     nav {
@@ -70,27 +68,33 @@
       text-align: center;
       padding: 5px;
     }
-
     nav a {
       margin: 0 15px;
       text-decoration: none;
       color: white;
-      display: inline-block;     /* better tap targets */
-      padding: 10px 6px;         /* touch-friendly */
+      display: inline-block;
+      padding: 10px 6px; /* tap-friendly */
     }
 
+    /* ===== Layout ===== */
     .container {
       max-width: 100000px;
       margin: auto;
       text-align: center;
-      padding: 0 16px; /* breathing room on mobile */
+      padding: 0 16px; /* breathing room on phones */
     }
 
-    .greeting {
-      font-size: clamp(36px, 14vw, 125px); /* fluid display size */
+    /* ===== Greeting (applies to all messages) ===== */
+    .greeting{
+      white-space: nowrap; /* force single line */
+      line-height: 1;
       font-weight: bold;
       text-align: center;
+      font-size: clamp(48px, 12vw, 260px); /* bigger on desktop than before */
       margin-top: clamp(40px, 12vw, 150px);
+    }
+    @media (max-width: 480px){
+      .greeting{ font-size: 18vw; } /* fill mobile width more aggressively */
     }
 
     .sub-greeting {
@@ -105,7 +109,7 @@
 
     .hidden { display: none; }
 
-    /* Dark mode adjustments */
+    /* ===== Dark mode adjustments ===== */
     body.darkmode--activated .announcement { background-color: #333; color: white; }
     body.darkmode--activated .announcement a { color: white; }
 
@@ -124,7 +128,6 @@
     @media (max-width: 768px) {
       .time-location { margin-bottom: 24px; }
     }
-
     /* Small phones */
     @media (max-width: 480px) {
       nav { padding: 8px; }
@@ -183,21 +186,66 @@
 
   <script src="https://cdn.jsdelivr.net/npm/darkmode-js@1.5.7/lib/darkmode-js.min.js"></script>
   <script>
-    function addDarkmodeWidget() {
-      new Darkmode().showWidget();
-    }
+    function addDarkmodeWidget() { new Darkmode().showWidget(); }
     window.addEventListener('load', addDarkmodeWidget);
 
-    // Marquee speed helper: slows on smaller screens for readability
+    /* ===== Helpers ===== */
+
+    // Slow ticker based on total distance; never faster than 75s
     function setMarqueeSpeed() {
       const el = document.querySelector('.announcement');
       if (!el) return;
-      const w = window.innerWidth;
-      const duration = w <= 480 ? 60 : w <= 768 ? 50 : 40; // seconds
+
+      // Distance is half the scrollWidth since content is duplicated
+      const distancePx = el.scrollWidth / 2;
+
+      // pixels per second (smaller => slower). Tune here if you want slower/faster.
+      const pxPerSec =
+        window.innerWidth <= 480 ? 25 :
+        window.innerWidth <= 768 ? 30 : 35;
+
+      let duration = distancePx / pxPerSec; // seconds
+      duration = Math.max(duration, 75);    // never faster than baseline 75s
       el.style.animationDuration = duration + 's';
     }
-    window.addEventListener('resize', setMarqueeSpeed);
 
+    // Match time/coords exact width to the H1 width (keeps it clean)
+    function syncTimeWidth() {
+      const h1 = document.querySelector('header h1');
+      const tl = document.querySelector('.time-location');
+      if (!h1 || !tl) return;
+      tl.style.display = 'inline-block';
+      tl.style.width = h1.clientWidth + 'px';
+    }
+
+    // Ensure the greeting (any text) fits one line across the device
+    function fitGreeting() {
+      const g = document.getElementById('greeting-text');
+      if (!g) return;
+
+      // Reset to CSS-defined size first (so it can grow when rotating, etc.)
+      g.style.fontSize = '';
+
+      // Use container width for a realistic constraint
+      const container = document.querySelector('.container');
+      const containerWidth = (container?.clientWidth) || window.innerWidth;
+
+      // If it overflows, shrink proportionally a couple of times
+      let tries = 3;
+      while (g.scrollWidth > containerWidth && tries-- > 0) {
+        const current = parseFloat(getComputedStyle(g).fontSize);
+        const ratio = containerWidth / g.scrollWidth; // < 1 when too big
+        g.style.fontSize = (current * ratio * 0.98) + 'px'; // small buffer
+      }
+    }
+
+    window.addEventListener('resize', () => {
+      setMarqueeSpeed();
+      syncTimeWidth();
+      fitGreeting();
+    });
+
+    /* ===== News ===== */
     async function fetchNews() {
       const container = document.querySelector('.announcement-container');
 
@@ -218,13 +266,12 @@
       }
 
       function renderLinks(pairs) {
-        // Build: <a>Title</a><span class="sep">|</span>...
         const once = pairs.map(([title, link]) =>
           `<a href="${link}" target="_blank" rel="noopener">${title}</a><span class="sep" aria-hidden="true">|</span>`
         ).join('');
         const doubled = once + once; // seamless with translateX(-50%)
         container.innerHTML = `<div class="announcement">${doubled}</div>`;
-        setMarqueeSpeed(); // adjust speed for current screen size
+        setMarqueeSpeed(); // adjust to content length + device
       }
 
       try {
@@ -233,7 +280,6 @@
           fetch(RSS2JSON(GNEWS_BUSINESS), { cache: 'no-store' }),
           fetch(RSS2JSON(GNEWS_TECH),     { cache: 'no-store' })
         ]);
-
         if (!rBiz.ok || !rTech.ok) throw new Error('rss2json network error');
 
         const [jBiz, jTech] = await Promise.all([rBiz.json(), rTech.json()]);
@@ -284,16 +330,16 @@
       ]);
     }
 
-    // Run once on load
-    window.addEventListener('DOMContentLoaded', fetchNews);
-
     // Refresh headlines every 10 minutes WITHOUT reloading the page
     setInterval(fetchNews, 600000);
 
+    /* ===== Time, Greeting, Nav ===== */
     function updateTime() {
       const now = new Date();
       const hours = now.getHours();
+
       document.getElementById('time').textContent = now.toLocaleTimeString();
+
       const greetingText = document.getElementById('greeting-text');
       if (hours >= 6 && hours < 12) {
         greetingText.textContent = "GOOD MORNING";
@@ -304,9 +350,12 @@
       } else {
         greetingText.textContent = "GO TO SLEEP";
       }
+
+      // Keep visuals aligned/sized each tick
+      syncTimeWidth();
+      fitGreeting();
     }
     setInterval(updateTime, 1000);
-    updateTime();
 
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(position => {
@@ -329,7 +378,15 @@
         event.preventDefault();
       }
     });
-  </script>
 
+    // Initial boot
+    window.addEventListener('DOMContentLoaded', () => {
+      fetchNews();
+      updateTime();
+      setMarqueeSpeed();
+      syncTimeWidth();
+      fitGreeting();
+    });
+  </script>
 </body>
 </html>
