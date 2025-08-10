@@ -5,12 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RIZVISIONS</title>
   <style>
+    html, body { width: 100%; overflow-x: hidden; } /* stop horizontal scroll */
+
     body {
       font-family: Arial, sans-serif;
       color: black;
       background-color: white;
       margin: 0;
       padding: 0;
+    }
+
+    /* keep core wrappers from exceeding viewport due to rounding */
+    header, nav, .announcement-container, .container {
+      max-width: 100%;
+      box-sizing: border-box;
     }
 
     /* ===== Announcement Ticker ===== */
@@ -32,7 +40,7 @@
     .announcement a {
       color: black;
       text-decoration: none;
-      margin: 0; /* no extra gaps; we use a pipe separator */
+      margin: 0; /* no gaps; we use a pipe separator */
       font-size: clamp(12px, 2.8vw, 16px);
     }
     .announcement a:hover { text-decoration: underline; }
@@ -88,6 +96,8 @@
     /* ===== Greeting (applies to all messages) ===== */
     .greeting{
       white-space: nowrap; /* force single line */
+      overflow: hidden;    /* guard against fractional overflow */
+      text-overflow: clip;
       line-height: 1;
       font-weight: bold;
       text-align: center;
@@ -234,16 +244,20 @@
       // Reset to CSS-defined size first (so it can grow when rotating, etc.)
       g.style.fontSize = '';
 
-      // Use container width for a realistic constraint
+      // Use viewport width minus container padding and a small safety buffer (iOS rounding)
       const container = document.querySelector('.container');
-      const containerWidth = (container?.clientWidth) || window.innerWidth;
+      const cs = getComputedStyle(container);
+      const paddingLeft  = parseFloat(cs.paddingLeft)  || 0;
+      const paddingRight = parseFloat(cs.paddingRight) || 0;
+      const safety = 2; // px
+      const containerWidth = Math.max(0, (window.innerWidth - paddingLeft - paddingRight - safety));
 
       // If it overflows, shrink proportionally a couple of times
       let tries = 3;
       while (g.scrollWidth > containerWidth && tries-- > 0) {
         const current = parseFloat(getComputedStyle(g).fontSize);
         const ratio = containerWidth / g.scrollWidth; // < 1 when too big
-        g.style.fontSize = (current * ratio * 0.98) + 'px'; // small buffer
+        g.style.fontSize = (current * ratio * 0.985) + 'px'; // tiny extra buffer
       }
     }
 
