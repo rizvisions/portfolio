@@ -39,12 +39,17 @@
         .announcement a {
             color: black;
             text-decoration: none;
-            margin: 0 2rem;
+            margin: 0 0;
         }
 
         .announcement a:hover {
             text-decoration: underline;
         }
+
+        .announcement .sep {
+    padding: 0 0.8rem; /* space around the | */
+    opacity: 0.6;      /* make it a bit subtle */
+}
 
         header {
             padding: 20px;
@@ -191,22 +196,14 @@
         async function fetchNews() {
     const container = document.querySelector('.announcement-container');
 
-    // keep your existing source URLs here if you changed them earlier
-    const GOOGLE_BUSINESS_RSS = 'https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en';
-    const RSS2JSON = 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(GOOGLE_BUSINESS_RSS);
+    // Sources
+    const GNEWS_BUSINESS = 'https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en';
+    const GNEWS_TECH     = 'https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en';
+    const RSS2JSON = (rss) => 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(rss);
+
     const REUTERS_RSS = 'https://feeds.reuters.com/reuters/businessNews';
     const ALLORIGINS = 'https://api.allorigins.win/get?url=' + encodeURIComponent(REUTERS_RSS);
 
-    function renderLinks(pairs) {
-      // duplicate once to make a seamless 50% loop with the CSS above
-      const once = pairs.map(([title, link]) =>
-        `<a href="${link}" target="_blank" rel="noopener">${title}</a>`
-      ).join('');
-      const doubled = once + once;
-      container.innerHTML = `<div class="announcement">${doubled}</div>`;
-    }
-
-    // light shuffle for variety
     function shuffle(arr) {
       for (let i = arr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -215,43 +212,67 @@
       return arr;
     }
 
-    try {
-      // Try JSON endpoint first
-      const r1 = await fetch(RSS2JSON, { cache: 'no-store' });
-      if (!r1.ok) throw new Error('rss2json network error');
-      const j = await r1.json();
-      if (!j.items || !j.items.length) throw new Error('rss2json empty');
-
-      // take more items for variety, then shuffle
-      const pairs = shuffle(j.items.slice(0, 25))
-        .map(it => [it.title || 'Untitled', it.link || '#']);
-
-      renderLinks(pairs);
-      return;
-    } catch (e1) {
-      console.warn('rss2json failed:', e1);
+    function renderLinks(pairs) {
+      // build: <a>Title</a><span class="sep">|</span>...
+      const once = pairs.map(([title, link]) =>
+        `<a href="${link}" target="_blank" rel="noopener">${title}</a><span class="sep" aria-hidden="true">|</span>`
+      ).join('');
+      const doubled = once + once; // seamless with translateX(-50%)
+      container.innerHTML = `<div class="announcement">${doubled}</div>`;
     }
 
     try {
-      // Fallback to XML via AllOrigins
+      // Try Google News (Business + Tech) via rss2json for variety
+      const [rBiz, rTech] = await Promise.all([
+        fetch(RSS2JSON(GNEWS_BUSINESS), { cache: 'no-store' }),
+        fetch(RSS2JSON(GNEWS_TECH),     { cache: 'no-store' })
+      ]);
+
+      if (!rBiz.ok || !rTech.ok) throw new Error('rss2json network error');
+
+      const [jBiz, jTech] = await Promise.all([rBiz.json(), rTech.json()]);
+
+      const items = [...(jBiz.items || []), ...(jTech.items || [])];
+
+      if (!items.length) throw new Error('rss2json empty');
+
+      // dedupe by normalized title
+      const seen = new Set();
+      const pairs = [];
+      for (const it of items) {
+        const title = (it.title || 'Untitled').trim();
+        const key = title.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        pairs.push([title, it.link || '#']);
+      }
+
+      renderLinks(shuffle(pairs).slice(0, 40));
+      return;
+    } catch (e1) {
+      console.warn('Google News rss2json failed:', e1);
+    }
+
+    try {
+      // Fallback: Reuters via AllOrigins (XML)
       const r2 = await fetch(ALLORIGINS, { cache: 'no-store' });
       if (!r2.ok) throw new Error('allorigins network error');
       const { contents } = await r2.json();
       const doc = new DOMParser().parseFromString(contents, 'text/xml');
       const items = Array.from(doc.querySelectorAll('item'));
 
-      const pairs = shuffle(items.slice(0, 25)).map(item => [
+      const pairs = items.map(item => [
         (item.querySelector('title')?.textContent || 'Untitled').trim(),
         (item.querySelector('link')?.textContent || '#').trim()
       ]);
 
-      renderLinks(pairs);
+      renderLinks(shuffle(pairs).slice(0, 40));
       return;
     } catch (e2) {
       console.warn('XML fallback failed:', e2);
     }
 
-    // Last-resort: keep marquee alive
+    // Last-resort: local items so the ticker still scrolls
     renderLinks([
       ['Unable to load live news — retry later', '#'],
       ['RIZVISIONS — Chicago based', '#'],
@@ -262,7 +283,7 @@
   // run once on load
   window.addEventListener('DOMContentLoaded', fetchNews);
 
-  // refresh every 10 minutes for more variety (600000 ms). Change if you want.
+  // refresh headlines every 10 minutes (600000 ms) WITHOUT reloading the page
   setInterval(fetchNews, 600000);
 
         function updateTime() {
