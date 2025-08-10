@@ -1,336 +1,335 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <title>RIZVISIONS</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            color: black;
-            background-color: white;
-            margin: 0;
-            padding: 0;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1"> <!-- mobile scaling -->
+  <title>RIZVISIONS</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      color: black;
+      background-color: white;
+      margin: 0;
+      padding: 0;
+    }
 
-        .announcement-container {
-            border-bottom: 1px solid black;
-            overflow: hidden;
-            position: relative;
-            background: white;
-        }
+    .announcement-container {
+      border-bottom: 1px solid black;
+      overflow: hidden;
+      position: relative;
+      background: white;
+    }
 
-        .announcement {
-            display: inline-block;
-            white-space: nowrap;
-            animation: marquee 75s linear infinite;
-        }
+    .announcement {
+      display: inline-block;
+      white-space: nowrap;
+      animation: marquee 75s linear infinite; /* base speed; JS will tweak on mobile */
+    }
 
-        @keyframes marquee {
-            0% {
-                transform: translateX(0);
-            }
+    @keyframes marquee {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); } /* seamless loop with duplicated content */
+    }
 
-            100% {
-                transform: translateX(-50%);
-            }
-        }
+    .announcement a {
+      color: black;
+      text-decoration: none;
+      margin: 0 0; /* no gaps between links; we use a visual pipe */
+      font-size: clamp(12px, 2.8vw, 16px); /* readable on phones */
+    }
 
-        .announcement a {
-            color: black;
-            text-decoration: none;
-            margin: 0 0;
-        }
+    .announcement a:hover { text-decoration: underline; }
 
-        .announcement a:hover {
-            text-decoration: underline;
-        }
+    .announcement .sep {
+      padding: 0 0.8rem; /* space around the | */
+      opacity: 0.6;      /* a bit subtle */
+    }
 
-        .announcement .sep {
-    padding: 0 0.8rem; /* space around the | */
-    opacity: 0.6;      /* make it a bit subtle */
-}
+    header {
+      padding: 20px;
+      text-align: center;
+      background: white;
+      margin-bottom: 0;
+    }
 
-        header {
-            padding: 20px;
-            text-align: center;
-            background: white;
-            margin-bottom: 0;
-        }
+    h1 {
+      font-size: clamp(28px, 6vw, 50px); /* fluid heading */
+      text-transform: uppercase;
+      margin-top: 30px;
+      margin-bottom: -10px;
+    }
 
-        h1 {
-            font-size: 50px;
-            text-transform: uppercase;
-            margin-top: 30px;
-            margin-bottom: -10px;
-        }
+    .time-location {
+      text-align: center;
+      margin-top: -10px;
+      margin-bottom: 40px;
+    }
 
-        .time-location {
-            text-align: center;
-            margin-top: -10px;
-            margin-bottom: 40px;
-        }
+    nav {
+      background-color: black;
+      text-align: center;
+      padding: 5px;
+    }
 
-        nav {
-            background-color: black;
-            text-align: center;
-            padding: 5px;
-        }
+    nav a {
+      margin: 0 15px;
+      text-decoration: none;
+      color: white;
+      display: inline-block;     /* better tap targets */
+      padding: 10px 6px;         /* touch-friendly */
+    }
 
-        nav a {
-            margin: 0 15px;
-            text-decoration: none;
-            color: white;
-        }
+    .container {
+      max-width: 100000px;
+      margin: auto;
+      text-align: center;
+      padding: 0 16px; /* breathing room on mobile */
+    }
 
-        .container {
-            max-width: 100000px;
-            margin: auto;
-            text-align: center;
-        }
+    .greeting {
+      font-size: clamp(36px, 14vw, 125px); /* fluid display size */
+      font-weight: bold;
+      text-align: center;
+      margin-top: clamp(40px, 12vw, 150px);
+    }
 
-        .greeting {
-            font-size: 125px;
-            font-weight: bold;
-            text-align: center;
-            margin-top: 150px;
-        }
+    .sub-greeting {
+      font-size: clamp(14px, 3.4vw, 24px);
+      color: black;
+      text-align: center;
+      margin-top: 20px;
+    }
 
-        .sub-greeting {
-            font-size: 24px;
-            color: black;
-            text-align: center;
-            margin-top: 20px;
-        }
+    .page-section { display: none; }
+    .page-section.active { display: block; }
 
-        .page-section {
-            display: none;
-        }
+    .hidden { display: none; }
 
-        .page-section.active {
-            display: block;
-        }
+    /* Dark mode adjustments */
+    body.darkmode--activated .announcement { background-color: #333; color: white; }
+    body.darkmode--activated .announcement a { color: white; }
 
-        .hidden {
-            display: none;
-        }
+    /* Dark mode button moon symbol */
+    .darkmode-toggle { position: relative; }
+    .darkmode-toggle::before {
+      content: '\1F319';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 0.8em;
+      color: white;
+    }
 
-        /* Dark mode adjustments */
-        body.darkmode--activated .announcement {
-            background-color: #333;
-            color: white;
-        }
+    /* Tablet tweaks */
+    @media (max-width: 768px) {
+      .time-location { margin-bottom: 24px; }
+    }
 
-        body.darkmode--activated .announcement a {
-            color: white;
-        }
-
-        /* Dark mode button moon symbol */
-        .darkmode-toggle {
-            position: relative;
-        }
-
-        .darkmode-toggle::before {
-            content: '\1F319';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 0.8em;
-            color: white;
-        }
-    </style>
+    /* Small phones */
+    @media (max-width: 480px) {
+      nav { padding: 8px; }
+      .announcement .sep { padding: 0 0.5rem; }
+    }
+  </style>
 </head>
 
 <body>
 
-    <div class="announcement-container">
-        <div class="announcement" id="news-headline">
-            Loading latest business news...
-        </div>
+  <div class="announcement-container">
+    <div class="announcement" id="news-headline">
+      Loading latest business news...
+    </div>
+  </div>
+
+  <header>
+    <h1>RIZVISIONS</h1>
+  </header>
+
+  <div class="time-location">
+    <span id="time"></span> | <span id="location"></span>
+  </div>
+
+  <nav>
+    <a href="#home">Home</a>
+    <a href="#about">About</a>
+    <a href="#contact">Contact</a>
+  </nav>
+
+  <div class="container">
+    <!-- Home Section -->
+    <div id="home-section" class="page-section active">
+      <div class="greeting" id="greeting-text">GOOD MORNING</div>
+      <div class="sub-greeting" id="sub-greeting-text"></div>
     </div>
 
-    <header>
-        <h1>RIZVISIONS</h1>
-    </header>
-
-    <div class="time-location">
-        <span id="time"></span> | <span id="location"></span>
+    <!-- About Section -->
+    <div id="about-section" class="page-section">
+      <h2>About</h2>
+      <p>Trying things until one of them changes everything.</p>
     </div>
 
-    <nav>
-        <a href="#home">Home</a>
-        <a href="#about">About</a>
-        <a href="#contact">Contact</a>
-    </nav>
-
-    <div class="container">
-        <!-- Home Section -->
-        <div id="home-section" class="page-section active">
-            <div class="greeting" id="greeting-text">GOOD MORNING</div>
-            <div class="sub-greeting" id="sub-greeting-text"></div>
-        </div>
-
-        <!-- About Section -->
-        <div id="about-section" class="page-section">
-            <h2>About</h2>
-            <p>Trying things until one of them changes everything.</p>
-        </div>
-
-        <!-- Contact Section -->
-<div id="contact-section" class="page-section">
-    <h2>Come Say Hi</h2>
-    <p>
-        <a href="https://www.instagram.com/rizvisions/" target="_blank">Instagram</a> ·
-        <a href="https://x.com/rizvisions" target="_blank">X</a> ·
-        <a href="https://www.linkedin.com/in/riz-zaheer/" target="_blank">LinkedIn</a> ·
-        <a href="https://www.tiktok.com/@riz.com" target="_blank">TikTok</a> ·
-        <a href="https://www.youtube.com/@rizzaheer/videos" target="_blank">YouTube</a>
-    </p>
-</div>
+    <!-- Contact Section -->
+    <div id="contact-section" class="page-section">
+      <h2>Come Say Hi</h2>
+      <p>
+        <a href="https://www.instagram.com/rizvisions/" target="_blank" rel="noopener">Instagram</a> ·
+        <a href="https://x.com/rizvisions" target="_blank" rel="noopener">X</a> ·
+        <a href="https://www.linkedin.com/in/riz-zaheer/" target="_blank" rel="noopener">LinkedIn</a> ·
+        <a href="https://www.tiktok.com/@riz.com" target="_blank" rel="noopener">TikTok</a> ·
+        <a href="https://www.youtube.com/@rizzaheer/videos" target="_blank" rel="noopener">YouTube</a>
+      </p>
     </div>
+  </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/darkmode-js@1.5.7/lib/darkmode-js.min.js"></script>
-    <script>
-        function addDarkmodeWidget() {
-            new Darkmode().showWidget();
+  <script src="https://cdn.jsdelivr.net/npm/darkmode-js@1.5.7/lib/darkmode-js.min.js"></script>
+  <script>
+    function addDarkmodeWidget() {
+      new Darkmode().showWidget();
+    }
+    window.addEventListener('load', addDarkmodeWidget);
+
+    // Marquee speed helper: slows on smaller screens for readability
+    function setMarqueeSpeed() {
+      const el = document.querySelector('.announcement');
+      if (!el) return;
+      const w = window.innerWidth;
+      const duration = w <= 480 ? 60 : w <= 768 ? 50 : 40; // seconds
+      el.style.animationDuration = duration + 's';
+    }
+    window.addEventListener('resize', setMarqueeSpeed);
+
+    async function fetchNews() {
+      const container = document.querySelector('.announcement-container');
+
+      // Sources
+      const GNEWS_BUSINESS = 'https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en';
+      const GNEWS_TECH     = 'https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en';
+      const RSS2JSON = (rss) => 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(rss);
+
+      const REUTERS_RSS = 'https://feeds.reuters.com/reuters/businessNews';
+      const ALLORIGINS = 'https://api.allorigins.win/get?url=' + encodeURIComponent(REUTERS_RSS);
+
+      function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
         }
-        window.addEventListener('load', addDarkmodeWidget);
-
-        async function fetchNews() {
-    const container = document.querySelector('.announcement-container');
-
-    // Sources
-    const GNEWS_BUSINESS = 'https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en';
-    const GNEWS_TECH     = 'https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en';
-    const RSS2JSON = (rss) => 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(rss);
-
-    const REUTERS_RSS = 'https://feeds.reuters.com/reuters/businessNews';
-    const ALLORIGINS = 'https://api.allorigins.win/get?url=' + encodeURIComponent(REUTERS_RSS);
-
-    function shuffle(arr) {
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-      return arr;
-    }
-
-    function renderLinks(pairs) {
-      // build: <a>Title</a><span class="sep">|</span>...
-      const once = pairs.map(([title, link]) =>
-        `<a href="${link}" target="_blank" rel="noopener">${title}</a><span class="sep" aria-hidden="true">|</span>`
-      ).join('');
-      const doubled = once + once; // seamless with translateX(-50%)
-      container.innerHTML = `<div class="announcement">${doubled}</div>`;
-    }
-
-    try {
-      // Try Google News (Business + Tech) via rss2json for variety
-      const [rBiz, rTech] = await Promise.all([
-        fetch(RSS2JSON(GNEWS_BUSINESS), { cache: 'no-store' }),
-        fetch(RSS2JSON(GNEWS_TECH),     { cache: 'no-store' })
-      ]);
-
-      if (!rBiz.ok || !rTech.ok) throw new Error('rss2json network error');
-
-      const [jBiz, jTech] = await Promise.all([rBiz.json(), rTech.json()]);
-
-      const items = [...(jBiz.items || []), ...(jTech.items || [])];
-
-      if (!items.length) throw new Error('rss2json empty');
-
-      // dedupe by normalized title
-      const seen = new Set();
-      const pairs = [];
-      for (const it of items) {
-        const title = (it.title || 'Untitled').trim();
-        const key = title.toLowerCase();
-        if (seen.has(key)) continue;
-        seen.add(key);
-        pairs.push([title, it.link || '#']);
+        return arr;
       }
 
-      renderLinks(shuffle(pairs).slice(0, 40));
-      return;
-    } catch (e1) {
-      console.warn('Google News rss2json failed:', e1);
-    }
+      function renderLinks(pairs) {
+        // Build: <a>Title</a><span class="sep">|</span>...
+        const once = pairs.map(([title, link]) =>
+          `<a href="${link}" target="_blank" rel="noopener">${title}</a><span class="sep" aria-hidden="true">|</span>`
+        ).join('');
+        const doubled = once + once; // seamless with translateX(-50%)
+        container.innerHTML = `<div class="announcement">${doubled}</div>`;
+        setMarqueeSpeed(); // adjust speed for current screen size
+      }
 
-    try {
-      // Fallback: Reuters via AllOrigins (XML)
-      const r2 = await fetch(ALLORIGINS, { cache: 'no-store' });
-      if (!r2.ok) throw new Error('allorigins network error');
-      const { contents } = await r2.json();
-      const doc = new DOMParser().parseFromString(contents, 'text/xml');
-      const items = Array.from(doc.querySelectorAll('item'));
+      try {
+        // Try Google News (Business + Tech) via rss2json for variety
+        const [rBiz, rTech] = await Promise.all([
+          fetch(RSS2JSON(GNEWS_BUSINESS), { cache: 'no-store' }),
+          fetch(RSS2JSON(GNEWS_TECH),     { cache: 'no-store' })
+        ]);
 
-      const pairs = items.map(item => [
-        (item.querySelector('title')?.textContent || 'Untitled').trim(),
-        (item.querySelector('link')?.textContent || '#').trim()
+        if (!rBiz.ok || !rTech.ok) throw new Error('rss2json network error');
+
+        const [jBiz, jTech] = await Promise.all([rBiz.json(), rTech.json()]);
+        const items = [...(jBiz.items || []), ...(jTech.items || [])];
+        if (!items.length) throw new Error('rss2json empty');
+
+        // Dedupe by normalized title
+        const seen = new Set();
+        const pairs = [];
+        for (const it of items) {
+          const title = (it.title || 'Untitled').trim();
+          const key = title.toLowerCase();
+          if (seen.has(key)) continue;
+          seen.add(key);
+          pairs.push([title, it.link || '#']);
+        }
+
+        renderLinks(shuffle(pairs).slice(0, 40));
+        return;
+      } catch (e1) {
+        console.warn('Google News rss2json failed:', e1);
+      }
+
+      try {
+        // Fallback: Reuters via AllOrigins (XML)
+        const r2 = await fetch(ALLORIGINS, { cache: 'no-store' });
+        if (!r2.ok) throw new Error('allorigins network error');
+        const { contents } = await r2.json();
+        const doc = new DOMParser().parseFromString(contents, 'text/xml');
+        const items = Array.from(doc.querySelectorAll('item'));
+
+        const pairs = items.map(item => [
+          (item.querySelector('title')?.textContent || 'Untitled').trim(),
+          (item.querySelector('link')?.textContent || '#').trim()
+        ]);
+
+        renderLinks(shuffle(pairs).slice(0, 40));
+        return;
+      } catch (e2) {
+        console.warn('XML fallback failed:', e2);
+      }
+
+      // Last-resort: keep marquee alive
+      renderLinks([
+        ['Unable to load live news — retry later', '#'],
+        ['RIZVISIONS — Chicago based', '#'],
+        ['Building, learning, shipping', '#']
       ]);
-
-      renderLinks(shuffle(pairs).slice(0, 40));
-      return;
-    } catch (e2) {
-      console.warn('XML fallback failed:', e2);
     }
 
-    // Last-resort: local items so the ticker still scrolls
-    renderLinks([
-      ['Unable to load live news — retry later', '#'],
-      ['RIZVISIONS — Chicago based', '#'],
-      ['Building, learning, shipping', '#']
-    ]);
-  }
+    // Run once on load
+    window.addEventListener('DOMContentLoaded', fetchNews);
 
-  // run once on load
-  window.addEventListener('DOMContentLoaded', fetchNews);
+    // Refresh headlines every 10 minutes WITHOUT reloading the page
+    setInterval(fetchNews, 600000);
 
-  // refresh headlines every 10 minutes (600000 ms) WITHOUT reloading the page
-  setInterval(fetchNews, 600000);
+    function updateTime() {
+      const now = new Date();
+      const hours = now.getHours();
+      document.getElementById('time').textContent = now.toLocaleTimeString();
+      const greetingText = document.getElementById('greeting-text');
+      if (hours >= 6 && hours < 12) {
+        greetingText.textContent = "GOOD MORNING";
+      } else if (hours >= 12 && hours < 18) {
+        greetingText.textContent = "GOOD AFTERNOON";
+      } else if (hours >= 18 && hours < 24) {
+        greetingText.textContent = "GOOD EVENING";
+      } else {
+        greetingText.textContent = "GO TO SLEEP";
+      }
+    }
+    setInterval(updateTime, 1000);
+    updateTime();
 
-        function updateTime() {
-            const now = new Date();
-            const hours = now.getHours();
-            document.getElementById('time').textContent = now.toLocaleTimeString();
-            const greetingText = document.getElementById('greeting-text');
-            if (hours >= 6 && hours < 12) {
-                greetingText.textContent = "GOOD MORNING";
-            } else if (hours >= 12 && hours < 18) {
-                greetingText.textContent = "GOOD AFTERNOON";
-            } else if (hours >= 18 && hours < 24) {
-                greetingText.textContent = "GOOD EVENING";
-            } else {
-                greetingText.textContent = "GO TO SLEEP";
-            }
-        }
-        setInterval(updateTime, 1000);
-        updateTime();
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(position => {
+        const lat = position.coords.latitude.toFixed(2);
+        const lon = position.coords.longitude.toFixed(2);
+        document.getElementById('location').textContent = `Lat: ${lat}, Long: ${lon}`;
+      }, err => {
+        console.error('Geolocation error:', err.message);
+        document.getElementById('location').textContent = 'Location not available';
+      });
+    } else {
+      document.getElementById('location').textContent = 'Location not available';
+    }
 
-        if ('geolocation' in navigator) {
-            navigator.geolocation.getCurrentPosition(position => {
-                const lat = position.coords.latitude.toFixed(2);
-                const lon = position.coords.longitude.toFixed(2);
-                document.getElementById('location').textContent = `Lat: ${lat}, Long: ${lon}`;
-            }, err => {
-                console.error('Geolocation error:', err.message);
-                document.getElementById('location').textContent = 'Location not available';
-            });
-        } else {
-            document.getElementById('location').textContent = 'Location not available';
-        }
-
-        document.querySelector('nav').addEventListener('click', event => {
-            if (event.target.tagName === 'A') {
-                document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
-                const sectionId = event.target.getAttribute('href').substring(1) + '-section';
-                document.getElementById(sectionId).classList.add('active');
-                event.preventDefault();
-            }
-        });
-    </script>
+    document.querySelector('nav').addEventListener('click', event => {
+      if (event.target.tagName === 'A') {
+        document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+        const sectionId = event.target.getAttribute('href').substring(1) + '-section';
+        document.getElementById(sectionId).classList.add('active');
+        event.preventDefault();
+      }
+    });
+  </script>
 
 </body>
-
 </html>
