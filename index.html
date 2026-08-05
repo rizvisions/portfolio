@@ -42,6 +42,7 @@
       <div class="menu-separator"></div>
       <button data-action="sleep">Sleep</button>
       <button data-action="restart">Restart…</button>
+      <button data-action="reset-all">Reset Rizvisions…</button>
     </div>
     <div id="brand-menu" class="dropdown-menu menu-panel">
       <button data-action="open" data-app="about">About Riz</button>
@@ -64,6 +65,7 @@
     <div id="view-menu" class="dropdown-menu menu-panel">
       <button data-action="show-desktop">Show Desktop</button>
       <button data-action="sort-icons">Sort Icons</button>
+      <button data-action="reset-layout">Restore Default Layout</button>
       <button data-action="open-wallpapers">Change Wallpaper…</button>
       <div class="menu-separator"></div>
       <button data-action="theme-light">Light Appearance</button>
@@ -92,10 +94,23 @@
 
   <main id="desktop" class="desktop" aria-label="Rizvisions desktop">
     <div class="wallpaper-art" aria-hidden="true">
-      <div class="sky-glow"></div>
-      <div class="lake"></div>
-      <div class="skyline"></div>
+      <div class="riz-watermark">rv</div>
+      <div class="wallpaper-wordmark">RIZVISIONS</div>
       <div class="grain"></div>
+    </div>
+
+    <aside class="desktop-feature" aria-label="Currently at Rizvisions">
+      <div><span>CURRENTLY</span><strong>building Parker</strong></div>
+      <button data-open-app="parker">Show</button>
+      <button class="feature-next" data-open-app="work">Next</button>
+    </aside>
+
+    <div class="desktop-polaroids" aria-hidden="true">
+      <div class="polaroid p1"><div class="photo-fill chicago"></div><span>chicago.jpg</span></div>
+      <div class="polaroid p2"><div class="photo-fill camera"></div><span>camera.png</span></div>
+      <div class="polaroid p3"><div class="photo-fill riz"></div><span>riz.png</span></div>
+      <div class="polaroid p4"><div class="photo-fill internet"></div><span>internet.jpg</span></div>
+      <div class="polaroid p5"><div class="photo-fill parker-shot"></div><span>parker.png</span></div>
     </div>
 
     <section id="desktop-icons" class="desktop-icons" aria-label="Desktop icons">

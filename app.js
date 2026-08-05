@@ -198,6 +198,15 @@
   });
   desktop.addEventListener('pointerdown',e=>{if(!e.target.closest('.desktop-icon,.app-window,.menu-panel'))$$('.desktop-icon').forEach(i=>i.classList.remove('selected'))});
 
+  function resetLayout(){
+    localStorage.removeItem(STORAGE_KEY);
+    $$('.desktop-icon').forEach(icon=>{icon.style.left='';icon.style.top='';});
+    $$('.app-window').forEach(win=>{win.style.left='';win.style.top='';win.style.width='';win.style.height='';win.classList.remove('open','minimized','maximized');});
+    closeMenus();notify('Default desktop restored');setTimeout(()=>location.reload(),500);
+  }
+  function resetAll(){
+    if(confirm('Reset wallpaper, icon positions, windows, sound, and local notes?')){localStorage.removeItem(STORAGE_KEY);location.reload();}
+  }
   function sortIcons(){
     const icons=$$('.desktop-icon');const cols=Math.max(1,Math.floor((innerWidth-30)/96));icons.forEach((icon,i)=>{const col=i%cols,row=Math.floor(i/cols);icon.style.left=(22+col*96)+'px';icon.style.top=(48+row*96)+'px'});persist();closeMenus();notify('Icons sorted');
   }
@@ -263,4 +272,30 @@
   $('#control-sound').classList.toggle('active',soundEnabled);$('#control-sound small').textContent=soundEnabled?'On':'Off';$('#control-theme small').textContent=body.dataset.theme[0].toUpperCase()+body.dataset.theme.slice(1);
   setTimeout(()=>$('#boot-screen').classList.add('done'),1650);
   setTimeout(()=>{openApp('about');notify('Welcome to Rizvisions. Click anything.')},1900);
+
+  document.addEventListener('click',e=>{const a=e.target.closest('[data-action]')?.dataset.action;if(a==='reset-layout')resetLayout();if(a==='reset-all')resetAll();});
+
+
+  const iconSVG={
+    about:`<svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="ab" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2c2c2e"/><stop offset="1" stop-color="#0b0b0c"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="14" fill="url(#ab)"/><rect x="10" y="10" width="44" height="44" rx="12" fill="#fff" opacity=".09"/><text x="32" y="41" text-anchor="middle" fill="white" font-size="27" font-weight="900" font-family="Arial">rv</text></svg>`,
+    work:`<svg viewBox="0 0 64 64"><defs><linearGradient id="fd" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#67d7ff"/><stop offset="1" stop-color="#168bd0"/></linearGradient></defs><path d="M4 17a6 6 0 0 1 6-6h16l5 6h23a6 6 0 0 1 6 6v31a6 6 0 0 1-6 6H10a6 6 0 0 1-6-6z" fill="url(#fd)"/><path d="M4 24h56" stroke="#b9efff" opacity=".8"/></svg>`,
+    photos:`<svg viewBox="0 0 64 64"><rect x="2" y="2" width="60" height="60" rx="14" fill="#fff"/><g transform="translate(32 32)">${['#ff3b30','#ff9500','#ffcc00','#34c759','#00c7be','#007aff','#5856d6','#af52de'].map((c,i)=>`<ellipse rx="7" ry="20" fill="${c}" opacity=".92" transform="rotate(${i*45}) translate(0 -10)"/>`).join('')}<circle r="7" fill="#fff"/></g></svg>`,
+    parker:`<svg viewBox="0 0 64 64"><defs><linearGradient id="pk" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#eeeaff"/><stop offset="1" stop-color="#7f78c5"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="14" fill="url(#pk)"/><path d="M20 48V16h15c9 0 14 5 14 13s-5 13-14 13h-6v6zm9-14h5c4 0 6-2 6-5s-2-5-6-5h-5z" fill="#28243f"/></svg>`,
+    career:`<svg viewBox="0 0 64 64"><rect x="2" y="2" width="60" height="60" rx="14" fill="#f3f3f5"/><rect x="13" y="15" width="38" height="35" rx="5" fill="#fff" stroke="#c6c6c8"/><circle cx="22" cy="27" r="5" fill="#7f78c5"/><path d="M31 23h13M31 28h13M18 38h27M18 43h20" stroke="#606066" stroke-width="3" stroke-linecap="round"/></svg>`,
+    socials:`<svg viewBox="0 0 64 64"><defs><radialGradient id="ig" cx="30%" cy="100%" r="120%"><stop stop-color="#ffd600"/><stop offset=".35" stop-color="#ff7a00"/><stop offset=".62" stop-color="#ff0169"/><stop offset="1" stop-color="#7638fa"/></radialGradient></defs><rect x="2" y="2" width="60" height="60" rx="14" fill="url(#ig)"/><rect x="15" y="15" width="34" height="34" rx="10" fill="none" stroke="white" stroke-width="4"/><circle cx="32" cy="32" r="8" fill="none" stroke="white" stroke-width="4"/><circle cx="43" cy="21" r="2.5" fill="white"/></svg>`,
+    tiktok:`<svg viewBox="0 0 64 64"><rect x="2" y="2" width="60" height="60" rx="14" fill="#080808"/><path d="M37 15c1 7 5 11 12 12v8c-5 0-9-2-12-4v11c0 9-6 15-15 15-8 0-14-6-14-14s6-14 14-14h3v8c-1-.3-2-.4-3-.4-4 0-6 2.6-6 6.3s2.5 6.2 6 6.2c4 0 7-2.5 7-7V15z" fill="#25f4ee" transform="translate(-2 2)"/><path d="M39 13c1 7 5 11 12 12v8c-5 0-9-2-12-4v11c0 9-6 15-15 15-8 0-14-6-14-14s6-14 14-14h3v8c-1-.3-2-.4-3-.4-4 0-6 2.6-6 6.3s2.5 6.2 6 6.2c4 0 7-2.5 7-7V13z" fill="#fe2c55"/><path d="M38 14c1 7 5 11 12 12v6c-5 0-9-2-12-4v12c0 9-6 14-14 14-7 0-12-5-12-12s5-12 12-12h2v6h-2c-4 0-6 2-6 6s2 6 6 6 7-3 7-8V14z" fill="white"/></svg>`,
+    spotify:`<svg viewBox="0 0 64 64"><rect x="2" y="2" width="60" height="60" rx="14" fill="#050505"/><circle cx="32" cy="32" r="22" fill="#1ed760"/><path d="M19 26c9-3 21-2 29 2M21 34c8-2 18-1 25 2M23 41c7-1 14 0 20 2" fill="none" stroke="#07120a" stroke-width="4" stroke-linecap="round"/></svg>`,
+    notes:`<svg viewBox="0 0 64 64"><rect x="2" y="2" width="60" height="60" rx="14" fill="#fff"/><path d="M2 16h60v10H2z" fill="#ffd60a"/><path d="M12 34h40M12 42h40M12 50h30" stroke="#d2d2d7" stroke-width="2"/></svg>`,
+    messages:`<svg viewBox="0 0 64 64"><defs><linearGradient id="msg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#64ef72"/><stop offset="1" stop-color="#18b736"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="14" fill="url(#msg)"/><ellipse cx="32" cy="30" rx="21" ry="17" fill="white"/><path d="M20 42l-3 9 11-6" fill="white"/></svg>`,
+    weather:`<svg viewBox="0 0 64 64"><defs><linearGradient id="we" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#5bb7ff"/><stop offset="1" stop-color="#1d78e8"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="14" fill="url(#we)"/><circle cx="24" cy="24" r="10" fill="#ffd60a"/><path d="M17 45h31c5 0 9-4 9-9s-4-9-9-9c-1 0-2 0-3 .4A15 15 0 0 0 17 32c-5 0-9 3-9 7s4 6 9 6z" fill="white" opacity=".96"/></svg>`,
+    resume:`<svg viewBox="0 0 64 64"><path d="M13 4h27l11 11v45H13z" fill="#fff" stroke="#c7c7cc"/><path d="M40 4v12h11" fill="#ececf1"/><rect x="18" y="36" width="28" height="14" rx="3" fill="#ff3b30"/><text x="32" y="46" text-anchor="middle" fill="white" font-size="10" font-weight="800">PDF</text><path d="M20 23h22M20 28h18" stroke="#b7b7bc" stroke-width="2"/></svg>`,
+    terminal:`<svg viewBox="0 0 64 64"><defs><linearGradient id="tr" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#454548"/><stop offset="1" stop-color="#111113"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="14" fill="url(#tr)"/><path d="M16 22l10 10-10 10M31 43h17" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    trash:`<svg viewBox="0 0 64 64"><defs><linearGradient id="ts" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f4f4f5"/><stop offset="1" stop-color="#bfc1c5"/></linearGradient></defs><path d="M17 18h30l-3 40H20z" fill="url(#ts)" stroke="#8f9297"/><path d="M14 15h36M25 10h14" stroke="#8f9297" stroke-width="4" stroke-linecap="round"/><path d="M25 25v25M32 25v25M39 25v25" stroke="#9a9da2" stroke-width="2"/></svg>`
+  };
+  const appAlias={about:'about',work:'work',photos:'photos',parker:'parker',career:'career',socials:'socials',tiktok:'tiktok',spotify:'spotify',notes:'notes',messages:'messages',weather:'weather',resume:'resume',terminal:'terminal',trash:'trash'};
+  document.querySelectorAll('.desktop-icon,.dock button').forEach(el=>{
+    const app=el.dataset.app; const host=el.querySelector('.app-icon,.file-icon');
+    if(host&&iconSVG[appAlias[app]]) host.innerHTML=iconSVG[appAlias[app]];
+  });
+
 })();
