@@ -127,17 +127,20 @@ button { color: inherit; }
 .now-actions button:active { background: rgba(0,0,0,.055); }
 
 /* Desktop icons */
-.desktop-icons { position: absolute; inset: 0; z-index: 10; }
+.desktop-icons { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
 .desktop-item {
   position: absolute; left: var(--x); top: var(--y); width: 108px; min-height: 106px;
   transform: translate(-50%, -50%); border: 0; background: transparent; padding: 0; display: flex; flex-direction: column; align-items: center;
-  cursor: default; touch-action: none;
+  cursor: default; touch-action: none; pointer-events: auto;
 }
-.icon-frame { position: relative; width: 69px; height: 69px; display: grid; place-items: center; filter: drop-shadow(0 7px 8px rgba(0,0,0,.22)); transition: filter .12s ease; }
-.icon-frame img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
-.icon-folder { width: 78px; height: 69px; }
-.icon-document { height: 72px; }
-.icon-trash { width: 60px; height: 70px; }
+.icon-frame { position: relative; width: 72px; height: 72px; display: grid; place-items: center; filter: drop-shadow(0 6px 7px rgba(0,0,0,.2)); transition: filter .12s ease; }
+.icon-frame img { display: block; width: 72px; height: 72px; object-fit: contain; pointer-events: none; }
+.icon-folder { width: 80px; height: 72px; }
+.icon-folder img { width: 80px; height: 72px; }
+.icon-document { width: 68px; height: 74px; }
+.icon-document img { width: 68px; height: 74px; }
+.icon-trash { width: 61px; height: 72px; }
+.icon-trash img { width: 61px; height: 72px; }
 .desktop-label {
   max-width: 116px; margin-top: 6px; padding: 2px 5px 3px; border-radius: 4px;
   color: #fff; font-size: 12.5px; font-weight: 520; line-height: 1.15; text-align: center;
@@ -161,18 +164,25 @@ button { color: inherit; }
 .calendar-day { font-size: 37px; font-weight: 300; letter-spacing: -.05em; line-height: .98; margin-top: 3px; }
 
 /* Photo stack */
-.photo-stack { position: absolute; z-index: 6; right: 4.6%; top: 24%; width: 252px; height: 370px; pointer-events: none; }
+.photo-stack { position: absolute; z-index: 6; inset: 0; pointer-events: none; }
 .photo-file {
-  position: absolute; width: 132px; padding: 7px 7px 24px; border: 0; background: #fff;
-  box-shadow: 0 12px 25px rgba(0,0,0,.23), 0 0 0 1px rgba(0,0,0,.15); pointer-events: auto; cursor: default;
+  position: absolute; left: var(--photo-x); top: var(--photo-y); width: var(--photo-width, 132px);
+  transform: translate(-50%, -50%) rotate(var(--photo-rotation, 0deg));
+  padding: 7px 7px 24px; border: 0; background: #fff;
+  box-shadow: 0 12px 25px rgba(0,0,0,.23), 0 0 0 1px rgba(0,0,0,.15);
+  pointer-events: auto; cursor: grab; touch-action: none; transform-origin: 50% 50%;
+  transition: box-shadow .12s ease, filter .12s ease;
 }
-.photo-file img { width: 100%; height: 135px; object-fit: cover; display: block; filter: grayscale(1) contrast(1.08); }
-.photo-file span { position: absolute; bottom: 5px; left: 4px; right: 4px; text-align: center; color: #fff; font-size: 11px; text-shadow: 0 1px 3px rgba(0,0,0,.9); transform: translateY(24px); }
-.photo-file:active { filter: brightness(.88); }
-.photo-one { left: 4px; top: 8px; transform: rotate(-8deg); }
-.photo-two { left: 102px; top: 0; transform: rotate(8deg); }
-.photo-three { left: 17px; top: 153px; transform: rotate(7deg); }
-.photo-four { left: 111px; top: 161px; transform: rotate(-6deg); }
+.photo-file img { width: 100%; aspect-ratio: .89; object-fit: cover; display: block; }
+.photo-file.monochrome img { filter: grayscale(1) contrast(1.08); }
+.photo-file span {
+  position: absolute; left: 50%; bottom: -23px; transform: translateX(-50%);
+  max-width: 155px; padding: 2px 5px 3px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: #fff; font-size: 11px; font-weight: 520; text-shadow: 0 1px 2px rgba(0,0,0,.95), 0 0 4px rgba(0,0,0,.65);
+}
+.photo-file.selected span { background: #0a84ff; text-shadow: none; }
+.photo-file.selected { filter: brightness(.88); }
+.photo-file.dragging { cursor: grabbing; box-shadow: 0 20px 38px rgba(0,0,0,.31), 0 0 0 1px rgba(0,0,0,.16); transition: none; }
 
 /* Dock */
 .dock-wrap { position: absolute; z-index: 9000; left: 50%; bottom: 13px; transform: translateX(-50%); height: var(--dock-height); display: flex; align-items: flex-end; pointer-events: none; }
@@ -185,10 +195,10 @@ button { color: inherit; }
   pointer-events: auto;
 }
 .dock-item {
-  position: relative; width: 61px; height: 67px; border: 0; background: transparent; padding: 0; display: flex; align-items: center; justify-content: center;
+  position: relative; width: 64px; height: 67px; border: 0; background: transparent; padding: 0; display: flex; align-items: center; justify-content: center;
   transform-origin: 50% 100%; transition: transform .12s ease, margin .12s ease; cursor: default;
 }
-.dock-item img { width: 59px; height: 59px; object-fit: contain; filter: drop-shadow(0 4px 5px rgba(0,0,0,.25)); pointer-events: none; }
+.dock-item img { width: 64px; height: 64px; object-fit: contain; filter: drop-shadow(0 4px 5px rgba(0,0,0,.25)); pointer-events: none; }
 .dock-item:hover { transform: translateY(-13px) scale(1.28); margin: 0 8px; z-index: 3; }
 .dock-item::before {
   content: attr(data-tooltip); position: absolute; bottom: 82px; left: 50%; transform: translateX(-50%) translateY(5px);
@@ -203,7 +213,7 @@ button { color: inherit; }
 .dock-calendar .calendar-weekday { margin-top: 5px; font-size: 8px; }
 .dock-calendar .calendar-day { font-size: 31px; }
 .dock-badge { right: -1px; top: -1px; }
-.trash-dock img { width: 49px; height: 58px; }
+.trash-dock img { width: 55px; height: 64px; }
 .dock-item.bounce { animation: dock-bounce .62s cubic-bezier(.25,.8,.25,1); }
 @keyframes dock-bounce { 0%,100%{transform:translateY(0)} 28%{transform:translateY(-29px)} 52%{transform:translateY(-7px)} 72%{transform:translateY(-17px)} }
 
@@ -329,7 +339,7 @@ button { color: inherit; }
 /* Instagram chooser */
 .instagram-shell { height:100%; background:linear-gradient(#fafafa,#f1f1f3); padding:24px; overflow:auto; }
 .instagram-heading { text-align:center; margin:2px 0 20px; }
-.instagram-heading img { width:55px; height:55px; }
+.instagram-heading img { width:58px; height:58px; object-fit:contain; }
 .instagram-heading h2 { margin:8px 0 3px; font-size:20px; }
 .instagram-heading p { margin:0; color:#737378; font-size:12px; }
 .account-list { border:1px solid rgba(0,0,0,.12); border-radius:12px; overflow:hidden; background:#fff; }
@@ -363,7 +373,7 @@ button { color: inherit; }
 /* Spotify */
 .spotify-shell { height:100%; color:#fff; background:linear-gradient(160deg,#203328 0%,#121212 44%); display:flex; flex-direction:column; }
 .spotify-top { padding:30px 31px 22px; display:grid; grid-template-columns:130px 1fr; gap:22px; align-items:end; }
-.spotify-top img { width:130px; height:130px; filter:drop-shadow(0 12px 22px rgba(0,0,0,.38)); }
+.spotify-top img { width:132px; height:132px; object-fit:contain; filter:drop-shadow(0 12px 22px rgba(0,0,0,.38)); }
 .spotify-top .type { font-size:10px; font-weight:700; text-transform:uppercase; }
 .spotify-top h2 { margin:7px 0 4px; font-size:38px; letter-spacing:-.05em; }
 .spotify-top p { margin:0; color:#c5c5c5; font-size:12px; }

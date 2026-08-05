@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "rizvisions-os-v3";
+  const STORAGE_KEY = "rizvisions-os-v4";
   const os = document.getElementById("os");
   const desktop = document.getElementById("desktop");
   const windowsRoot = document.getElementById("windows");
@@ -12,18 +12,25 @@
   const controlCenter = document.getElementById("controlCenterPanel");
   const controlCenterButton = document.getElementById("controlCenterButton");
   const soundStatus = document.getElementById("soundStatus");
+  const desktopPhotosRoot = document.getElementById("desktopPhotos");
 
+  const CONTENT = window.RIZVISIONS_CONTENT || { desktopPhotos: [], photoLibrary: [] };
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const iconNodes = [...document.querySelectorAll(".desktop-item")];
   const defaultIcons = Object.fromEntries(iconNodes.map((node) => [
     node.dataset.id,
     { x: parseFloat(node.style.getPropertyValue("--x")), y: parseFloat(node.style.getPropertyValue("--y")) }
   ]));
+  const defaultPhotos = Object.fromEntries((CONTENT.desktopPhotos || []).map((photo, index) => [
+    photo.id,
+    { x: photo.x, y: photo.y, rotation: photo.rotation || 0, z: index + 1 }
+  ]));
 
   const DEFAULT_STATE = {
     wallpaper: "grid",
     sound: true,
     icons: clone(defaultIcons),
+    photos: clone(defaultPhotos),
     windows: {},
     notes: "Rizvisions is supposed to be a permanent internet home.\n\nThings to add:\n• real photography archives\n• Parker work\n• Blue Specs story\n• WAP / Whop era\n• better easter eggs\n• an iOS version for mobile"
   };
@@ -33,6 +40,7 @@
   let activeWindow = null;
   let audioContext = null;
   let toastTimer = null;
+  let photoZCounter = Math.max(20, ...(Object.values(state.photos || {}).map((photo) => Number(photo.z) || 0)));
 
   const appDefinitions = {
     work: { name: "Finder", title: "Selected Work", size: [920, 610], render: renderFinder },
@@ -94,6 +102,7 @@
         ...clone(DEFAULT_STATE),
         ...parsed,
         icons: { ...clone(defaultIcons), ...(parsed.icons || {}) },
+        photos: { ...clone(defaultPhotos), ...(parsed.photos || {}) },
         windows: parsed.windows || {}
       };
     } catch {
@@ -148,11 +157,106 @@
     });
   }
 
+  function renderDesktopPhotos() {
+    if (!desktopPhotosRoot) return;
+    desktopPhotosRoot.innerHTML = "";
+    (CONTENT.desktopPhotos || []).forEach((photo, index) => {
+      const saved = state.photos[photo.id] || defaultPhotos[photo.id] || { x: photo.x, y: photo.y, rotation: photo.rotation || 0, z: index + 1 };
+      const file = document.createElement("button");
+      file.type = "button";
+      file.className = `photo-file${photo.monochrome ? " monochrome" : ""}`;
+      file.dataset.photoId = photo.id;
+      file.setAttribute("aria-label", `${photo.filename}. Double-click to open Photos.`);
+      file.style.setProperty("--photo-x", `${saved.x}%`);
+      file.style.setProperty("--photo-y", `${saved.y}%`);
+      file.style.setProperty("--photo-rotation", `${saved.rotation || 0}deg`);
+      file.style.setProperty("--photo-width", `${photo.width || 132}px`);
+      file.style.zIndex = String(saved.z || index + 1);
+      file.innerHTML = `<img src="${escapeHtml(photo.src)}" alt="${escapeHtml(photo.alt || "")}"><span>${escapeHtml(photo.filename || "photo.jpg")}</span>`;
+      file.addEventListener("pointerdown", (event) => beginPhotoDrag(event, file));
+      file.addEventListener("click", (event) => { event.stopPropagation(); selectDesktopPhoto(file); });
+      file.addEventListener("dblclick", (event) => { event.preventDefault(); openApp("photos"); });
+      desktopPhotosRoot.appendChild(file);
+    });
+  }
+
+  function applyPhotoLayout() {
+    if (!desktopPhotosRoot) return;
+    desktopPhotosRoot.querySelectorAll(".photo-file").forEach((file) => {
+      const saved = state.photos[file.dataset.photoId] || defaultPhotos[file.dataset.photoId];
+      if (!saved) return;
+      file.style.setProperty("--photo-x", `${saved.x}%`);
+      file.style.setProperty("--photo-y", `${saved.y}%`);
+      file.style.setProperty("--photo-rotation", `${saved.rotation || 0}deg`);
+      file.style.left = "var(--photo-x)";
+      file.style.top = "var(--photo-y)";
+      file.style.zIndex = String(saved.z || 1);
+    });
+  }
+
+  function beginPhotoDrag(event, file) {
+    if (event.button !== 0) return;
+    const desktopRect = desktop.getBoundingClientRect();
+    const fileRect = file.getBoundingClientRect();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startLeft = fileRect.left - desktopRect.left + fileRect.width / 2;
+    const startTop = fileRect.top - desktopRect.top + fileRect.height / 2;
+    let moved = false;
+
+    photoZCounter += 1;
+    file.style.zIndex = String(photoZCounter);
+    selectDesktopPhoto(file);
+
+    const onMove = (moveEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+      if (!moved && Math.hypot(dx, dy) < 4) return;
+      moved = true;
+      file.classList.add("dragging");
+      const halfW = file.offsetWidth / 2;
+      const halfH = file.offsetHeight / 2;
+      const left = Math.min(Math.max(halfW + 8, startLeft + dx), desktop.clientWidth - halfW - 8);
+      const top = Math.min(Math.max(halfH + 8, startTop + dy), desktop.clientHeight - halfH - 105);
+      file.style.left = `${left}px`;
+      file.style.top = `${top}px`;
+    };
+
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      const current = state.photos[file.dataset.photoId] || defaultPhotos[file.dataset.photoId] || {};
+      if (moved) {
+        const x = (parseFloat(file.style.left) / desktop.clientWidth) * 100;
+        const y = (parseFloat(file.style.top) / desktop.clientHeight) * 100;
+        state.photos[file.dataset.photoId] = { ...current, x: +x.toFixed(3), y: +y.toFixed(3), z: photoZCounter };
+        file.style.setProperty("--photo-x", `${x}%`);
+        file.style.setProperty("--photo-y", `${y}%`);
+        file.classList.remove("dragging");
+      } else {
+        state.photos[file.dataset.photoId] = { ...current, z: photoZCounter };
+      }
+      saveState();
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
+  }
+
+  function selectDesktopPhoto(file) {
+    iconNodes.forEach((node) => node.classList.remove("selected"));
+    desktopPhotosRoot?.querySelectorAll(".photo-file").forEach((node) => node.classList.toggle("selected", node === file));
+    playSound("select");
+  }
+
   function resetLayout() {
     state.icons = clone(defaultIcons);
+    state.photos = clone(defaultPhotos);
+    photoZCounter = Math.max(20, ...(Object.values(state.photos || {}).map((photo) => Number(photo.z) || 0)));
     state.windows = {};
     saveState();
     applyIconLayout();
+    applyPhotoLayout();
     [...windowsRoot.children].forEach((win) => win.remove());
     activeWindow = null;
     activeAppName.textContent = "Rizvisions";
@@ -161,7 +265,7 @@
   }
 
   function fullReset() {
-    const confirmed = window.confirm("Reset Rizvisions? This clears the wallpaper, icon positions, window positions, and saved Notes on this browser.");
+    const confirmed = window.confirm("Reset Rizvisions? This clears the wallpaper, desktop icon and photo positions, window positions, and saved Notes on this browser.");
     if (!confirmed) return;
     try {
       const keys = [];
@@ -172,8 +276,10 @@
       keys.forEach((key) => localStorage.removeItem(key));
     } catch { /* private browsing can disable storage */ }
     state = clone(DEFAULT_STATE);
+    photoZCounter = Math.max(20, ...(Object.values(state.photos || {}).map((photo) => Number(photo.z) || 0)));
     setWallpaper(state.wallpaper, false);
     applyIconLayout();
+    renderDesktopPhotos();
     [...windowsRoot.children].forEach((win) => win.remove());
     activeWindow = null;
     activeAppName.textContent = "Rizvisions";
@@ -426,6 +532,7 @@
   }
 
   function selectDesktopItem(item) {
+    desktopPhotosRoot?.querySelectorAll(".photo-file").forEach((node) => node.classList.remove("selected"));
     iconNodes.forEach((node) => node.classList.toggle("selected", node === item));
     playSound("select");
   }
@@ -484,14 +591,14 @@
             <input class="search-field" aria-label="Search" placeholder="Search" />
           </div>
           <div class="finder-content"><div class="finder-grid">
-            <button class="file-item" data-project="parker"><span class="finder-folder"><img src="assets/icons/folder.svg" alt=""><i style="--tag:#8b7fd1"></i></span><span class="file-name">Parker</span></button>
-            <button class="file-item" data-project="bluespecs"><span class="finder-folder"><img src="assets/icons/folder.svg" alt=""><i style="--tag:#2686e8"></i></span><span class="file-name">Blue Specs</span></button>
-            <button class="file-item" data-project="whop"><span class="finder-folder"><img src="assets/icons/folder.svg" alt=""><i style="--tag:#ff453a"></i></span><span class="file-name">Whop + WAP</span></button>
-            <button class="file-item" data-project="windsurf"><span class="finder-folder"><img src="assets/icons/folder.svg" alt=""><i style="--tag:#30b0c7"></i></span><span class="file-name">Windsurf</span></button>
-            <button class="file-item" data-project="creator"><span class="finder-folder"><img src="assets/icons/folder.svg" alt=""><i style="--tag:#8e8e93"></i></span><span class="file-name">Creator Work</span></button>
-            <button class="file-item" data-app="photos"><img src="assets/icons/photos.png" alt=""><span class="file-name">Photography</span></button>
-            <button class="file-item" data-app="resume"><img src="assets/icons/document.svg" alt=""><span class="file-name">Resume.pdf</span></button>
-            <button class="file-item" data-app="notes"><img src="assets/icons/notes.png" alt=""><span class="file-name">Random Notes</span></button>
+            <button class="file-item" data-project="parker"><span class="finder-folder"><img src="assets/icons/macos/folder.png" alt=""><i style="--tag:#8b7fd1"></i></span><span class="file-name">Parker</span></button>
+            <button class="file-item" data-project="bluespecs"><span class="finder-folder"><img src="assets/icons/macos/folder.png" alt=""><i style="--tag:#2686e8"></i></span><span class="file-name">Blue Specs</span></button>
+            <button class="file-item" data-project="whop"><span class="finder-folder"><img src="assets/icons/macos/folder.png" alt=""><i style="--tag:#ff453a"></i></span><span class="file-name">Whop + WAP</span></button>
+            <button class="file-item" data-project="windsurf"><span class="finder-folder"><img src="assets/icons/macos/folder.png" alt=""><i style="--tag:#30b0c7"></i></span><span class="file-name">Windsurf</span></button>
+            <button class="file-item" data-project="creator"><span class="finder-folder"><img src="assets/icons/macos/folder.png" alt=""><i style="--tag:#8e8e93"></i></span><span class="file-name">Creator Work</span></button>
+            <button class="file-item" data-app="photos"><img src="assets/icons/macos/photos.png" alt=""><span class="file-name">Photography</span></button>
+            <button class="file-item" data-app="resume"><img src="assets/icons/macos/document.png" alt=""><span class="file-name">Resume.pdf</span></button>
+            <button class="file-item" data-app="notes"><img src="assets/icons/macos/notes.png" alt=""><span class="file-name">Random Notes</span></button>
           </div></div>
           <div class="finder-statusbar">8 items, 42.6 GB available</div>
         </main>
@@ -503,7 +610,7 @@
       <div class="settings-shell">
         <aside class="settings-sidebar">
           <input class="settings-search" placeholder="Search" aria-label="Search settings">
-          <div class="settings-profile-mini"><img src="assets/icons/about.svg" alt=""><span><strong>Riz Zaheer</strong><small>Rizvisions</small></span></div>
+          <div class="settings-profile-mini"><img src="assets/icons/macos/rizvisions.png" alt=""><span><strong>Riz Zaheer</strong><small>Rizvisions</small></span></div>
           <div class="settings-list">
             <div class="settings-row active"><span class="settings-row-icon">R</span>About Riz</div>
             <div class="settings-row"><span class="settings-row-icon" style="background:#0a84ff">◎</span>Work</div>
@@ -515,7 +622,7 @@
         <main class="settings-main">
           <h1>About Riz</h1>
           <section class="profile-card">
-            <div class="profile-hero"><img src="assets/icons/about.svg" alt="Rizvisions icon"><div><h2>Riz Zaheer</h2><p>Creator and operator in Chicago. I work at Parker, build things on the internet, take photos, make videos, and have been using Rizvisions as a creative moniker since I was a kid.</p></div></div>
+            <div class="profile-hero"><img src="assets/icons/macos/rizvisions.png" alt="Rizvisions icon"><div><h2>Riz Zaheer</h2><p>Creator and operator in Chicago. I work at Parker, build things on the internet, take photos, make videos, and have been using Rizvisions as a creative moniker since I was a kid.</p></div></div>
             <div class="profile-detail-row"><span class="label">Currently</span><strong>Parker AI</strong><button class="mac-button" data-project="parker">Open</button></div>
             <div class="profile-detail-row"><span class="label">Based in</span><strong>Chicago, Illinois</strong><span></span></div>
             <div class="profile-detail-row"><span class="label">Internet home</span><strong>rizvisions.com</strong><span></span></div>
@@ -540,14 +647,7 @@
         <main class="photos-main">
           <div class="photos-toolbar"><h2>Library</h2><span class="toolbar-spacer"></span><button class="toolbar-button">−</button><button class="toolbar-button">+</button></div>
           <div class="photos-grid">
-            <button class="wide"><img src="assets/photos/chicago-river-bw.jpg" alt="Chicago River"></button>
-            <button><img src="assets/photos/camera-bw.jpg" alt="Camera"></button>
-            <button class="tall"><img src="assets/photos/hasselblad.jpg" alt="Hasselblad"></button>
-            <button><img src="assets/photos/chicago-skyline.jpg" alt="Chicago skyline"></button>
-            <button><img src="assets/photos/camera-bw.jpg" alt="Camera"></button>
-            <button class="wide"><img src="assets/photos/chicago-skyline.jpg" alt="Chicago skyline"></button>
-            <button><img src="assets/photos/chicago-river-bw.jpg" alt="Chicago River"></button>
-            <button><img src="assets/photos/hasselblad.jpg" alt="Hasselblad"></button>
+            ${(CONTENT.photoLibrary || []).map((photo) => `<button class="${escapeHtml(photo.layout || "")}"><img src="${escapeHtml(photo.src)}" alt="${escapeHtml(photo.alt || "")}"></button>`).join("")}
           </div>
         </main>
       </div>`;
@@ -577,7 +677,7 @@
   function renderInstagram() {
     return `
       <div class="instagram-shell">
-        <div class="instagram-heading"><img src="assets/icons/instagram.svg" alt="Instagram"><h2>Choose an account</h2><p>Different corners of the same internet person.</p></div>
+        <div class="instagram-heading"><img src="assets/icons/macos/instagram.png" alt="Instagram"><h2>Choose an account</h2><p>Different corners of the same internet person.</p></div>
         <div class="account-list">
           <a class="account-row" href="https://www.instagram.com/rizvisions/" target="_blank" rel="noopener"><span class="account-avatar">RV</span><span><strong>@rizvisions</strong><small>Photography, video, life, and creative stuff</small></span><span class="chevron">›</span></a>
           <a class="account-row" href="https://www.instagram.com/rizgoestomarket/" target="_blank" rel="noopener"><span class="account-avatar">GT</span><span><strong>@rizgoestomarket</strong><small>AI, GTM, Parker, and work-brain content</small></span><span class="chevron">›</span></a>
@@ -595,7 +695,7 @@
   }
 
   function renderSpotify() {
-    return `<div class="spotify-shell"><div class="spotify-top"><img src="assets/icons/spotify.svg" alt="Spotify"><div><span class="type">Profile</span><h2>Riz</h2><p>Playlist coming soon. For now, open the actual profile.</p></div></div><div class="spotify-content"><button class="spotify-play" data-external="https://open.spotify.com/user/riz002?si=eb580719d3ed4637" aria-label="Open Spotify">▶</button><div class="spotify-row"><span>1</span><span><strong>Rizvisions playlist</strong><small>In progress</small></span><span>—</span></div><p><button class="mac-button spotify-link" data-external="https://open.spotify.com/user/riz002?si=eb580719d3ed4637">Open profile in Spotify</button></p></div></div>`;
+    return `<div class="spotify-shell"><div class="spotify-top"><img src="assets/icons/macos/spotify.png" alt="Spotify"><div><span class="type">Profile</span><h2>Riz</h2><p>Playlist coming soon. For now, open the actual profile.</p></div></div><div class="spotify-content"><button class="spotify-play" data-external="https://open.spotify.com/user/riz002?si=eb580719d3ed4637" aria-label="Open Spotify">▶</button><div class="spotify-row"><span>1</span><span><strong>Rizvisions playlist</strong><small>In progress</small></span><span>—</span></div><p><button class="mac-button spotify-link" data-external="https://open.spotify.com/user/riz002?si=eb580719d3ed4637">Open profile in Spotify</button></p></div></div>`;
   }
 
   function renderCalendar() {
@@ -607,7 +707,7 @@
   }
 
   function renderTrash() {
-    return `<div class="empty-state"><div><img src="assets/icons/trash.png" alt="Trash"><h2>Nothing worth deleting</h2><p>Old domains, failed ideas, embarrassing drafts, and abandoned businesses will eventually live here.</p></div></div>`;
+    return `<div class="empty-state"><div><img src="assets/icons/macos/trash.png" alt="Trash"><h2>Nothing worth deleting</h2><p>Old domains, failed ideas, embarrassing drafts, and abandoned businesses will eventually live here.</p></div></div>`;
   }
 
   function renderResume() {
@@ -716,7 +816,10 @@
     if (actionTarget) { event.preventDefault(); handleAction(actionTarget.dataset.action); closeMenus(); return; }
     if (wallpaperTarget && wallpaperTarget.dataset.wallpaper) { event.preventDefault(); setWallpaper(wallpaperTarget.dataset.wallpaper); closeMenus(); return; }
     if (!event.target.closest(".menu-bar, .menu-popover, .context-menu, .control-center-panel")) closeMenus();
-    if (event.target === desktop || event.target.classList.contains("wallpaper")) iconNodes.forEach(node => node.classList.remove("selected"));
+    if (event.target === desktop || event.target.classList.contains("wallpaper")) {
+      iconNodes.forEach(node => node.classList.remove("selected"));
+      desktopPhotosRoot?.querySelectorAll(".photo-file").forEach(node => node.classList.remove("selected"));
+    }
   });
 
   desktop.addEventListener("contextmenu", (event) => {
@@ -733,7 +836,6 @@
     item.addEventListener("dblclick", (event) => { event.preventDefault(); openApp(item.dataset.app); });
   });
 
-  document.querySelectorAll(".photo-file").forEach((file) => file.addEventListener("dblclick", () => openApp("photos")));
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeMenus();
@@ -753,6 +855,7 @@
   });
 
   setWallpaper(state.wallpaper, false);
+  renderDesktopPhotos();
   applyIconLayout();
   soundStatus.style.opacity = state.sound ? "1" : ".42";
   updateClockAndCalendar();
