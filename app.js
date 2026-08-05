@@ -1,301 +1,762 @@
 (() => {
-  'use strict';
-  const $ = (s, root = document) => root.querySelector(s);
-  const $$ = (s, root = document) => [...root.querySelectorAll(s)];
-  const body = document.body;
-  const desktop = $('#desktop');
-  const dock = $('#dock');
-  const toast = $('#toast');
-  const stateKey = 'rizvisions-desktop-v1';
-  let z = 100;
-  let activeWindow = null;
-  let soundEnabled = true;
-  let menuOpen = null;
-  let toastTimer;
+  "use strict";
 
-  const appNames = {
-    about:'About Riz',work:'Selected Work',photos:'Photos',parker:'Parker',career:'Career History',socials:'Instagram',tiktok:'TikTok',spotify:'Spotify',notes:'Notes',messages:'Messages',weather:'Weather',terminal:'Terminal',resume:'Resume.pdf',trash:'Trash',wallpapers:'Wallpaper'
+  const STORAGE_KEY = "rizvisions-os-v3";
+  const os = document.getElementById("os");
+  const desktop = document.getElementById("desktop");
+  const windowsRoot = document.getElementById("windows");
+  const windowTemplate = document.getElementById("window-template");
+  const activeAppName = document.getElementById("activeAppName");
+  const toast = document.getElementById("toast");
+  const contextMenu = document.getElementById("desktopContextMenu");
+  const controlCenter = document.getElementById("controlCenterPanel");
+  const controlCenterButton = document.getElementById("controlCenterButton");
+  const soundStatus = document.getElementById("soundStatus");
+
+  const clone = (value) => JSON.parse(JSON.stringify(value));
+  const iconNodes = [...document.querySelectorAll(".desktop-item")];
+  const defaultIcons = Object.fromEntries(iconNodes.map((node) => [
+    node.dataset.id,
+    { x: parseFloat(node.style.getPropertyValue("--x")), y: parseFloat(node.style.getPropertyValue("--y")) }
+  ]));
+
+  const DEFAULT_STATE = {
+    wallpaper: "grid",
+    sound: true,
+    icons: clone(defaultIcons),
+    windows: {},
+    notes: "Rizvisions is supposed to be a permanent internet home.\n\nThings to add:\n• real photography archives\n• Parker work\n• Blue Specs story\n• WAP / Whop era\n• better easter eggs\n• an iOS version for mobile"
   };
 
-  const saved = (() => { try { return JSON.parse(localStorage.getItem(stateKey)) || {}; } catch { return {}; } })();
-  body.dataset.theme = saved.theme || 'light';
-  body.dataset.wallpaper = saved.wallpaper || 'sonoma';
-  soundEnabled = saved.sound !== false;
+  let state = loadState();
+  let zCounter = 200;
+  let activeWindow = null;
+  let audioContext = null;
+  let toastTimer = null;
 
-  function persist(extra = {}) {
-    const windows = {};
-    $$('.app-window').forEach(w => {
-      windows[w.dataset.window] = { left:w.style.left, top:w.style.top, width:w.style.width, height:w.style.height, maximized:w.classList.contains('maximized') };
-    });
-    const icons = {};
-    $$('.desktop-icon').forEach(i => icons[i.dataset.app] = { left:i.style.left, top:i.style.top });
+  const appDefinitions = {
+    work: { name: "Finder", title: "Selected Work", size: [920, 610], render: renderFinder },
+    about: { name: "System Settings", title: "About Riz", size: [760, 550], render: renderAbout },
+    photos: { name: "Photos", title: "Photos", size: [900, 590], render: renderPhotos },
+    messages: { name: "Messages", title: "Messages", size: [790, 540], render: renderMessages },
+    instagram: { name: "Instagram", title: "Instagram", size: [560, 515], render: renderInstagram },
+    terminal: { name: "Terminal", title: "riz — zsh", size: [690, 450], render: renderTerminal },
+    notes: { name: "Notes", title: "Notes", size: [720, 510], render: renderNotes },
+    spotify: { name: "Spotify", title: "Spotify", size: [690, 520], render: renderSpotify },
+    calendar: { name: "Calendar", title: "Calendar", size: [720, 510], render: renderCalendar },
+    trash: { name: "Finder", title: "Trash", size: [620, 430], render: renderTrash },
+    resume: { name: "Preview", title: "Resume.pdf", size: [690, 650], render: renderResume }
+  };
+
+  const projectDefinitions = {
+    parker: {
+      title: "Parker",
+      eyebrow: "CURRENTLY",
+      color: "#7f78c5",
+      description: "AI creative strategy for ecommerce teams. I work across GTM, demos, customers, pricing, product feedback, content, and whatever else needs doing.",
+      facts: ["Sales + customer work", "GTM and pricing", "Product storytelling", "Parker Brain"]
+    },
+    bluespecs: {
+      title: "Blue Specs",
+      eyebrow: "2020",
+      color: "#3688e8",
+      description: "The ecommerce business I built at 18: blue-light glasses, influencer deals, paid ads, support tickets, SEO, and a crash course in doing everything yourself.",
+      facts: ["$40K+ in six months", "60% margin", "244% ROAS", "50+ influencer contracts"]
+    },
+    whop: {
+      title: "Whop / WAP",
+      eyebrow: "CREATOR ECONOMY",
+      color: "#ef4d5f",
+      description: "Creator rewards, clip programs, and performance-based content systems. This was where internet distribution, operations, and incentives really clicked for me.",
+      facts: ["$5.5K peak MRR", "$20K+ earned", "25K community", "$3K in 30 Days winner"]
+    },
+    windsurf: {
+      title: "Windsurf",
+      eyebrow: "CAMPAIGN",
+      color: "#21a89b",
+      description: "A creator campaign built around short-form distribution and rewards. The program generated millions of views while exposing exactly where open creator systems break.",
+      facts: ["3.6M views", "$5.75 RPM", "$20K spend", "fraud controls + content rules"]
+    },
+    creator: {
+      title: "Rizvisions",
+      eyebrow: "CREATOR",
+      color: "#242426",
+      description: "Photography, video, short-form experiments, internet projects, and the visual identity I have carried since middle school.",
+      facts: ["TikTok @riz.com", "Instagram @rizvisions", "30M+ lifetime views", "Chicago"]
+    }
+  };
+
+  function loadState() {
     try {
-      localStorage.setItem(stateKey, JSON.stringify({ theme:body.dataset.theme, wallpaper:body.dataset.wallpaper, sound:soundEnabled, windows, icons, note:$('#note-text')?.value || '', ...extra }));
-    } catch {}
+      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (!parsed || typeof parsed !== "object") return clone(DEFAULT_STATE);
+      return {
+        ...clone(DEFAULT_STATE),
+        ...parsed,
+        icons: { ...clone(defaultIcons), ...(parsed.icons || {}) },
+        windows: parsed.windows || {}
+      };
+    } catch {
+      return clone(DEFAULT_STATE);
+    }
   }
 
-  function restoreLayout() {
-    Object.entries(saved.windows || {}).forEach(([name, pos]) => {
-      const w = $(`[data-window="${name}"]`);
-      if (!w) return;
-      if (pos.left) w.style.left = pos.left;
-      if (pos.top) w.style.top = pos.top;
-      if (pos.width) w.style.width = pos.width;
-      if (pos.height) w.style.height = pos.height;
-      if (pos.maximized) w.classList.add('maximized');
-    });
-    Object.entries(saved.icons || {}).forEach(([name, pos]) => {
-      const icon = $(`.desktop-icon[data-app="${name}"]`);
-      if (!icon) return;
-      if (pos.left) icon.style.left = pos.left;
-      if (pos.top) icon.style.top = pos.top;
-    });
-    if (saved.note && $('#note-text')) $('#note-text').value = saved.note;
+  function saveState() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* storage can be disabled */ }
   }
 
-  function beep(freq = 420, duration = .045) {
-    if (!soundEnabled) return;
+  function showToast(message) {
+    clearTimeout(toastTimer);
+    toast.textContent = message;
+    toast.classList.add("show");
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
+  }
+
+  function playSound(kind = "open") {
+    if (!state.sound) return;
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = freq; osc.type = 'sine'; gain.gain.value = .025;
-      osc.connect(gain); gain.connect(ctx.destination); osc.start();
-      gain.gain.exponentialRampToValueAtTime(.0001, ctx.currentTime + duration);
-      osc.stop(ctx.currentTime + duration); setTimeout(() => ctx.close(), 120);
-    } catch {}
+      audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.value = kind === "close" ? 310 : kind === "select" ? 520 : 420;
+      gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(kind === "select" ? 0.018 : 0.028, audioContext.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.12);
+      oscillator.connect(gain).connect(audioContext.destination);
+      oscillator.start(); oscillator.stop(audioContext.currentTime + 0.13);
+    } catch { /* audio is optional */ }
   }
 
-  function notify(message) {
-    clearTimeout(toastTimer); toast.textContent = message; toast.classList.add('show');
-    toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+  function setWallpaper(name, persist = true) {
+    if (!["grid", "chicago", "dark"].includes(name)) return;
+    state.wallpaper = name;
+    os.dataset.wallpaper = name;
+    document.querySelectorAll(".menu-check").forEach((check) => {
+      check.textContent = check.dataset.check === name ? "✓" : "";
+    });
+    if (persist) saveState();
+  }
+
+  function applyIconLayout() {
+    iconNodes.forEach((node) => {
+      const saved = state.icons[node.dataset.id] || defaultIcons[node.dataset.id];
+      node.style.setProperty("--x", `${saved.x}%`);
+      node.style.setProperty("--y", `${saved.y}%`);
+      node.style.left = "var(--x)";
+      node.style.top = "var(--y)";
+    });
+  }
+
+  function resetLayout() {
+    state.icons = clone(defaultIcons);
+    state.windows = {};
+    saveState();
+    applyIconLayout();
+    [...windowsRoot.children].forEach((win) => win.remove());
+    activeWindow = null;
+    activeAppName.textContent = "Rizvisions";
+    updateDockRunning();
+    showToast("Desktop layout restored");
+  }
+
+  function fullReset() {
+    const confirmed = window.confirm("Reset Rizvisions? This clears the wallpaper, icon positions, window positions, and saved Notes on this browser.");
+    if (!confirmed) return;
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (key && key.toLowerCase().includes("rizvisions")) keys.push(key);
+      }
+      keys.forEach((key) => localStorage.removeItem(key));
+    } catch { /* private browsing can disable storage */ }
+    state = clone(DEFAULT_STATE);
+    setWallpaper(state.wallpaper, false);
+    applyIconLayout();
+    [...windowsRoot.children].forEach((win) => win.remove());
+    activeWindow = null;
+    activeAppName.textContent = "Rizvisions";
+    soundStatus.style.opacity = "1";
+    updateDockRunning();
+    saveState();
+    showToast("Rizvisions reset");
+  }
+
+  function defaultWindowRect(appId, width, height) {
+    const desktopRect = desktop.getBoundingClientRect();
+    const index = Math.max(0, Object.keys(appDefinitions).indexOf(appId));
+    const w = Math.min(width, desktopRect.width - 34);
+    const h = Math.min(height, desktopRect.height - 122);
+    const left = Math.max(10, Math.round((desktopRect.width - w) / 2 + ((index % 4) - 1.5) * 22));
+    const top = Math.max(10, Math.round((desktopRect.height - h) / 2 - 32 + (index % 3) * 16));
+    return { left, top, width: w, height: h };
+  }
+
+  function clampWindowRect(rect) {
+    const maxWidth = desktop.clientWidth;
+    const maxHeight = desktop.clientHeight - 91;
+    const width = Math.min(Math.max(540, rect.width), maxWidth);
+    const height = Math.min(Math.max(360, rect.height), maxHeight);
+    return {
+      width,
+      height,
+      left: Math.min(Math.max(-width + 110, rect.left), maxWidth - 110),
+      top: Math.min(Math.max(0, rect.top), maxHeight - 52)
+    };
+  }
+
+  function createWindow(appId, definition = appDefinitions[appId]) {
+    if (!definition) return null;
+    const fragment = windowTemplate.content.cloneNode(true);
+    const win = fragment.querySelector(".mac-window");
+    win.dataset.appWindow = appId;
+    win.setAttribute("aria-label", definition.title);
+    win.querySelector(".window-title").textContent = definition.title;
+    win.querySelector(".window-body").innerHTML = definition.render(appId);
+
+    const saved = state.windows[appId];
+    const initial = clampWindowRect(saved || defaultWindowRect(appId, ...definition.size));
+    Object.assign(win.style, {
+      left: `${initial.left}px`, top: `${initial.top}px`, width: `${initial.width}px`, height: `${initial.height}px`, zIndex: ++zCounter
+    });
+
+    windowsRoot.appendChild(win);
+    wireWindow(win);
+    wireAppSpecific(win, appId);
+    requestAnimationFrame(() => focusWindow(win));
+    return win;
+  }
+
+  function openApp(appId) {
+    closeMenus();
+    let win = windowsRoot.querySelector(`[data-app-window="${CSS.escape(appId)}"]`);
+    if (!win) win = createWindow(appId);
+    if (!win) return;
+    win.hidden = false;
+    win.classList.remove("minimizing");
+    focusWindow(win);
+    bounceDock(appId);
+    playSound("open");
+  }
+
+  function openProject(projectId) {
+    const project = projectDefinitions[projectId];
+    if (!project) return;
+    const appId = `project-${projectId}`;
+    let win = windowsRoot.querySelector(`[data-app-window="${appId}"]`);
+    if (!win) {
+      const definition = {
+        name: "Quick Look",
+        title: project.title,
+        size: [660, 535],
+        render: () => renderProject(project)
+      };
+      win = createWindow(appId, definition);
+      win.dataset.appName = "Quick Look";
+    }
+    win.hidden = false;
+    focusWindow(win);
+    playSound("open");
   }
 
   function focusWindow(win) {
-    if (!win) return;
-    $$('.app-window').forEach(w => w.classList.add('inactive'));
-    win.classList.remove('inactive');
-    win.style.zIndex = ++z;
+    if (!win || win.hidden) return;
     activeWindow = win;
+    [...windowsRoot.children].forEach((other) => other.classList.toggle("inactive", other !== win));
+    win.style.zIndex = ++zCounter;
+    const id = win.dataset.appWindow;
+    const app = appDefinitions[id];
+    activeAppName.textContent = app?.name || win.dataset.appName || "Rizvisions";
+    updateDockRunning();
   }
 
-  function openApp(name) {
-    const win = $(`[data-window="${name}"]`);
+  function saveWindowRect(win) {
+    if (!win || win.classList.contains("maximized")) return;
+    const rect = {
+      left: parseFloat(win.style.left) || win.offsetLeft,
+      top: parseFloat(win.style.top) || win.offsetTop,
+      width: win.offsetWidth,
+      height: win.offsetHeight
+    };
+    state.windows[win.dataset.appWindow] = clampWindowRect(rect);
+    saveState();
+  }
+
+  function closeWindow(win = activeWindow) {
     if (!win) return;
-    win.classList.add('open'); win.classList.remove('minimized'); focusWindow(win);
-    const dockIcon = $(`#dock [data-app="${name}"]`); if (dockIcon) dockIcon.classList.add('running');
-    closeMenus(); beep(470, .05);
-    if (name === 'terminal') setTimeout(() => $('#terminal-input')?.focus(), 80);
+    saveWindowRect(win);
+    playSound("close");
+    win.remove();
+    activeWindow = [...windowsRoot.children].filter((node) => !node.hidden).sort((a, b) => (+a.style.zIndex) - (+b.style.zIndex)).pop() || null;
+    if (activeWindow) focusWindow(activeWindow); else activeAppName.textContent = "Rizvisions";
+    updateDockRunning();
   }
 
-  function closeWindow(win) {
+  function minimizeWindow(win = activeWindow) {
     if (!win) return;
-    const name = win.dataset.window; win.classList.remove('open','minimized','inactive');
-    const dockIcon = $(`#dock [data-app="${name}"]`); if (dockIcon) dockIcon.classList.remove('running');
-    activeWindow = null; beep(260, .05); persist();
+    saveWindowRect(win);
+    win.classList.add("minimizing");
+    setTimeout(() => {
+      win.hidden = true;
+      win.classList.remove("minimizing");
+      activeWindow = [...windowsRoot.children].filter((node) => !node.hidden).sort((a, b) => (+a.style.zIndex) - (+b.style.zIndex)).pop() || null;
+      if (activeWindow) focusWindow(activeWindow); else activeAppName.textContent = "Rizvisions";
+      updateDockRunning();
+    }, 230);
   }
 
-  function minimizeWindow(win) {
+  function zoomWindow(win = activeWindow) {
     if (!win) return;
-    win.classList.add('minimized'); activeWindow = null; beep(310, .04); persist();
+    if (win.classList.contains("maximized")) {
+      const previous = JSON.parse(win.dataset.previousRect || "{}");
+      win.classList.remove("maximized");
+      Object.assign(win.style, {
+        left: `${previous.left || 20}px`, top: `${previous.top || 20}px`,
+        width: `${previous.width || 760}px`, height: `${previous.height || 520}px`
+      });
+    } else {
+      win.dataset.previousRect = JSON.stringify({ left: win.offsetLeft, top: win.offsetTop, width: win.offsetWidth, height: win.offsetHeight });
+      win.classList.add("maximized");
+      Object.assign(win.style, { left: "0px", top: "0px", width: "100%", height: "calc(100% - 103px)" });
+    }
+    focusWindow(win);
   }
 
-  function maximizeWindow(win) {
-    if (!win) return;
-    win.classList.toggle('maximized'); focusWindow(win); persist();
+  function wireWindow(win) {
+    win.addEventListener("pointerdown", () => focusWindow(win));
+    win.querySelectorAll("[data-window-action]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const action = button.dataset.windowAction;
+        if (action === "close") closeWindow(win);
+        if (action === "minimize") minimizeWindow(win);
+        if (action === "zoom") zoomWindow(win);
+      });
+    });
+    win.querySelector(".drag-handle").addEventListener("pointerdown", (event) => beginWindowDrag(event, win));
+    const observer = new ResizeObserver(() => {
+      clearTimeout(win._saveTimer);
+      win._saveTimer = setTimeout(() => saveWindowRect(win), 260);
+    });
+    observer.observe(win);
   }
 
-  function showDesktop() { $$('.app-window.open').forEach(w => w.classList.add('minimized')); activeWindow = null; closeMenus(); }
-  function bringFront() { $$('.app-window.open:not(.minimized)').forEach(w => focusWindow(w)); }
-
-  function positionMenu(trigger, panel) {
-    const rect = trigger.getBoundingClientRect();
-    panel.style.left = Math.min(rect.left, innerWidth - panel.offsetWidth - 8) + 'px';
+  function beginWindowDrag(event, win) {
+    if (event.button !== 0 || event.target.closest(".traffic-lights") || win.classList.contains("maximized")) return;
+    event.preventDefault();
+    focusWindow(win);
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startLeft = win.offsetLeft;
+    const startTop = win.offsetTop;
+    const onMove = (moveEvent) => {
+      const left = startLeft + moveEvent.clientX - startX;
+      const top = startTop + moveEvent.clientY - startY;
+      const clamped = clampWindowRect({ left, top, width: win.offsetWidth, height: win.offsetHeight });
+      win.style.left = `${clamped.left}px`;
+      win.style.top = `${clamped.top}px`;
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      saveWindowRect(win);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
   }
+
+  function updateDockRunning() {
+    document.querySelectorAll(".dock-item[data-app]").forEach((item) => {
+      const id = item.dataset.app;
+      const running = [...windowsRoot.children].some((win) => {
+        const windowId = win.dataset.appWindow;
+        return windowId === id || (id === "work" && windowId.startsWith("project-"));
+      });
+      item.classList.toggle("running", running || id === "work");
+    });
+  }
+
+  function bounceDock(appId) {
+    const item = document.querySelector(`.dock-item[data-app="${CSS.escape(appId)}"]`);
+    if (!item) return;
+    item.classList.remove("bounce");
+    void item.offsetWidth;
+    item.classList.add("bounce");
+    setTimeout(() => item.classList.remove("bounce"), 700);
+  }
+
+  function beginIconDrag(event, item) {
+    if (event.button !== 0) return;
+    const desktopRect = desktop.getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startLeft = itemRect.left - desktopRect.left + itemRect.width / 2;
+    const startTop = itemRect.top - desktopRect.top + itemRect.height / 2;
+    let moved = false;
+
+    selectDesktopItem(item);
+    const onMove = (moveEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+      if (!moved && Math.hypot(dx, dy) < 4) return;
+      moved = true;
+      item.classList.add("dragging");
+      const left = Math.min(Math.max(54, startLeft + dx), desktop.clientWidth - 54);
+      const top = Math.min(Math.max(55, startTop + dy), desktop.clientHeight - 118);
+      item.style.left = `${left}px`;
+      item.style.top = `${top}px`;
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      if (moved) {
+        const x = (parseFloat(item.style.left) / desktop.clientWidth) * 100;
+        const y = (parseFloat(item.style.top) / desktop.clientHeight) * 100;
+        state.icons[item.dataset.id] = { x: +x.toFixed(3), y: +y.toFixed(3) };
+        item.style.setProperty("--x", `${x}%`);
+        item.style.setProperty("--y", `${y}%`);
+        item.classList.remove("dragging");
+        saveState();
+      }
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
+  }
+
+  function selectDesktopItem(item) {
+    iconNodes.forEach((node) => node.classList.toggle("selected", node === item));
+    playSound("select");
+  }
+
+  function closeMenus() {
+    document.querySelectorAll(".menu-popover.open, .context-menu.open").forEach((menu) => menu.classList.remove("open"));
+    document.querySelectorAll(".menu-trigger.open").forEach((trigger) => trigger.classList.remove("open"));
+    controlCenter.classList.remove("open");
+    controlCenter.setAttribute("aria-hidden", "true");
+  }
+
   function toggleMenu(trigger) {
-    const id = trigger.dataset.menu, panel = $('#' + id);
-    if (!panel) return;
-    if (menuOpen === panel) { closeMenus(); return; }
-    closeMenus(); panel.classList.add('open'); trigger.classList.add('active'); menuOpen = panel;
-    requestAnimationFrame(() => positionMenu(trigger,panel));
-  }
-  function closeMenus() { $$('.menu-panel.open').forEach(p=>p.classList.remove('open')); $$('.menu-trigger.active,.status-button.active').forEach(b=>b.classList.remove('active')); menuOpen=null; }
-
-  $$('.menu-trigger').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); toggleMenu(b); }));
-  $('#control-center').addEventListener('click', e => { e.stopPropagation(); closeMenus(); const p=$('#control-panel'); p.classList.add('open'); e.currentTarget.classList.add('active'); menuOpen=p; });
-  document.addEventListener('pointerdown', e => { if (!e.target.closest('.menu-panel,.menu-trigger,.status-button')) closeMenus(); });
-
-  function handleAction(action, source) {
-    const app = source?.dataset.app;
-    const msg = source?.dataset.message;
-    switch(action) {
-      case 'open': openApp(app); break;
-      case 'open-wallpapers': openApp('wallpapers'); break;
-      case 'close-active': closeWindow(activeWindow); break;
-      case 'minimize-active': minimizeWindow(activeWindow); break;
-      case 'maximize-active': maximizeWindow(activeWindow); break;
-      case 'bring-front': bringFront(); closeMenus(); break;
-      case 'show-desktop': showDesktop(); break;
-      case 'sort-icons': sortIcons(); break;
-      case 'theme-light': setTheme('light'); break;
-      case 'theme-dark': setTheme('dark'); break;
-      case 'new-note': openApp('notes'); setTimeout(()=>$('#note-text')?.focus(),100); break;
-      case 'copy-email': navigator.clipboard?.writeText('https://rizvisions.com'); notify('Copied rizvisions.com'); closeMenus(); break;
-      case 'paste-creativity': notify('Creativity pasted. Results may vary.'); closeMenus(); break;
-      case 'select-icons': $$('.desktop-icon').forEach(i=>i.classList.add('selected')); closeMenus(); break;
-      case 'restart': restartDesktop(); break;
-      case 'sleep': sleepDesktop(); break;
-      case 'notify': notify(msg || 'Noted.'); closeMenus(); break;
-      case 'secret': loveBurst(); closeMenus(); break;
+    const menu = document.getElementById(trigger.dataset.menu);
+    const wasOpen = menu.classList.contains("open");
+    closeMenus();
+    if (!wasOpen) {
+      menu.classList.add("open");
+      trigger.classList.add("open");
     }
   }
-  document.addEventListener('click', e => {
-    const actionEl = e.target.closest('[data-action]'); if (actionEl) handleAction(actionEl.dataset.action, actionEl);
-    const appEl = e.target.closest('[data-open-app]'); if (appEl) openApp(appEl.dataset.openApp);
-  });
 
-  function setTheme(theme) { body.dataset.theme=theme; $('#control-theme small').textContent=theme[0].toUpperCase()+theme.slice(1); persist(); closeMenus(); notify(`${theme[0].toUpperCase()+theme.slice(1)} appearance`); }
-  function setWallpaper(name) { body.dataset.wallpaper=name; persist(); notify('Wallpaper changed'); }
-  $$('[data-wallpaper-choice]').forEach(b=>b.addEventListener('click',()=>setWallpaper(b.dataset.wallpaperChoice)));
-
-  $$('.desktop-icon').forEach(icon => {
-    icon.style.left = getComputedStyle(icon).getPropertyValue('--x').trim();
-    icon.style.top = getComputedStyle(icon).getPropertyValue('--y').trim();
-    let start, moved=false;
-    icon.addEventListener('pointerdown', e => {
-      if (e.button !== 0) return;
-      $$('.desktop-icon').forEach(i=>i.classList.remove('selected')); icon.classList.add('selected');
-      start={x:e.clientX,y:e.clientY,left:icon.offsetLeft,top:icon.offsetTop}; moved=false; icon.setPointerCapture(e.pointerId);
-    });
-    icon.addEventListener('pointermove', e => {
-      if (!start || !icon.hasPointerCapture(e.pointerId)) return;
-      const dx=e.clientX-start.x,dy=e.clientY-start.y;if(Math.abs(dx)+Math.abs(dy)>5)moved=true;
-      if(moved){icon.classList.add('dragging');icon.style.left=Math.max(0,Math.min(innerWidth-icon.offsetWidth,start.left+dx))+'px';icon.style.top=Math.max(0,Math.min(innerHeight-120-icon.offsetHeight,start.top+dy))+'px';}
-    });
-    icon.addEventListener('pointerup', e => { if(!start)return;icon.classList.remove('dragging');icon.releasePointerCapture(e.pointerId);if(!moved)openApp(icon.dataset.app);else persist();start=null; });
-    icon.addEventListener('click', e => { if (e.detail === 0) openApp(icon.dataset.app); });
-  });
-
-  $$('#dock [data-app]').forEach(btn => btn.addEventListener('click',()=>openApp(btn.dataset.app)));
-
-  $$('.app-window').forEach(win => {
-    const bar = $('.window-titlebar',win); let drag=null;
-    win.addEventListener('pointerdown',()=>focusWindow(win));
-    bar.addEventListener('dblclick',e=>{if(!e.target.closest('.traffic-lights'))maximizeWindow(win)});
-    bar.addEventListener('pointerdown', e => {
-      if(e.target.closest('.traffic-lights')||win.classList.contains('maximized'))return;
-      const r=win.getBoundingClientRect();drag={x:e.clientX,y:e.clientY,left:r.left,top:r.top};bar.setPointerCapture(e.pointerId);focusWindow(win);
-    });
-    bar.addEventListener('pointermove',e=>{if(!drag||!bar.hasPointerCapture(e.pointerId))return;win.style.left=Math.max(0,Math.min(innerWidth-win.offsetWidth,drag.left+e.clientX-drag.x))+'px';win.style.top=Math.max(0,Math.min(innerHeight-110-win.offsetHeight,drag.top+e.clientY-drag.y))+'px';});
-    bar.addEventListener('pointerup',e=>{if(!drag)return;bar.releasePointerCapture(e.pointerId);drag=null;persist()});
-    $$('.traffic-lights button',win).forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();const a=btn.dataset.windowAction;if(a==='close')closeWindow(win);if(a==='minimize')minimizeWindow(win);if(a==='maximize')maximizeWindow(win)}));
-    win.addEventListener('mouseup',()=>persist());
-  });
-
-  desktop.addEventListener('contextmenu',e=>{
-    if(e.target.closest('.app-window,.desktop-icon,.dock'))return;
-    e.preventDefault();closeMenus();const m=$('#context-menu');m.style.left=Math.min(e.clientX,innerWidth-215)+'px';m.style.top=Math.min(e.clientY,innerHeight-230)+'px';m.classList.add('open');menuOpen=m;
-  });
-  desktop.addEventListener('pointerdown',e=>{if(!e.target.closest('.desktop-icon,.app-window,.menu-panel'))$$('.desktop-icon').forEach(i=>i.classList.remove('selected'))});
-
-  function resetLayout(){
-    localStorage.removeItem(STORAGE_KEY);
-    $$('.desktop-icon').forEach(icon=>{icon.style.left='';icon.style.top='';});
-    $$('.app-window').forEach(win=>{win.style.left='';win.style.top='';win.style.width='';win.style.height='';win.classList.remove('open','minimized','maximized');});
-    closeMenus();notify('Default desktop restored');setTimeout(()=>location.reload(),500);
+  function wireAppSpecific(win, appId) {
+    if (appId === "terminal") wireTerminal(win);
+    if (appId === "notes") {
+      const textarea = win.querySelector("textarea");
+      textarea.value = state.notes;
+      textarea.addEventListener("input", () => { state.notes = textarea.value; saveState(); });
+    }
   }
-  function resetAll(){
-    if(confirm('Reset wallpaper, icon positions, windows, sound, and local notes?')){localStorage.removeItem(STORAGE_KEY);location.reload();}
-  }
-  function sortIcons(){
-    const icons=$$('.desktop-icon');const cols=Math.max(1,Math.floor((innerWidth-30)/96));icons.forEach((icon,i)=>{const col=i%cols,row=Math.floor(i/cols);icon.style.left=(22+col*96)+'px';icon.style.top=(48+row*96)+'px'});persist();closeMenus();notify('Icons sorted');
-  }
-  function restartDesktop(){closeMenus();$('#boot-screen').classList.remove('done');setTimeout(()=>location.reload(),650)}
-  function sleepDesktop(){closeMenus();const s=$('#boot-screen');$('.boot-name',s).textContent='GOOD NIGHT, RIZ';$('.boot-progress',s).style.display='none';s.classList.remove('done');s.addEventListener('click',()=>{s.classList.add('done');$('.boot-name',s).textContent='RIZVISIONS';$('.boot-progress',s).style.display='block'},{once:true})}
-  function loveBurst(){const wrap=$('#love-burst');for(let i=0;i<24;i++){const h=document.createElement('span');h.className='heart';h.textContent=['♥','✦','R','★'][Math.floor(Math.random()*4)];h.style.left=(20+Math.random()*60)+'vw';h.style.top=(65+Math.random()*20)+'vh';h.style.animationDelay=(Math.random()*.35)+'s';wrap.appendChild(h);setTimeout(()=>h.remove(),1800)}beep(620,.1)}
 
-  $('#sound-toggle').addEventListener('click',()=>{soundEnabled=!soundEnabled;$('#sound-toggle').textContent=soundEnabled?'◉':'○';$('#control-sound').classList.toggle('active',soundEnabled);$('#control-sound small').textContent=soundEnabled?'On':'Off';persist();notify(`Sound ${soundEnabled?'on':'off'}`)});
-  $('#control-sound').addEventListener('click',()=>$('#sound-toggle').click());
-  $('#control-theme').addEventListener('click',()=>setTheme(body.dataset.theme==='light'?'dark':'light'));
-  $('#brightness-range').addEventListener('input',e=>desktop.style.setProperty('--desktop-brightness',e.target.value/100));
-  $('#note-text').addEventListener('input',()=>persist());
-  $('#new-note-button').addEventListener('click',()=>{if(confirm('Clear this local note?')){$('#note-text').value='';persist();$('#note-text').focus()}});
-  $('#empty-trash').addEventListener('click',()=>{const files=$('.trash-files');files.innerHTML='<p style="grid-column:1/-1;text-align:center;color:var(--muted);padding:70px 0">Trash is empty.<br><small>For now.</small></p>';notify('Trash emptied');beep(180,.08)});
-  $('#fake-play').addEventListener('click',e=>{e.currentTarget.textContent=e.currentTarget.textContent==='▶'?'Ⅱ':'▶';notify('Make the playlist first, Riz.');beep(520,.08)});
+  function renderFinder() {
+    return `
+      <div class="finder-shell">
+        <aside class="finder-sidebar">
+          <div class="sidebar-section"><div class="sidebar-title">Favorites</div>
+            <div class="sidebar-row active"><span class="sidebar-glyph">◫</span>Selected Work</div>
+            <div class="sidebar-row"><span class="sidebar-glyph">◉</span>Recents</div>
+            <div class="sidebar-row"><span class="sidebar-glyph">⌁</span>Photos</div>
+            <div class="sidebar-row"><span class="sidebar-glyph">⇩</span>Downloads</div>
+          </div>
+          <div class="sidebar-section"><div class="sidebar-title">Locations</div>
+            <div class="sidebar-row"><span class="sidebar-glyph">▣</span>Rizvisions</div>
+            <div class="sidebar-row"><span class="sidebar-glyph">☁</span>iCloud Drive</div>
+          </div>
+          <div class="sidebar-section"><div class="sidebar-title">Tags</div>
+            <div class="sidebar-row"><span class="sidebar-glyph" style="color:#ff3b30">●</span>Work</div>
+            <div class="sidebar-row"><span class="sidebar-glyph" style="color:#ff9f0a">●</span>Internet</div>
+            <div class="sidebar-row"><span class="sidebar-glyph" style="color:#30d158">●</span>Personal</div>
+          </div>
+        </aside>
+        <main class="finder-main">
+          <div class="finder-toolbar">
+            <button class="toolbar-button" aria-label="Back">‹</button><button class="toolbar-button" aria-label="Forward">›</button>
+            <span class="finder-title-inline">Selected Work</span><span class="toolbar-spacer"></span>
+            <button class="toolbar-button" aria-label="Icon view">▦</button><button class="toolbar-button" aria-label="List view">☷</button>
+            <input class="search-field" aria-label="Search" placeholder="Search" />
+          </div>
+          <div class="finder-content"><div class="finder-grid">
+            <button class="file-item" data-project="parker"><span class="finder-folder"><img src="assets/icons/folder.svg" alt=""><i style="--tag:#8b7fd1"></i></span><span class="file-name">Parker</span></button>
+            <button class="file-item" data-project="bluespecs"><span class="finder-folder"><img src="assets/icons/folder.svg" alt=""><i style="--tag:#2686e8"></i></span><span class="file-name">Blue Specs</span></button>
+            <button class="file-item" data-project="whop"><span class="finder-folder"><img src="assets/icons/folder.svg" alt=""><i style="--tag:#ff453a"></i></span><span class="file-name">Whop + WAP</span></button>
+            <button class="file-item" data-project="windsurf"><span class="finder-folder"><img src="assets/icons/folder.svg" alt=""><i style="--tag:#30b0c7"></i></span><span class="file-name">Windsurf</span></button>
+            <button class="file-item" data-project="creator"><span class="finder-folder"><img src="assets/icons/folder.svg" alt=""><i style="--tag:#8e8e93"></i></span><span class="file-name">Creator Work</span></button>
+            <button class="file-item" data-app="photos"><img src="assets/icons/photos.png" alt=""><span class="file-name">Photography</span></button>
+            <button class="file-item" data-app="resume"><img src="assets/icons/document.svg" alt=""><span class="file-name">Resume.pdf</span></button>
+            <button class="file-item" data-app="notes"><img src="assets/icons/notes.png" alt=""><span class="file-name">Random Notes</span></button>
+          </div></div>
+          <div class="finder-statusbar">8 items, 42.6 GB available</div>
+        </main>
+      </div>`;
+  }
 
-  const projectData={
-    parker:{title:'Parker',icon:'P',cls:'parker-project',copy:'Helping build and grow an AI creative strategist for ecommerce teams.',bullets:['GTM, sales, onboarding, and support','Product concepts and positioning','Parker Brain and workflow ideas'],button:'Open Parker'},
-    'blue-specs':{title:'Blue Specs',icon:'B',cls:'blue-project',copy:'The ecommerce business I started in 2020 selling blue-light glasses.',bullets:['$40K+ in six months','Influencer marketing and paid social','A very early lesson in building online'],button:null},
-    wap:{title:'WAP',icon:'W',cls:'wap-project',copy:'A creator rewards and clip-curation operation built around performance-based payouts.',bullets:['Creator systems and community','Campaign rules and fraud prevention','Peak around $5.5K MRR'],button:null},
-    windsurf:{title:'Windsurf',icon:'↗',cls:'windsurf-project',copy:'A creator campaign that generated roughly 3.6 million views.',bullets:['Performance creative distribution','RPM-based incentives','One of the cleaner internet wins'],button:null},
-    rizvisions:{title:'Rizvisions',icon:'R',cls:'riz-project',copy:'The creative identity that started with photography and keeps absorbing everything else.',bullets:['Photography and video','Lifestyle storytelling','The site you are currently inside'],button:'Open Photos'},
-    internet:{title:'Internet Stuff',icon:'∞',cls:'internet-project',copy:'Projects that were useful, funny, short-lived, or all three.',bullets:['Client work','Creator programs','Too many domains'],button:null}
-  };
-  $$('.project-file').forEach(file=>file.addEventListener('click',()=>{
-    $$('.project-file').forEach(f=>f.classList.remove('selected'));file.classList.add('selected');const d=projectData[file.dataset.project],p=$('#project-preview');p.innerHTML=`<span class="preview-label">QUICK LOOK</span><div class="preview-icon ${d.cls}">${d.icon}</div><h2>${d.title}</h2><p>${d.copy}</p><ul>${d.bullets.map(x=>`<li>${x}</li>`).join('')}</ul>${d.button?`<button class="primary-button compact" data-open-app="${file.dataset.project==='parker'?'parker':'photos'}">${d.button}</button>`:''}`;
+  function renderAbout() {
+    return `
+      <div class="settings-shell">
+        <aside class="settings-sidebar">
+          <input class="settings-search" placeholder="Search" aria-label="Search settings">
+          <div class="settings-profile-mini"><img src="assets/icons/about.svg" alt=""><span><strong>Riz Zaheer</strong><small>Rizvisions</small></span></div>
+          <div class="settings-list">
+            <div class="settings-row active"><span class="settings-row-icon">R</span>About Riz</div>
+            <div class="settings-row"><span class="settings-row-icon" style="background:#0a84ff">◎</span>Work</div>
+            <div class="settings-row"><span class="settings-row-icon" style="background:#30b755">⌁</span>Socials</div>
+            <div class="settings-row"><span class="settings-row-icon" style="background:#ff9f0a">♫</span>Currently</div>
+            <div class="settings-row"><span class="settings-row-icon" style="background:#8e8e93">•••</span>Whatever</div>
+          </div>
+        </aside>
+        <main class="settings-main">
+          <h1>About Riz</h1>
+          <section class="profile-card">
+            <div class="profile-hero"><img src="assets/icons/about.svg" alt="Rizvisions icon"><div><h2>Riz Zaheer</h2><p>Creator and operator in Chicago. I work at Parker, build things on the internet, take photos, make videos, and have been using Rizvisions as a creative moniker since I was a kid.</p></div></div>
+            <div class="profile-detail-row"><span class="label">Currently</span><strong>Parker AI</strong><button class="mac-button" data-project="parker">Open</button></div>
+            <div class="profile-detail-row"><span class="label">Based in</span><strong>Chicago, Illinois</strong><span></span></div>
+            <div class="profile-detail-row"><span class="label">Internet home</span><strong>rizvisions.com</strong><span></span></div>
+            <div class="profile-links">
+              <button class="mac-button primary" data-external="https://www.linkedin.com/in/riz-zaheer/">LinkedIn</button>
+              <button class="mac-button" data-external="https://x.com/rizvisions">X</button>
+              <button class="mac-button" data-app="instagram">Instagram</button>
+              <button class="mac-button" data-external="https://open.spotify.com/user/riz002?si=eb580719d3ed4637">Spotify</button>
+            </div>
+          </section>
+        </main>
+      </div>`;
+  }
+
+  function renderPhotos() {
+    return `
+      <div class="photos-shell">
+        <aside class="photos-sidebar">
+          <div class="sidebar-section"><div class="sidebar-title">Library</div><div class="sidebar-row active"><span class="sidebar-glyph">⌁</span>All Photos</div><div class="sidebar-row"><span class="sidebar-glyph">▣</span>Recents</div><div class="sidebar-row"><span class="sidebar-glyph">♡</span>Favorites</div></div>
+          <div class="sidebar-section"><div class="sidebar-title">Albums</div><div class="sidebar-row"><span class="sidebar-glyph">□</span>Chicago</div><div class="sidebar-row"><span class="sidebar-glyph">□</span>Film</div><div class="sidebar-row"><span class="sidebar-glyph">□</span>Rizvisions</div></div>
+        </aside>
+        <main class="photos-main">
+          <div class="photos-toolbar"><h2>Library</h2><span class="toolbar-spacer"></span><button class="toolbar-button">−</button><button class="toolbar-button">+</button></div>
+          <div class="photos-grid">
+            <button class="wide"><img src="assets/photos/chicago-river-bw.jpg" alt="Chicago River"></button>
+            <button><img src="assets/photos/camera-bw.jpg" alt="Camera"></button>
+            <button class="tall"><img src="assets/photos/hasselblad.jpg" alt="Hasselblad"></button>
+            <button><img src="assets/photos/chicago-skyline.jpg" alt="Chicago skyline"></button>
+            <button><img src="assets/photos/camera-bw.jpg" alt="Camera"></button>
+            <button class="wide"><img src="assets/photos/chicago-skyline.jpg" alt="Chicago skyline"></button>
+            <button><img src="assets/photos/chicago-river-bw.jpg" alt="Chicago River"></button>
+            <button><img src="assets/photos/hasselblad.jpg" alt="Hasselblad"></button>
+          </div>
+        </main>
+      </div>`;
+  }
+
+  function renderMessages() {
+    return `
+      <div class="messages-shell">
+        <aside class="conversation-list">
+          <input class="message-search" placeholder="Search" aria-label="Search messages">
+          <div class="conversation active"><span class="avatar">R</span><span><strong>Riz</strong><small>Welcome to my corner of the internet.</small></span><time>now</time></div>
+          <div class="conversation"><span class="avatar">P</span><span><strong>Parker</strong><small>Back to work?</small></span><time>1:04 AM</time></div>
+        </aside>
+        <main class="chat-pane">
+          <div class="chat-header">Riz</div>
+          <div class="chat-body">
+            <div class="bubble in">You made it this far. What do you want to know?</div>
+            <div class="bubble out">This site is cool. How do I reach you?</div>
+            <div class="bubble in">LinkedIn is best for work. Instagram works for everything else.</div>
+            <div class="chat-actions"><button class="mac-button primary" data-external="https://www.linkedin.com/in/riz-zaheer/">Open LinkedIn</button><button class="mac-button" data-app="instagram">Open Instagram</button></div>
+          </div>
+          <div class="chat-input"><input placeholder="iMessage" aria-label="Message field"></div>
+        </main>
+      </div>`;
+  }
+
+  function renderInstagram() {
+    return `
+      <div class="instagram-shell">
+        <div class="instagram-heading"><img src="assets/icons/instagram.svg" alt="Instagram"><h2>Choose an account</h2><p>Different corners of the same internet person.</p></div>
+        <div class="account-list">
+          <a class="account-row" href="https://www.instagram.com/rizvisions/" target="_blank" rel="noopener"><span class="account-avatar">RV</span><span><strong>@rizvisions</strong><small>Photography, video, life, and creative stuff</small></span><span class="chevron">›</span></a>
+          <a class="account-row" href="https://www.instagram.com/rizgoestomarket/" target="_blank" rel="noopener"><span class="account-avatar">GT</span><span><strong>@rizgoestomarket</strong><small>AI, GTM, Parker, and work-brain content</small></span><span class="chevron">›</span></a>
+          <a class="account-row" href="https://www.instagram.com/rizzaheer/" target="_blank" rel="noopener"><span class="account-avatar">RZ</span><span><strong>@rizzaheer</strong><small>Personal — friends and family</small></span><span class="chevron">›</span></a>
+        </div>
+      </div>`;
+  }
+
+  function renderTerminal() {
+    return `<div class="terminal-shell"><div class="terminal-output">Last login: ${new Date().toLocaleDateString()} on ttys001\n\nRizvisions OS 3.0\nType <span class="terminal-link">help</span> to see available commands.\n</div><div class="terminal-input-row"><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Terminal command"></div></div>`;
+  }
+
+  function renderNotes() {
+    return `<div class="notes-shell"><aside class="notes-list"><div class="note-row active"><strong>Rizvisions roadmap</strong><small>Today&nbsp;&nbsp; ${escapeHtml(state.notes.slice(0, 45))}…</small></div><div class="note-row"><strong>Things I should build</strong><small>Yesterday&nbsp;&nbsp; Guestbook, timeline…</small></div></aside><main class="note-editor"><div class="note-meta">Today at ${new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</div><textarea aria-label="Note"></textarea></main></div>`;
+  }
+
+  function renderSpotify() {
+    return `<div class="spotify-shell"><div class="spotify-top"><img src="assets/icons/spotify.svg" alt="Spotify"><div><span class="type">Profile</span><h2>Riz</h2><p>Playlist coming soon. For now, open the actual profile.</p></div></div><div class="spotify-content"><button class="spotify-play" data-external="https://open.spotify.com/user/riz002?si=eb580719d3ed4637" aria-label="Open Spotify">▶</button><div class="spotify-row"><span>1</span><span><strong>Rizvisions playlist</strong><small>In progress</small></span><span>—</span></div><p><button class="mac-button spotify-link" data-external="https://open.spotify.com/user/riz002?si=eb580719d3ed4637">Open profile in Spotify</button></p></div></div>`;
+  }
+
+  function renderCalendar() {
+    const today = new Date();
+    const month = today.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    const day = today.getDate();
+    const cells = Array.from({length: 35}, (_, i) => i + 1).map((n) => `<span class="${n === day ? "today" : ""}">${n <= 31 ? n : ""}</span>`).join("");
+    return `<div class="calendar-shell"><aside class="calendar-sidebar"><div class="mini-calendar"><strong>${month}</strong><div class="mini-grid">${["S","M","T","W","T","F","S"].map(d=>`<span>${d}</span>`).join("")}${cells}</div></div></aside><main class="calendar-main"><h2>${today.toLocaleDateString("en-US", {weekday:"long", month:"long", day:"numeric"})}</h2><div class="calendar-event"><strong>Coffee chat with Riz</strong><p>No booking link yet. Reach out on LinkedIn or Instagram and we’ll figure it out like normal people.</p><p><button class="mac-button primary" data-external="https://www.linkedin.com/in/riz-zaheer/">Message on LinkedIn</button></p></div></main></div>`;
+  }
+
+  function renderTrash() {
+    return `<div class="empty-state"><div><img src="assets/icons/trash.png" alt="Trash"><h2>Nothing worth deleting</h2><p>Old domains, failed ideas, embarrassing drafts, and abandoned businesses will eventually live here.</p></div></div>`;
+  }
+
+  function renderResume() {
+    return `<div style="height:100%;background:#707070;padding:25px;overflow:auto"><article style="width:min(100%,560px);min-height:760px;margin:auto;background:white;box-shadow:0 8px 30px rgba(0,0,0,.35);padding:48px 54px;color:#1e1e1f;user-select:text"><h1 style="margin:0;font-size:29px;letter-spacing:-.04em">Riz Zaheer</h1><p style="margin:5px 0 28px;color:#666;font-size:12px">Chicago, IL · Creator, operator, GTM person</p><h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid #bbb;padding-bottom:5px">Experience</h2><h3 style="font-size:15px;margin-bottom:3px">Parker AI</h3><p style="font-size:12px;color:#666;margin-top:0">Sales, customer success, GTM, product feedback, pricing, content and operations · 2026—present</p><h3 style="font-size:15px;margin-bottom:3px">Databricks</h3><p style="font-size:12px;color:#666;margin-top:0">Solutions Specialist · 2025</p><h3 style="font-size:15px;margin-bottom:3px">Rewards Network</h3><p style="font-size:12px;color:#666;margin-top:0">#1 SDR / Qualification Specialist · 2024—2025</p><h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid #bbb;padding-bottom:5px;margin-top:30px">Things built</h2><p style="font-size:12px;line-height:1.6">Blue Specs · Rizvisions · Whop creator programs · WAP · short-form content · various internet experiments</p><p style="font-size:11px;color:#888;margin-top:45px">This is intentionally not the final downloadable résumé yet.</p></article></div>`;
+  }
+
+  function renderProject(project) {
+    return `<div style="height:100%;display:flex;flex-direction:column;background:#f4f4f4;overflow:auto;user-select:text"><div style="min-height:230px;padding:34px 38px;color:white;background:linear-gradient(145deg,${project.color},color-mix(in srgb, ${project.color} 55%, #101014));display:flex;flex-direction:column;justify-content:flex-end"><span style="font-size:10px;font-weight:700;letter-spacing:.12em;opacity:.76">${project.eyebrow}</span><h1 style="margin:8px 0 0;font-size:48px;letter-spacing:-.055em">${project.title}</h1></div><div style="padding:28px 36px 36px"><p style="font-size:16px;line-height:1.52;margin:0 0 24px;max-width:640px">${project.description}</p><div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid rgba(0,0,0,.12);border-radius:11px;overflow:hidden;background:white">${project.facts.map((fact,i)=>`<div style="min-height:64px;padding:14px 16px;display:flex;align-items:center;font-size:13px;font-weight:600;border-${i%2===0?'right':'left'}:0;border-bottom:${i<2?'1px solid rgba(0,0,0,.09)':'0'}">${fact}</div>`).join("")}</div></div></div>`;
+  }
+
+  function wireTerminal(win) {
+    const input = win.querySelector(".terminal-input");
+    const output = win.querySelector(".terminal-output");
+    input.focus();
+    input.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      const command = input.value.trim();
+      output.textContent += `\nriz@rizvisions ~ % ${command}\n`;
+      input.value = "";
+      const lower = command.toLowerCase();
+      if (!lower) return;
+      if (lower === "help") output.textContent += "about  work  photos  social  spotify  clear  reset\n";
+      else if (lower === "about") { output.textContent += "Opening About Riz…\n"; openApp("about"); }
+      else if (lower === "work") { output.textContent += "Opening Selected Work…\n"; openApp("work"); }
+      else if (lower === "photos") { output.textContent += "Opening Photos…\n"; openApp("photos"); }
+      else if (lower === "social") { output.textContent += "Opening Instagram…\n"; openApp("instagram"); }
+      else if (lower === "spotify") { output.textContent += "Opening Spotify…\n"; openApp("spotify"); }
+      else if (lower === "clear") output.textContent = "";
+      else if (lower === "reset") { output.textContent += "Use the Rizvisions menu to confirm a full reset.\n"; }
+      else if (lower === "sudo") output.textContent += "Riz is not in the sudoers file. This incident will be reported.\n";
+      else output.textContent += `zsh: command not found: ${command}\n`;
+      output.scrollTop = output.scrollHeight;
+    });
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>'"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#039;",'"':"&quot;"}[char]));
+  }
+
+  function updateClockAndCalendar() {
+    const now = new Date();
+    const chicago = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Chicago", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
+    }).format(now).replace(",", "");
+    document.getElementById("clock").textContent = chicago;
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone:"America/Chicago", weekday:"short", day:"numeric" }).formatToParts(now);
+    const weekday = parts.find(p=>p.type==="weekday")?.value || "WED";
+    const day = parts.find(p=>p.type==="day")?.value || "5";
+    document.querySelectorAll(".calendar-weekday").forEach(n => n.textContent = weekday.toUpperCase());
+    document.querySelectorAll(".calendar-day").forEach(n => n.textContent = day);
+  }
+
+  async function updateWeather() {
+    const tempNode = document.getElementById("weatherTemp");
+    try {
+      const response = await fetch("https://api.open-meteo.com/v1/forecast?latitude=41.8781&longitude=-87.6298&current=temperature_2m&temperature_unit=fahrenheit&timezone=America%2FChicago", { cache:"no-store" });
+      if (!response.ok) throw new Error("weather unavailable");
+      const data = await response.json();
+      tempNode.textContent = `${Math.round(data.current.temperature_2m)}°F`;
+    } catch {
+      tempNode.textContent = "Chicago";
+    }
+  }
+
+  function handleAction(action) {
+    if (action === "open-about") openApp("about");
+    if (action === "open-settings") openApp("about");
+    if (action === "reset-layout") resetLayout();
+    if (action === "reset-os") fullReset();
+    if (action === "close-active") closeWindow();
+    if (action === "minimize-active") minimizeWindow();
+    if (action === "zoom-active") zoomWindow();
+    if (action === "bring-all-front") [...windowsRoot.children].filter(n=>!n.hidden).forEach(focusWindow);
+    if (action === "show-shortcuts") window.alert("⌘N New Finder Window\n⌘W Close Window\n⌘M Minimize\nDouble-click desktop icons to open them.\nRight-click the desktop for more options.");
+  }
+
+  document.querySelectorAll(".menu-trigger").forEach((trigger) => trigger.addEventListener("click", (event) => {
+    event.stopPropagation(); toggleMenu(trigger);
   }));
 
-  function updateClock(){
-    const now=new Date();$('#menu-clock').textContent=new Intl.DateTimeFormat('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(now);$('#note-date').textContent=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short'}).format(now);$('#terminal-login').textContent=now.toString().split(' GMT')[0];
-  }
-  updateClock();setInterval(updateClock,1000);
-
-  async function loadWeather(){
-    try{
-      const url='https://api.open-meteo.com/v1/forecast?latitude=41.8781&longitude=-87.6298&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FChicago&forecast_days=1';
-      const r=await fetch(url);if(!r.ok)throw new Error('weather');const j=await r.json();const c=j.current,d=j.daily;const code=c.weather_code;const desc=code===0?'Clear':code<=3?'Partly Cloudy':code<=48?'Foggy':code<=67?'Rain':code<=77?'Snow':code<=82?'Showers':'Storms';const icon=code===0?'☀':code<=3?'⛅':code<=67?'☂':code<=77?'❄':'☁';
-      $('#weather-temp').textContent=Math.round(c.temperature_2m)+'°';$('#weather-condition').textContent=desc;$('#weather-high').textContent='H: '+Math.round(d.temperature_2m_max[0])+'°';$('#weather-low').textContent='L: '+Math.round(d.temperature_2m_min[0])+'°';$('#weather-feels').textContent=Math.round(c.apparent_temperature)+'°';$('#weather-wind').textContent=Math.round(c.wind_speed_10m)+' mph';$('#weather-humidity').textContent=Math.round(c.relative_humidity_2m)+'%';$('#weather-updated').textContent=new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});$('#control-temp').textContent=Math.round(c.temperature_2m)+'°';$('#weather-icon-mini').textContent=icon;
-    }catch{$('#weather-condition').textContent='Weather unavailable';$('#control-temp').textContent='--°';}
-  }
-  loadWeather();setInterval(loadWeather,10*60*1000);
-
-  const termOut=$('#terminal-output'),termForm=$('#terminal-form'),termInput=$('#terminal-input');
-  function termPrint(html,cls=''){const p=document.createElement('p');p.className=cls;p.innerHTML=html;termOut.appendChild(p);termOut.parentElement.scrollTop=termOut.parentElement.scrollHeight}
-  const commands={
-    help:()=>termPrint('Commands: <b>about</b>, <b>work</b>, <b>photos</b>, <b>parker</b>, <b>career</b>, <b>socials</b>, <b>weather</b>, <b>whoami</b>, <b>date</b>, <b>blue-specs</b>, <b>wap</b>, <b>secret</b>, <b>clear</b>'),
-    about:()=>{termPrint('Opening About Riz…');openApp('about')},work:()=>{termPrint('Opening Selected Work…');openApp('work')},photos:()=>{termPrint('Opening Photos…');openApp('photos')},parker:()=>{termPrint('Current process: making creative strategy less generic.');openApp('parker')},career:()=>openApp('career'),socials:()=>openApp('socials'),weather:()=>openApp('weather'),whoami:()=>termPrint('riz — creator, operator, and professional tab collector'),date:()=>termPrint(new Date().toString()),'blue-specs':()=>termPrint('Blue Specs: $40K+ in six months, 2020. The lore is being restored.'),wap:()=>termPrint('WAP = creator rewards, performance payouts, and an objectively unfortunate acronym.'),secret:()=>{termPrint('You found it. There will be better secrets later.');loveBurst()},sudo:()=>termPrint('riz is not in the sudoers file. This incident will be reported.','terminal-error'),sleep:()=>sleepDesktop(),clear:()=>termOut.innerHTML=''
-  };
-  termForm.addEventListener('submit',e=>{e.preventDefault();const cmd=termInput.value.trim().toLowerCase();termPrint(`<span style="color:#7ef290">riz@rizvisions ~ %</span> ${termInput.value}`);termInput.value='';if(commands[cmd])commands[cmd]();else if(cmd)termPrint(`zsh: command not found: ${cmd}`,'terminal-error')});
-
-  document.addEventListener('keydown',e=>{
-    const meta=e.metaKey||e.ctrlKey;
-    if(e.key==='Escape')closeMenus();
-    if(meta&&e.key.toLowerCase()==='w'){e.preventDefault();closeWindow(activeWindow)}
-    if(meta&&e.key.toLowerCase()==='m'){e.preventDefault();minimizeWindow(activeWindow)}
-    if(meta&&e.key.toLowerCase()==='k'){e.preventDefault();openApp('terminal')}
-    if(meta&&e.key.toLowerCase()==='n'){e.preventDefault();openApp('notes')}
+  controlCenterButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const open = controlCenter.classList.toggle("open");
+    controlCenter.setAttribute("aria-hidden", String(!open));
+    document.querySelectorAll(".menu-popover.open").forEach(m => m.classList.remove("open"));
   });
 
-  window.addEventListener('resize',persist);
-  restoreLayout();
-  $('#sound-toggle').textContent=soundEnabled?'◉':'○';
-  $('#control-sound').classList.toggle('active',soundEnabled);$('#control-sound small').textContent=soundEnabled?'On':'Off';$('#control-theme small').textContent=body.dataset.theme[0].toUpperCase()+body.dataset.theme.slice(1);
-  setTimeout(()=>$('#boot-screen').classList.add('done'),1650);
-  setTimeout(()=>{openApp('about');notify('Welcome to Rizvisions. Click anything.')},1900);
-
-  document.addEventListener('click',e=>{const a=e.target.closest('[data-action]')?.dataset.action;if(a==='reset-layout')resetLayout();if(a==='reset-all')resetAll();});
-
-
-  const iconSVG={
-    about:`<svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="ab" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2c2c2e"/><stop offset="1" stop-color="#0b0b0c"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="14" fill="url(#ab)"/><rect x="10" y="10" width="44" height="44" rx="12" fill="#fff" opacity=".09"/><text x="32" y="41" text-anchor="middle" fill="white" font-size="27" font-weight="900" font-family="Arial">rv</text></svg>`,
-    work:`<svg viewBox="0 0 64 64"><defs><linearGradient id="fd" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#67d7ff"/><stop offset="1" stop-color="#168bd0"/></linearGradient></defs><path d="M4 17a6 6 0 0 1 6-6h16l5 6h23a6 6 0 0 1 6 6v31a6 6 0 0 1-6 6H10a6 6 0 0 1-6-6z" fill="url(#fd)"/><path d="M4 24h56" stroke="#b9efff" opacity=".8"/></svg>`,
-    photos:`<svg viewBox="0 0 64 64"><rect x="2" y="2" width="60" height="60" rx="14" fill="#fff"/><g transform="translate(32 32)">${['#ff3b30','#ff9500','#ffcc00','#34c759','#00c7be','#007aff','#5856d6','#af52de'].map((c,i)=>`<ellipse rx="7" ry="20" fill="${c}" opacity=".92" transform="rotate(${i*45}) translate(0 -10)"/>`).join('')}<circle r="7" fill="#fff"/></g></svg>`,
-    parker:`<svg viewBox="0 0 64 64"><defs><linearGradient id="pk" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#eeeaff"/><stop offset="1" stop-color="#7f78c5"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="14" fill="url(#pk)"/><path d="M20 48V16h15c9 0 14 5 14 13s-5 13-14 13h-6v6zm9-14h5c4 0 6-2 6-5s-2-5-6-5h-5z" fill="#28243f"/></svg>`,
-    career:`<svg viewBox="0 0 64 64"><rect x="2" y="2" width="60" height="60" rx="14" fill="#f3f3f5"/><rect x="13" y="15" width="38" height="35" rx="5" fill="#fff" stroke="#c6c6c8"/><circle cx="22" cy="27" r="5" fill="#7f78c5"/><path d="M31 23h13M31 28h13M18 38h27M18 43h20" stroke="#606066" stroke-width="3" stroke-linecap="round"/></svg>`,
-    socials:`<svg viewBox="0 0 64 64"><defs><radialGradient id="ig" cx="30%" cy="100%" r="120%"><stop stop-color="#ffd600"/><stop offset=".35" stop-color="#ff7a00"/><stop offset=".62" stop-color="#ff0169"/><stop offset="1" stop-color="#7638fa"/></radialGradient></defs><rect x="2" y="2" width="60" height="60" rx="14" fill="url(#ig)"/><rect x="15" y="15" width="34" height="34" rx="10" fill="none" stroke="white" stroke-width="4"/><circle cx="32" cy="32" r="8" fill="none" stroke="white" stroke-width="4"/><circle cx="43" cy="21" r="2.5" fill="white"/></svg>`,
-    tiktok:`<svg viewBox="0 0 64 64"><rect x="2" y="2" width="60" height="60" rx="14" fill="#080808"/><path d="M37 15c1 7 5 11 12 12v8c-5 0-9-2-12-4v11c0 9-6 15-15 15-8 0-14-6-14-14s6-14 14-14h3v8c-1-.3-2-.4-3-.4-4 0-6 2.6-6 6.3s2.5 6.2 6 6.2c4 0 7-2.5 7-7V15z" fill="#25f4ee" transform="translate(-2 2)"/><path d="M39 13c1 7 5 11 12 12v8c-5 0-9-2-12-4v11c0 9-6 15-15 15-8 0-14-6-14-14s6-14 14-14h3v8c-1-.3-2-.4-3-.4-4 0-6 2.6-6 6.3s2.5 6.2 6 6.2c4 0 7-2.5 7-7V13z" fill="#fe2c55"/><path d="M38 14c1 7 5 11 12 12v6c-5 0-9-2-12-4v12c0 9-6 14-14 14-7 0-12-5-12-12s5-12 12-12h2v6h-2c-4 0-6 2-6 6s2 6 6 6 7-3 7-8V14z" fill="white"/></svg>`,
-    spotify:`<svg viewBox="0 0 64 64"><rect x="2" y="2" width="60" height="60" rx="14" fill="#050505"/><circle cx="32" cy="32" r="22" fill="#1ed760"/><path d="M19 26c9-3 21-2 29 2M21 34c8-2 18-1 25 2M23 41c7-1 14 0 20 2" fill="none" stroke="#07120a" stroke-width="4" stroke-linecap="round"/></svg>`,
-    notes:`<svg viewBox="0 0 64 64"><rect x="2" y="2" width="60" height="60" rx="14" fill="#fff"/><path d="M2 16h60v10H2z" fill="#ffd60a"/><path d="M12 34h40M12 42h40M12 50h30" stroke="#d2d2d7" stroke-width="2"/></svg>`,
-    messages:`<svg viewBox="0 0 64 64"><defs><linearGradient id="msg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#64ef72"/><stop offset="1" stop-color="#18b736"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="14" fill="url(#msg)"/><ellipse cx="32" cy="30" rx="21" ry="17" fill="white"/><path d="M20 42l-3 9 11-6" fill="white"/></svg>`,
-    weather:`<svg viewBox="0 0 64 64"><defs><linearGradient id="we" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#5bb7ff"/><stop offset="1" stop-color="#1d78e8"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="14" fill="url(#we)"/><circle cx="24" cy="24" r="10" fill="#ffd60a"/><path d="M17 45h31c5 0 9-4 9-9s-4-9-9-9c-1 0-2 0-3 .4A15 15 0 0 0 17 32c-5 0-9 3-9 7s4 6 9 6z" fill="white" opacity=".96"/></svg>`,
-    resume:`<svg viewBox="0 0 64 64"><path d="M13 4h27l11 11v45H13z" fill="#fff" stroke="#c7c7cc"/><path d="M40 4v12h11" fill="#ececf1"/><rect x="18" y="36" width="28" height="14" rx="3" fill="#ff3b30"/><text x="32" y="46" text-anchor="middle" fill="white" font-size="10" font-weight="800">PDF</text><path d="M20 23h22M20 28h18" stroke="#b7b7bc" stroke-width="2"/></svg>`,
-    terminal:`<svg viewBox="0 0 64 64"><defs><linearGradient id="tr" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#454548"/><stop offset="1" stop-color="#111113"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="14" fill="url(#tr)"/><path d="M16 22l10 10-10 10M31 43h17" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-    trash:`<svg viewBox="0 0 64 64"><defs><linearGradient id="ts" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f4f4f5"/><stop offset="1" stop-color="#bfc1c5"/></linearGradient></defs><path d="M17 18h30l-3 40H20z" fill="url(#ts)" stroke="#8f9297"/><path d="M14 15h36M25 10h14" stroke="#8f9297" stroke-width="4" stroke-linecap="round"/><path d="M25 25v25M32 25v25M39 25v25" stroke="#9a9da2" stroke-width="2"/></svg>`
-  };
-  const appAlias={about:'about',work:'work',photos:'photos',parker:'parker',career:'career',socials:'socials',tiktok:'tiktok',spotify:'spotify',notes:'notes',messages:'messages',weather:'weather',resume:'resume',terminal:'terminal',trash:'trash'};
-  document.querySelectorAll('.desktop-icon,.dock button').forEach(el=>{
-    const app=el.dataset.app; const host=el.querySelector('.app-icon,.file-icon');
-    if(host&&iconSVG[appAlias[app]]) host.innerHTML=iconSVG[appAlias[app]];
+  soundStatus.addEventListener("click", () => {
+    state.sound = !state.sound; saveState();
+    soundStatus.style.opacity = state.sound ? "1" : ".42";
+    soundStatus.setAttribute("aria-label", state.sound ? "Sound on" : "Sound off");
+    showToast(state.sound ? "Sound on" : "Sound off");
   });
 
+  document.addEventListener("click", (event) => {
+    const appTarget = event.target.closest("[data-app]");
+    const actionTarget = event.target.closest("[data-action]");
+    const wallpaperTarget = event.target.closest("[data-wallpaper]");
+    const projectTarget = event.target.closest("[data-project]");
+    const externalTarget = event.target.closest("[data-external]");
+
+    if (event.target.closest(".menu-popover, .context-menu, .control-center-panel")) event.stopPropagation();
+    if (projectTarget) { event.preventDefault(); openProject(projectTarget.dataset.project); return; }
+    if (externalTarget) { event.preventDefault(); window.open(externalTarget.dataset.external, "_blank", "noopener"); return; }
+    if (appTarget && !appTarget.classList.contains("desktop-item")) { event.preventDefault(); openApp(appTarget.dataset.app); return; }
+    if (actionTarget) { event.preventDefault(); handleAction(actionTarget.dataset.action); closeMenus(); return; }
+    if (wallpaperTarget && wallpaperTarget.dataset.wallpaper) { event.preventDefault(); setWallpaper(wallpaperTarget.dataset.wallpaper); closeMenus(); return; }
+    if (!event.target.closest(".menu-bar, .menu-popover, .context-menu, .control-center-panel")) closeMenus();
+    if (event.target === desktop || event.target.classList.contains("wallpaper")) iconNodes.forEach(node => node.classList.remove("selected"));
+  });
+
+  desktop.addEventListener("contextmenu", (event) => {
+    if (event.target.closest(".mac-window, .dock, .desktop-item, .photo-file")) return;
+    event.preventDefault(); closeMenus();
+    contextMenu.style.left = `${Math.min(event.clientX, window.innerWidth - 250)}px`;
+    contextMenu.style.top = `${Math.min(event.clientY, window.innerHeight - 230)}px`;
+    contextMenu.classList.add("open");
+  });
+
+  iconNodes.forEach((item) => {
+    item.addEventListener("pointerdown", (event) => beginIconDrag(event, item));
+    item.addEventListener("click", (event) => { event.stopPropagation(); selectDesktopItem(item); });
+    item.addEventListener("dblclick", (event) => { event.preventDefault(); openApp(item.dataset.app); });
+  });
+
+  document.querySelectorAll(".photo-file").forEach((file) => file.addEventListener("dblclick", () => openApp("photos")));
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeMenus();
+    if (!(event.metaKey || event.ctrlKey)) return;
+    if (event.key.toLowerCase() === "n" && !event.shiftKey) { event.preventDefault(); openApp("work"); }
+    if (event.key.toLowerCase() === "n" && event.shiftKey) { event.preventDefault(); openApp("notes"); }
+    if (event.key.toLowerCase() === "w") { event.preventDefault(); closeWindow(); }
+    if (event.key.toLowerCase() === "m") { event.preventDefault(); minimizeWindow(); }
+  });
+
+  window.addEventListener("resize", () => {
+    [...windowsRoot.children].forEach((win) => {
+      if (win.classList.contains("maximized")) return;
+      const clamped = clampWindowRect({ left: win.offsetLeft, top: win.offsetTop, width: win.offsetWidth, height: win.offsetHeight });
+      Object.assign(win.style, { left:`${clamped.left}px`, top:`${clamped.top}px`, width:`${clamped.width}px`, height:`${clamped.height}px` });
+    });
+  });
+
+  setWallpaper(state.wallpaper, false);
+  applyIconLayout();
+  soundStatus.style.opacity = state.sound ? "1" : ".42";
+  updateClockAndCalendar();
+  setInterval(updateClockAndCalendar, 30_000);
+  updateWeather();
+  updateDockRunning();
 })();

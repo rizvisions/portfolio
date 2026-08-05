@@ -1,14 +1,9 @@
-# Rizvisions v2
+# Rizvisions OS v3
 
-Visual-fidelity pass for the macOS-style personal desktop.
+Static macOS-inspired personal website for GitHub Pages.
 
 ## Deploy
-Upload `index.html`, `styles.css`, `app.js`, `CNAME`, and this README to the root of the GitHub Pages repository.
+Upload all files and the `assets` folder to the root of the `main` branch in `rizvisions/portfolio`.
 
-## New in v2
-- Native-style custom SVG app icons
-- Gilly-inspired grid desktop composition
-- Refined menu bar, Dock, windows, and materials
-- Desktop feature widget and personal-file composition
-- Restore Default Layout and Reset Rizvisions controls
-- Persistence remains intentional through localStorage
+## Reset behavior
+The site uses the localStorage key `rizvisions-os-v3`. Use **View → Restore Default Layout** to reset icon/window placement, or **Rizvisions → Reset Rizvisions…** to clear all saved site preferences.

@@ -2,325 +2,227 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#171a22" />
-  <meta name="description" content="Rizvisions — the permanent internet home of Riz Zaheer." />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f2f2f2" />
   <title>Rizvisions</title>
+  <meta name="description" content="The internet home of Riz Zaheer — work, photography, projects, notes, and whatever else." />
+  <link rel="icon" href="assets/icons/about.svg" />
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body data-theme="light" data-wallpaper="sonoma">
-  <div id="boot-screen" aria-hidden="true">
-    <div class="boot-mark">R</div>
-    <div class="boot-name">RIZVISIONS</div>
-    <div class="boot-progress"><span></span></div>
+<body>
+  <div id="os" class="os" data-wallpaper="grid">
+    <header class="menu-bar" aria-label="Menu bar">
+      <div class="menu-left">
+        <button class="brand-menu menu-trigger" data-menu="riz-menu" aria-label="Rizvisions menu">
+          <img src="assets/icons/about.svg" alt="" />
+        </button>
+        <span class="active-app-name" id="activeAppName">Rizvisions</span>
+        <button class="menu-trigger" data-menu="file-menu">File</button>
+        <button class="menu-trigger" data-menu="edit-menu">Edit</button>
+        <button class="menu-trigger" data-menu="view-menu">View</button>
+        <button class="menu-trigger" data-menu="go-menu">Go</button>
+        <button class="menu-trigger" data-menu="window-menu">Window</button>
+        <button class="menu-trigger" data-menu="help-menu">Help</button>
+      </div>
+      <div class="menu-right">
+        <button class="status-button" id="soundStatus" aria-label="Sound on" title="Sound">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm12.4-1.5a6 6 0 0 1 0 9M18.8 5a10 10 0 0 1 0 14"/></svg>
+        </button>
+        <span class="status-item wifi" aria-label="Wi-Fi connected">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8.5a14 14 0 0 1 18 0M6.5 12a9 9 0 0 1 11 0M10 15.5a4 4 0 0 1 4 0M12 19h.01"/></svg>
+        </span>
+        <span class="status-item weather-status" id="weatherStatus" title="Chicago weather">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .3-8A6 6 0 0 0 6 9.3 4.5 4.5 0 0 0 7 18Z"/></svg>
+          <span id="weatherTemp">—°</span>
+        </span>
+        <button class="status-item control-center" id="controlCenterButton" aria-label="Control Center">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M8 14v6"/></svg>
+        </button>
+        <time class="clock" id="clock">Wed Aug 5 1:29 AM</time>
+      </div>
+    </header>
+
+    <div class="menu-popover" id="riz-menu" role="menu">
+      <button role="menuitem" data-action="open-about"><strong>About Rizvisions</strong></button>
+      <div class="menu-separator"></div>
+      <button role="menuitem" data-action="open-settings">System Settings…</button>
+      <div class="menu-separator"></div>
+      <button role="menuitem" data-action="reset-os">Reset Rizvisions…</button>
+    </div>
+    <div class="menu-popover" id="file-menu" role="menu">
+      <button role="menuitem" data-app="work">New Finder Window <kbd>⌘N</kbd></button>
+      <button role="menuitem" data-app="notes">New Note <kbd>⌘⇧N</kbd></button>
+      <div class="menu-separator"></div>
+      <button role="menuitem" data-action="close-active">Close Window <kbd>⌘W</kbd></button>
+    </div>
+    <div class="menu-popover" id="edit-menu" role="menu">
+      <button role="menuitem" disabled>Undo <kbd>⌘Z</kbd></button>
+      <button role="menuitem" disabled>Redo <kbd>⇧⌘Z</kbd></button>
+      <div class="menu-separator"></div>
+      <button role="menuitem" disabled>Cut <kbd>⌘X</kbd></button>
+      <button role="menuitem" disabled>Copy <kbd>⌘C</kbd></button>
+      <button role="menuitem" disabled>Paste <kbd>⌘V</kbd></button>
+    </div>
+    <div class="menu-popover" id="view-menu" role="menu">
+      <button role="menuitem" data-wallpaper="grid"><span class="menu-check" data-check="grid">✓</span> Grid Wallpaper</button>
+      <button role="menuitem" data-wallpaper="chicago"><span class="menu-check" data-check="chicago"></span> Chicago Wallpaper</button>
+      <button role="menuitem" data-wallpaper="dark"><span class="menu-check" data-check="dark"></span> Dark Wallpaper</button>
+      <div class="menu-separator"></div>
+      <button role="menuitem" data-action="reset-layout">Restore Default Layout</button>
+    </div>
+    <div class="menu-popover" id="go-menu" role="menu">
+      <button role="menuitem" data-app="about">About Riz</button>
+      <button role="menuitem" data-app="work">Selected Work</button>
+      <button role="menuitem" data-app="photos">Photos</button>
+      <button role="menuitem" data-app="instagram">Instagram</button>
+      <button role="menuitem" data-app="spotify">Spotify</button>
+    </div>
+    <div class="menu-popover" id="window-menu" role="menu">
+      <button role="menuitem" data-action="minimize-active">Minimize <kbd>⌘M</kbd></button>
+      <button role="menuitem" data-action="zoom-active">Zoom</button>
+      <div class="menu-separator"></div>
+      <button role="menuitem" data-action="bring-all-front">Bring All to Front</button>
+    </div>
+    <div class="menu-popover" id="help-menu" role="menu">
+      <button role="menuitem" data-app="about">Rizvisions Help</button>
+      <div class="menu-separator"></div>
+      <button role="menuitem" data-action="show-shortcuts">Keyboard Shortcuts</button>
+    </div>
+
+    <div class="desktop" id="desktop" tabindex="-1">
+      <div class="wallpaper wallpaper-grid" aria-hidden="true">
+        <div class="watermark"><span>RIZ</span><span>VISIONS</span></div>
+      </div>
+      <div class="wallpaper wallpaper-chicago" aria-hidden="true"></div>
+      <div class="wallpaper wallpaper-dark" aria-hidden="true">
+        <div class="dark-orb dark-orb-a"></div><div class="dark-orb dark-orb-b"></div>
+      </div>
+
+      <section class="now-widget" aria-label="Currently">
+        <div class="now-copy">
+          <span class="eyebrow">CURRENTLY</span>
+          <strong>Parker</strong>
+          <span class="now-sub">AI creative strategy</span>
+        </div>
+        <div class="now-actions">
+          <button data-project="parker">Open</button>
+          <button data-app="about" class="muted">More</button>
+        </div>
+      </section>
+
+      <div class="desktop-icons" id="desktopIcons" aria-label="Desktop items">
+        <button class="desktop-item" data-id="about" data-app="about" style="--x: 36.1%; --y: 24.8%;">
+          <span class="icon-frame"><img src="assets/icons/about.svg" alt="" /></span>
+          <span class="desktop-label">About Riz</span>
+        </button>
+        <button class="desktop-item" data-id="work" data-app="work" style="--x: 44.4%; --y: 24.8%;">
+          <span class="icon-frame icon-folder"><img src="assets/icons/folder.svg" alt="" /></span>
+          <span class="desktop-label">Selected Work</span>
+        </button>
+        <button class="desktop-item" data-id="settings" data-app="about" style="--x: 52.6%; --y: 24.8%;">
+          <span class="icon-frame"><img src="assets/icons/settings.png" alt="" /></span>
+          <span class="desktop-label">About + Links</span>
+        </button>
+        <button class="desktop-item" data-id="messages" data-app="messages" style="--x: 60.8%; --y: 24.8%;">
+          <span class="icon-frame"><img src="assets/icons/messages.png" alt="" /><span class="notification-badge">1</span></span>
+          <span class="desktop-label">Message Riz</span>
+        </button>
+        <button class="desktop-item" data-id="photos" data-app="photos" style="--x: 36.1%; --y: 40.9%;">
+          <span class="icon-frame"><img src="assets/icons/photos.png" alt="" /></span>
+          <span class="desktop-label">Photos</span>
+        </button>
+        <button class="desktop-item" data-id="resume" data-app="resume" style="--x: 44.4%; --y: 40.9%;">
+          <span class="icon-frame icon-document"><img src="assets/icons/document.svg" alt="" /></span>
+          <span class="desktop-label">Resume.pdf</span>
+        </button>
+        <button class="desktop-item" data-id="calendar" data-app="calendar" style="--x: 52.6%; --y: 40.9%;">
+          <span class="icon-frame calendar-icon" aria-hidden="true"><span class="calendar-weekday">WED</span><span class="calendar-day">5</span></span>
+          <span class="desktop-label">Coffee Chat</span>
+        </button>
+        <button class="desktop-item" data-id="instagram" data-app="instagram" style="--x: 60.8%; --y: 40.9%;">
+          <span class="icon-frame"><img src="assets/icons/instagram.svg" alt="" /></span>
+          <span class="desktop-label">Instagram</span>
+        </button>
+        <button class="desktop-item" data-id="trash" data-app="trash" style="--x: 44.4%; --y: 57.1%;">
+          <span class="icon-frame icon-trash"><img src="assets/icons/trash.png" alt="" /></span>
+          <span class="desktop-label">Trash</span>
+        </button>
+        <button class="desktop-item" data-id="terminal" data-app="terminal" style="--x: 52.6%; --y: 57.1%;">
+          <span class="icon-frame"><img src="assets/icons/terminal.png" alt="" /></span>
+          <span class="desktop-label">Terminal</span>
+        </button>
+        <button class="desktop-item" data-id="spotify" data-app="spotify" style="--x: 60.8%; --y: 57.1%;">
+          <span class="icon-frame"><img src="assets/icons/spotify.svg" alt="" /></span>
+          <span class="desktop-label">Spotify</span>
+        </button>
+      </div>
+
+      <aside class="photo-stack" aria-label="Photography files">
+        <button class="photo-file photo-one" data-app="photos"><img src="assets/photos/chicago-river-bw.jpg" alt="Chicago River" /><span>chicago_01.jpg</span></button>
+        <button class="photo-file photo-two" data-app="photos"><img src="assets/photos/camera-bw.jpg" alt="Camera" /><span>camera.jpg</span></button>
+        <button class="photo-file photo-three" data-app="photos"><img src="assets/photos/hasselblad.jpg" alt="Hasselblad camera" /><span>film.jpg</span></button>
+        <button class="photo-file photo-four" data-app="photos"><img src="assets/photos/chicago-skyline.jpg" alt="Chicago skyline" /><span>home.jpg</span></button>
+      </aside>
+
+      <div class="windows" id="windows" aria-live="polite"></div>
+
+      <nav class="dock-wrap" aria-label="Dock">
+        <div class="dock" id="dock">
+          <button class="dock-item" data-app="work" data-tooltip="Finder"><img src="assets/icons/finder.png" alt="Finder" /><span class="running-dot"></span></button>
+          <button class="dock-item" data-app="work" data-tooltip="Selected Work"><img src="assets/icons/folder.svg" alt="Selected Work" /></button>
+          <button class="dock-item" data-app="photos" data-tooltip="Photos"><img src="assets/icons/photos.png" alt="Photos" /></button>
+          <button class="dock-item" data-app="about" data-tooltip="About Riz"><img src="assets/icons/about.svg" alt="About Riz" /></button>
+          <button class="dock-item" data-app="messages" data-tooltip="Messages"><img src="assets/icons/messages.png" alt="Messages" /><span class="notification-badge dock-badge">1</span></button>
+          <button class="dock-item dock-calendar" data-app="calendar" data-tooltip="Calendar"><span class="calendar-icon"><span class="calendar-weekday">WED</span><span class="calendar-day">5</span></span></button>
+          <span class="dock-separator" aria-hidden="true"></span>
+          <button class="dock-item" data-app="notes" data-tooltip="Notes"><img src="assets/icons/notes.png" alt="Notes" /></button>
+          <button class="dock-item" data-app="terminal" data-tooltip="Terminal"><img src="assets/icons/terminal.png" alt="Terminal" /></button>
+          <button class="dock-item" data-app="spotify" data-tooltip="Spotify"><img src="assets/icons/spotify.svg" alt="Spotify" /></button>
+          <button class="dock-item trash-dock" data-app="trash" data-tooltip="Trash"><img src="assets/icons/trash.png" alt="Trash" /></button>
+        </div>
+      </nav>
+
+      <div class="context-menu" id="desktopContextMenu" role="menu">
+        <button role="menuitem" data-app="work">New Finder Window</button>
+        <button role="menuitem" data-app="notes">New Note</button>
+        <div class="menu-separator"></div>
+        <button role="menuitem" data-wallpaper="grid">Use Grid Wallpaper</button>
+        <button role="menuitem" data-wallpaper="chicago">Use Chicago Wallpaper</button>
+        <div class="menu-separator"></div>
+        <button role="menuitem" data-action="reset-layout">Restore Default Layout</button>
+      </div>
+
+      <div class="control-center-panel" id="controlCenterPanel" aria-hidden="true">
+        <div class="cc-grid">
+          <button class="cc-tile active"><span class="cc-icon">⌁</span><span><strong>Wi‑Fi</strong><small>Home</small></span></button>
+          <button class="cc-tile active"><span class="cc-icon">ᛒ</span><span><strong>Bluetooth</strong><small>On</small></span></button>
+          <button class="cc-tile"><span class="cc-icon">☾</span><span><strong>Focus</strong><small>Off</small></span></button>
+          <button class="cc-tile" id="ccSound"><span class="cc-icon">◖</span><span><strong>Sound</strong><small>On</small></span></button>
+        </div>
+        <label class="cc-slider"><span>Display</span><input type="range" min="20" max="100" value="82" /></label>
+        <label class="cc-slider"><span>Sound</span><input type="range" min="0" max="100" value="54" /></label>
+      </div>
+
+      <div class="toast" id="toast" role="status"></div>
+    </div>
   </div>
 
-  <header id="menu-bar" class="menu-bar" aria-label="Desktop menu bar">
-    <div class="menu-left">
-      <button class="menu-trigger apple-trigger" data-menu="apple-menu" aria-label="Rizvisions menu">●</button>
-      <button class="menu-trigger brand-trigger" data-menu="brand-menu">Rizvisions</button>
-      <button class="menu-trigger" data-menu="file-menu">File</button>
-      <button class="menu-trigger" data-menu="edit-menu">Edit</button>
-      <button class="menu-trigger" data-menu="view-menu">View</button>
-      <button class="menu-trigger" data-menu="go-menu">Go</button>
-      <button class="menu-trigger" data-menu="window-menu">Window</button>
-      <button class="menu-trigger" data-menu="help-menu">Help</button>
-    </div>
-    <div class="menu-right">
-      <button id="sound-toggle" class="status-button" title="Toggle sound">◉</button>
-      <button id="control-center" class="status-button" title="Control Center">≡</button>
-      <button id="menu-clock" class="status-button clock-button">Wed Aug 5&nbsp;&nbsp;2:52 AM</button>
-    </div>
-  </header>
-
-  <div id="menus" aria-live="polite">
-    <div id="apple-menu" class="dropdown-menu menu-panel">
-      <button data-action="open" data-app="about"><strong>About Rizvisions</strong></button>
-      <div class="menu-separator"></div>
-      <button data-action="open-wallpapers">System Settings…</button>
-      <button data-action="open" data-app="career">Career History…</button>
-      <div class="menu-separator"></div>
-      <button data-action="sleep">Sleep</button>
-      <button data-action="restart">Restart…</button>
-      <button data-action="reset-all">Reset Rizvisions…</button>
-    </div>
-    <div id="brand-menu" class="dropdown-menu menu-panel">
-      <button data-action="open" data-app="about">About Riz</button>
-      <button data-action="open" data-app="work">Selected Work</button>
-      <button data-action="open" data-app="photos">Photography</button>
-      <button data-action="open" data-app="socials">Find Me Online</button>
-    </div>
-    <div id="file-menu" class="dropdown-menu menu-panel">
-      <button data-action="new-note">New Note <span>⌘N</span></button>
-      <button data-action="open" data-app="work">Open Selected Work <span>⌘O</span></button>
-      <div class="menu-separator"></div>
-      <button data-action="close-active">Close Window <span>⌘W</span></button>
-    </div>
-    <div id="edit-menu" class="dropdown-menu menu-panel">
-      <button data-action="copy-email">Copy Contact Link <span>⌘C</span></button>
-      <button data-action="paste-creativity">Paste Creativity <span>⌘V</span></button>
-      <div class="menu-separator"></div>
-      <button data-action="select-icons">Select All Icons <span>⌘A</span></button>
-    </div>
-    <div id="view-menu" class="dropdown-menu menu-panel">
-      <button data-action="show-desktop">Show Desktop</button>
-      <button data-action="sort-icons">Sort Icons</button>
-      <button data-action="reset-layout">Restore Default Layout</button>
-      <button data-action="open-wallpapers">Change Wallpaper…</button>
-      <div class="menu-separator"></div>
-      <button data-action="theme-light">Light Appearance</button>
-      <button data-action="theme-dark">Dark Appearance</button>
-    </div>
-    <div id="go-menu" class="dropdown-menu menu-panel">
-      <button data-action="open" data-app="about">About Riz</button>
-      <button data-action="open" data-app="work">Selected Work</button>
-      <button data-action="open" data-app="photos">Photos</button>
-      <button data-action="open" data-app="parker">Parker</button>
-      <button data-action="open" data-app="career">Career</button>
-      <button data-action="open" data-app="socials">Socials</button>
-      <button data-action="open" data-app="messages">Messages</button>
-    </div>
-    <div id="window-menu" class="dropdown-menu menu-panel">
-      <button data-action="minimize-active">Minimize <span>⌘M</span></button>
-      <button data-action="maximize-active">Zoom</button>
-      <button data-action="bring-front">Bring All to Front</button>
-    </div>
-    <div id="help-menu" class="dropdown-menu menu-panel">
-      <button data-action="open" data-app="terminal">Rizvisions Help</button>
-      <button data-action="notify" data-message="This is an early build. Finding something broken is part of the experience.">Report a Bug</button>
-      <button data-action="secret">Show Some Love</button>
-    </div>
-  </div>
-
-  <main id="desktop" class="desktop" aria-label="Rizvisions desktop">
-    <div class="wallpaper-art" aria-hidden="true">
-      <div class="riz-watermark">rv</div>
-      <div class="wallpaper-wordmark">RIZVISIONS</div>
-      <div class="grain"></div>
-    </div>
-
-    <aside class="desktop-feature" aria-label="Currently at Rizvisions">
-      <div><span>CURRENTLY</span><strong>building Parker</strong></div>
-      <button data-open-app="parker">Show</button>
-      <button class="feature-next" data-open-app="work">Next</button>
-    </aside>
-
-    <div class="desktop-polaroids" aria-hidden="true">
-      <div class="polaroid p1"><div class="photo-fill chicago"></div><span>chicago.jpg</span></div>
-      <div class="polaroid p2"><div class="photo-fill camera"></div><span>camera.png</span></div>
-      <div class="polaroid p3"><div class="photo-fill riz"></div><span>riz.png</span></div>
-      <div class="polaroid p4"><div class="photo-fill internet"></div><span>internet.jpg</span></div>
-      <div class="polaroid p5"><div class="photo-fill parker-shot"></div><span>parker.png</span></div>
-    </div>
-
-    <section id="desktop-icons" class="desktop-icons" aria-label="Desktop icons">
-      <button class="desktop-icon" data-app="about" style="--x:28px;--y:54px">
-        <span class="app-icon icon-about">R</span><span>About Riz</span>
-      </button>
-      <button class="desktop-icon" data-app="work" style="--x:28px;--y:154px">
-        <span class="app-icon icon-folder">▰</span><span>Selected Work</span>
-      </button>
-      <button class="desktop-icon" data-app="photos" style="--x:28px;--y:254px">
-        <span class="app-icon icon-photos">✿</span><span>Photos</span>
-      </button>
-      <button class="desktop-icon" data-app="parker" style="--x:28px;--y:354px">
-        <span class="app-icon icon-parker">P</span><span>Parker</span>
-      </button>
-      <button class="desktop-icon" data-app="career" style="--x:28px;--y:454px">
-        <span class="app-icon icon-career">▤</span><span>Career</span>
-      </button>
-
-      <button class="desktop-icon" data-app="socials" style="--x:calc(100vw - 116px);--y:54px">
-        <span class="app-icon icon-instagram">◎</span><span>Instagram</span>
-      </button>
-      <button class="desktop-icon" data-app="tiktok" style="--x:calc(100vw - 116px);--y:154px">
-        <span class="app-icon icon-tiktok">♪</span><span>TikTok</span>
-      </button>
-      <button class="desktop-icon" data-app="spotify" style="--x:calc(100vw - 116px);--y:254px">
-        <span class="app-icon icon-spotify">≋</span><span>Spotify</span>
-      </button>
-      <button class="desktop-icon" data-app="notes" style="--x:calc(100vw - 116px);--y:354px">
-        <span class="app-icon icon-notes">≡</span><span>Notes</span>
-      </button>
-      <button class="desktop-icon" data-app="messages" style="--x:calc(100vw - 116px);--y:454px">
-        <span class="app-icon icon-messages">●</span><span>Messages</span><span class="badge">1</span>
-      </button>
-      <button class="desktop-icon" data-app="weather" style="--x:calc(100vw - 216px);--y:54px">
-        <span class="app-icon icon-weather"><b id="weather-icon-mini">☁</b></span><span>Chicago</span>
-      </button>
-      <button class="desktop-icon" data-app="resume" style="--x:calc(100vw - 216px);--y:154px">
-        <span class="file-icon pdf-icon">PDF</span><span>Resume.pdf</span>
-      </button>
-      <button class="desktop-icon" data-app="terminal" style="--x:calc(100vw - 216px);--y:254px">
-        <span class="app-icon icon-terminal">&gt;_</span><span>Terminal</span>
-      </button>
-      <button class="desktop-icon" data-app="trash" style="--x:calc(100vw - 216px);--y:454px">
-        <span class="app-icon icon-trash">♲</span><span>Trash</span>
-      </button>
+  <template id="window-template">
+    <section class="mac-window" data-app-window="" aria-label="">
+      <header class="window-titlebar drag-handle">
+        <div class="traffic-lights" aria-label="Window controls">
+          <button class="traffic close" data-window-action="close" aria-label="Close"></button>
+          <button class="traffic minimize" data-window-action="minimize" aria-label="Minimize"></button>
+          <button class="traffic zoom" data-window-action="zoom" aria-label="Zoom"></button>
+        </div>
+        <div class="window-title"></div>
+        <div class="window-title-spacer"></div>
+      </header>
+      <div class="window-body"></div>
+      <div class="resize-grip" aria-hidden="true"></div>
     </section>
+  </template>
 
-    <section id="windows" class="windows" aria-live="polite">
-      <article class="app-window" data-window="about" style="--left:14vw;--top:11vh;--width:620px;--height:510px">
-        <div class="window-titlebar">
-          <div class="traffic-lights"><button data-window-action="close" aria-label="Close"></button><button data-window-action="minimize" aria-label="Minimize"></button><button data-window-action="maximize" aria-label="Maximize"></button></div>
-          <div class="window-title">About Riz</div><div class="titlebar-spacer"></div>
-        </div>
-        <div class="window-content about-app">
-          <div class="about-hero">
-            <div class="riz-avatar">RZ</div>
-            <div><p class="eyebrow">CHICAGO, IL · ONLINE SINCE FOREVER</p><h1>Riz Zaheer</h1><p class="lead">Creator, operator, professional internet person, and the human behind Rizvisions.</p></div>
-          </div>
-          <div class="about-grid">
-            <div class="about-card wide"><span class="card-kicker">STATUS</span><h3>Trying things until one of them changes everything.</h3><p>This desktop is the catch-all: work, photos, old businesses, current obsessions, unfinished ideas, and whatever comes next.</p></div>
-            <div class="about-card"><span class="card-kicker">CURRENTLY</span><h3>Building at Parker</h3><p>AI, GTM, product storytelling, customer insight, and a lot of tabs.</p></div>
-            <div class="about-card"><span class="card-kicker">ALSO</span><h3>Making things</h3><p>Photography, video, internet experiments, and occasional questionable decisions.</p></div>
-          </div>
-          <div class="button-row"><button class="primary-button" data-open-app="work">Explore my work</button><button class="secondary-button" data-open-app="socials">Find me online</button></div>
-        </div>
-      </article>
-
-      <article class="app-window finder-window" data-window="work" style="--left:18vw;--top:9vh;--width:790px;--height:570px">
-        <div class="window-titlebar">
-          <div class="traffic-lights"><button data-window-action="close"></button><button data-window-action="minimize"></button><button data-window-action="maximize"></button></div>
-          <div class="window-title">Selected Work</div><div class="titlebar-spacer"></div>
-        </div>
-        <div class="finder-toolbar"><button>‹</button><button>›</button><div class="finder-path">Rizvisions ▸ Selected Work</div><button>⋯</button></div>
-        <div class="finder-layout">
-          <aside class="finder-sidebar">
-            <p>Favorites</p><button class="active">◆ Selected Work</button><button>◷ Recents</button><button>▣ Creator</button><button>⌘ Experiments</button><p>Locations</p><button>☁ Rizvisions</button><button>▤ Archive</button>
-          </aside>
-          <div class="finder-main">
-            <div class="file-grid">
-              <button class="project-file selected" data-project="parker"><span class="project-icon parker-project">P</span><b>Parker.app</b><small>Current chapter</small></button>
-              <button class="project-file" data-project="blue-specs"><span class="project-icon blue-project">B</span><b>Blue Specs</b><small>Ecommerce, 2020</small></button>
-              <button class="project-file" data-project="wap"><span class="project-icon wap-project">W</span><b>WAP</b><small>Creator rewards</small></button>
-              <button class="project-file" data-project="windsurf"><span class="project-icon windsurf-project">↗</span><b>Windsurf.mov</b><small>3.6M views</small></button>
-              <button class="project-file" data-project="rizvisions"><span class="project-icon riz-project">R</span><b>Rizvisions</b><small>Photo + video</small></button>
-              <button class="project-file" data-project="internet"><span class="project-icon internet-project">∞</span><b>Internet Stuff</b><small>Assorted chaos</small></button>
-            </div>
-            <aside id="project-preview" class="project-preview">
-              <span class="preview-label">QUICK LOOK</span><div class="preview-icon parker-project">P</div><h2>Parker</h2><p>Helping build and grow an AI creative strategist for ecommerce teams.</p><ul><li>GTM, sales, onboarding, and support</li><li>Product concepts and positioning</li><li>Parker Brain and workflow ideas</li></ul><button data-open-app="parker" class="primary-button compact">Open Parker</button>
-            </aside>
-          </div>
-        </div>
-      </article>
-
-      <article class="app-window" data-window="photos" style="--left:12vw;--top:8vh;--width:860px;--height:600px">
-        <div class="window-titlebar dark-titlebar"><div class="traffic-lights"><button data-window-action="close"></button><button data-window-action="minimize"></button><button data-window-action="maximize"></button></div><div class="window-title">Photos</div><div class="titlebar-spacer"></div></div>
-        <div class="photos-app">
-          <aside class="photos-sidebar"><h3>Photos</h3><button class="active">Library</button><button>Memories</button><button>People & Places</button><h4>Albums</h4><button>Chicago</button><button>Rizvisions</button><button>Work</button><button>Archive</button></aside>
-          <div class="photos-main"><div class="photos-heading"><div><h2>Library</h2><p>2009 – 2026</p></div><div class="segmented"><button class="active">Years</button><button>Months</button><button>All Photos</button></div></div>
-            <div class="photo-grid">
-              <button class="photo-cell p1"><span>Chicago</span></button><button class="photo-cell p2 tall"><span>People</span></button><button class="photo-cell p3"><span>Street</span></button><button class="photo-cell p4 wide"><span>Rizvisions Archive</span></button><button class="photo-cell p5"><span>Travel</span></button><button class="photo-cell p6"><span>Behind the scenes</span></button><button class="photo-cell p7 wide"><span>Real photos coming next</span></button>
-            </div>
-          </div>
-        </div>
-      </article>
-
-      <article class="app-window" data-window="parker" style="--left:22vw;--top:12vh;--width:730px;--height:520px">
-        <div class="window-titlebar"><div class="traffic-lights"><button data-window-action="close"></button><button data-window-action="minimize"></button><button data-window-action="maximize"></button></div><div class="window-title">Parker</div><div class="titlebar-spacer"></div></div>
-        <div class="window-content parker-app">
-          <div class="parker-banner"><div class="parker-logo">P</div><div><span>NOW</span><h1>Parker</h1><p>AI creative strategy with the context to actually be useful.</p></div></div>
-          <div class="parker-columns"><div><h3>What I do</h3><p>A broad mix of GTM, demos, customer success, product thinking, pricing, research, content, and translating customer pain into things worth building.</p></div><div><h3>What I keep working on</h3><p>Parker Brain, connected workflows, context systems, creative strategy tooling, and making AI products feel less like AI products.</p></div></div>
-          <div class="parker-tags"><span>AI</span><span>GTM</span><span>PRODUCT</span><span>ECOMMERCE</span><span>CREATIVE STRATEGY</span></div>
-          <p class="muted-note">More screenshots, launches, and stories will live here once we add the real assets.</p>
-        </div>
-      </article>
-
-      <article class="app-window" data-window="career" style="--left:19vw;--top:10vh;--width:760px;--height:570px">
-        <div class="window-titlebar"><div class="traffic-lights"><button data-window-action="close"></button><button data-window-action="minimize"></button><button data-window-action="maximize"></button></div><div class="window-title">Career History</div><div class="titlebar-spacer"></div></div>
-        <div class="window-content career-app"><div class="career-header"><span class="eyebrow">A NON-LINEAR TIMELINE</span><h1>Things I’ve done for work.</h1><p>Some jobs, some businesses, some internet experiments. All of them count.</p></div>
-          <div class="timeline">
-            <div class="timeline-item current"><time>2026—NOW</time><div><h3>Parker</h3><p>GTM, customer success, product, sales, support, content, and wherever else the ball is rolling.</p></div></div>
-            <div class="timeline-item"><time>2025</time><div><h3>Databricks</h3><p>Solutions Specialist. Enterprise tech, very high call volume, and a useful lesson about what I did not want forever.</p></div></div>
-            <div class="timeline-item"><time>2024—2025</time><div><h3>Rewards Network</h3><p>Top SDR. Learned how to sell, listen, and build repeatable systems under pressure.</p></div></div>
-            <div class="timeline-item"><time>2020—2025</time><div><h3>Internet businesses</h3><p>Blue Specs, Rizvisions, creator programs, client work, Whop, and a rotating cast of ideas.</p></div></div>
-            <div class="timeline-item"><time>2024</time><div><h3>Loyola University Chicago</h3><p>Marketing + Entrepreneurship. Cum laude. Spent plenty of time learning elsewhere too.</p></div></div>
-          </div>
-        </div>
-      </article>
-
-      <article class="app-window" data-window="socials" style="--left:27vw;--top:16vh;--width:540px;--height:430px">
-        <div class="window-titlebar"><div class="traffic-lights"><button data-window-action="close"></button><button data-window-action="minimize"></button><button data-window-action="maximize"></button></div><div class="window-title">Instagram</div><div class="titlebar-spacer"></div></div>
-        <div class="window-content social-app"><div class="social-heading"><div class="app-icon icon-instagram large">◎</div><div><h1>Choose an account</h1><p>Three different corners of the same person.</p></div></div>
-          <a class="account-row" href="https://www.instagram.com/rizvisions/" target="_blank" rel="noopener"><div class="account-avatar av1">RV</div><div><b>@rizvisions</b><span>Creative work, photography, and the original moniker</span></div><strong>↗</strong></a>
-          <a class="account-row" href="https://www.instagram.com/rizgoestomarket/" target="_blank" rel="noopener"><div class="account-avatar av2">GTM</div><div><b>@rizgoestomarket</b><span>AI, startups, GTM, Parker, and business internet</span></div><strong>↗</strong></a>
-          <a class="account-row" href="https://www.instagram.com/rizzaheer/" target="_blank" rel="noopener"><div class="account-avatar av3">RZ</div><div><b>@rizzaheer</b><span>Personal account · friends and family</span></div><strong>↗</strong></a>
-        </div>
-      </article>
-
-      <article class="app-window" data-window="tiktok" style="--left:31vw;--top:18vh;--width:480px;--height:380px">
-        <div class="window-titlebar dark-titlebar"><div class="traffic-lights"><button data-window-action="close"></button><button data-window-action="minimize"></button><button data-window-action="maximize"></button></div><div class="window-title">TikTok</div><div class="titlebar-spacer"></div></div>
-        <div class="window-content tiktok-app"><div class="tiktok-logo">♪</div><h1>@riz.com</h1><p>Short-form stories, experiments, and several million people accidentally seeing my life.</p><div class="fake-stats"><div><b>50K+</b><span>followers</span></div><div><b>30M+</b><span>lifetime views</span></div><div><b>∞</b><span>drafts</span></div></div><a class="primary-button centered" href="https://www.tiktok.com/@riz.com" target="_blank" rel="noopener">Open TikTok ↗</a></div>
-      </article>
-
-      <article class="app-window" data-window="spotify" style="--left:29vw;--top:15vh;--width:540px;--height:450px">
-        <div class="window-titlebar dark-titlebar"><div class="traffic-lights"><button data-window-action="close"></button><button data-window-action="minimize"></button><button data-window-action="maximize"></button></div><div class="window-title">Spotify</div><div class="titlebar-spacer"></div></div>
-        <div class="spotify-app"><div class="spotify-top"><div class="vinyl"><span>R</span></div><div><span class="eyebrow">PUBLIC PROFILE</span><h1>Riz</h1><p>Playlist integration is next. For now, this opens the profile.</p></div></div><div class="now-playing"><div class="album-placeholder">RV</div><div><b>Rizvisions Radio</b><span>Playlist coming soon</span></div><button id="fake-play">▶</button></div><div class="spotify-progress"><span></span></div><a class="spotify-link" href="https://open.spotify.com/user/riz002?si=eb580719d3ed4637" target="_blank" rel="noopener">Open Spotify profile ↗</a></div>
-      </article>
-
-      <article class="app-window" data-window="notes" style="--left:36vw;--top:13vh;--width:500px;--height:500px">
-        <div class="window-titlebar"><div class="traffic-lights"><button data-window-action="close"></button><button data-window-action="minimize"></button><button data-window-action="maximize"></button></div><div class="window-title">Notes</div><div class="titlebar-spacer"></div></div>
-        <div class="notes-app"><aside><button class="new-note-button" id="new-note-button">＋</button><h3>Notes</h3><button class="note-list-item active"><b>Website ideas</b><span>Just now</span></button><button class="note-list-item"><b>Things to build</b><span>Yesterday</span></button><button class="note-list-item"><b>Do not forget</b><span>Probably important</span></button></aside><div class="note-editor"><div class="note-date" id="note-date"></div><textarea id="note-text" spellcheck="true">Make the internet feel personal again.\n\n- Add real photos\n- Build the iOS version\n- Hide something funny in Trash\n- Make a Rizvisions playlist\n- Do not turn this into a boring portfolio</textarea></div></div>
-      </article>
-
-      <article class="app-window" data-window="messages" style="--left:30vw;--top:14vh;--width:560px;--height:480px">
-        <div class="window-titlebar"><div class="traffic-lights"><button data-window-action="close"></button><button data-window-action="minimize"></button><button data-window-action="maximize"></button></div><div class="window-title">Messages</div><div class="titlebar-spacer"></div></div>
-        <div class="messages-app"><aside><div class="message-search">Search</div><button class="conversation active"><div class="message-avatar">R</div><div><b>Riz</b><span>What’s up?</span></div><time>Now</time></button></aside><div class="chat"><div class="chat-header"><div class="message-avatar">R</div><b>Riz Zaheer</b><span>Chicago</span></div><div class="bubbles"><div class="bubble incoming">You found my website.</div><div class="bubble incoming">That probably means we should talk.</div><div class="contact-actions"><a href="https://www.linkedin.com/in/riz-zaheer/" target="_blank" rel="noopener">LinkedIn</a><a href="https://x.com/rizvisions" target="_blank" rel="noopener">X / Twitter</a><button data-open-app="socials">Instagram</button></div><div class="bubble outgoing">Email and coffee-chat links coming soon.</div></div><div class="message-input"><span>iMessage</span><button>↑</button></div></div></div>
-      </article>
-
-      <article class="app-window" data-window="weather" style="--left:28vw;--top:12vh;--width:560px;--height:500px">
-        <div class="window-titlebar glass-titlebar"><div class="traffic-lights"><button data-window-action="close"></button><button data-window-action="minimize"></button><button data-window-action="maximize"></button></div><div class="window-title">Weather</div><div class="titlebar-spacer"></div></div>
-        <div class="weather-app"><div class="weather-current"><span>My Location</span><h1>Chicago</h1><div class="temperature" id="weather-temp">--°</div><p id="weather-condition">Loading weather…</p><div class="high-low"><span id="weather-high">H: --°</span><span id="weather-low">L: --°</span></div></div><div class="weather-panel"><div><span>FEELS LIKE</span><b id="weather-feels">--°</b></div><div><span>WIND</span><b id="weather-wind">-- mph</b></div><div><span>HUMIDITY</span><b id="weather-humidity">--%</b></div><div><span>UPDATED</span><b id="weather-updated">Now</b></div></div><p class="weather-note">Live data via Open‑Meteo. Chicago skyline wallpaper coming once we choose the real image.</p></div>
-      </article>
-
-      <article class="app-window terminal-window" data-window="terminal" style="--left:24vw;--top:18vh;--width:650px;--height:420px">
-        <div class="window-titlebar dark-titlebar"><div class="traffic-lights"><button data-window-action="close"></button><button data-window-action="minimize"></button><button data-window-action="maximize"></button></div><div class="window-title">riz — zsh</div><div class="titlebar-spacer"></div></div>
-        <div class="terminal-app"><div id="terminal-output"><p>Last login: <span id="terminal-login"></span> on rizvisions.com</p><p>Type <b>help</b> to see what works.</p></div><form id="terminal-form"><span>riz@rizvisions ~ %</span><input id="terminal-input" autocomplete="off" autocapitalize="none" spellcheck="false" /></form></div>
-      </article>
-
-      <article class="app-window" data-window="resume" style="--left:30vw;--top:9vh;--width:600px;--height:640px">
-        <div class="window-titlebar"><div class="traffic-lights"><button data-window-action="close"></button><button data-window-action="minimize"></button><button data-window-action="maximize"></button></div><div class="window-title">Resume.pdf</div><div class="titlebar-spacer"></div></div>
-        <div class="pdf-toolbar"><button>−</button><span>100%</span><button>＋</button><div></div><button>⌕</button><button>⇩</button></div>
-        <div class="pdf-view"><div class="resume-page"><div class="resume-title"><h1>RIZ ZAHEER</h1><p>Chicago, IL · rizvisions.com</p></div><h2>PROFILE</h2><p>Creator and operator with experience across AI, GTM, ecommerce, content, customer success, and building things on the internet.</p><h2>EXPERIENCE</h2><div class="resume-role"><b>Parker</b><span>2026—Present</span><p>GTM, sales, customer success, product strategy, research, support, and content.</p></div><div class="resume-role"><b>Databricks</b><span>2025</span><p>Solutions Specialist focused on pipeline generation and customer qualification.</p></div><div class="resume-role"><b>Rewards Network</b><span>2024—2025</span><p>Top-performing SDR with a record of closed deals, repeatable scripts, and revenue impact.</p></div><h2>INTERNET</h2><p>Blue Specs · Rizvisions · Whop creator programs · 30M+ lifetime short-form views</p><p class="resume-foot">This is a placeholder résumé. The final version will be factual, downloadable, and less generic.</p></div></div>
-      </article>
-
-      <article class="app-window" data-window="trash" style="--left:35vw;--top:20vh;--width:470px;--height:390px">
-        <div class="window-titlebar"><div class="traffic-lights"><button data-window-action="close"></button><button data-window-action="minimize"></button><button data-window-action="maximize"></button></div><div class="window-title">Trash</div><div class="titlebar-spacer"></div></div>
-        <div class="trash-app"><div class="trash-toolbar"><span>4 items</span><button id="empty-trash">Empty</button></div><div class="trash-files"><button><span>▧</span><b>Bad startup names.txt</b><small>rizlab, riznotes, etc.</small></button><button><span>▧</span><b>Corporate LinkedIn draft.docx</b><small>Deleted for sounding insane</small></button><button><span>▧</span><b>final_FINAL_v7.mov</b><small>Definitely not final</small></button><button><span>▧</span><b>One more business idea</b><small>Recovered 38 times</small></button></div></div>
-      </article>
-
-      <article class="app-window" data-window="wallpapers" style="--left:32vw;--top:18vh;--width:520px;--height:390px">
-        <div class="window-titlebar"><div class="traffic-lights"><button data-window-action="close"></button><button data-window-action="minimize"></button><button data-window-action="maximize"></button></div><div class="window-title">Wallpaper</div><div class="titlebar-spacer"></div></div>
-        <div class="wallpaper-picker"><h2>Choose your desktop</h2><p>Generic for now. Personal Chicago photography comes next.</p><div class="wallpaper-options"><button data-wallpaper-choice="sonoma"><span class="wallpaper-thumb sonoma"></span><b>Sonoma-ish</b></button><button data-wallpaper-choice="chicago-night"><span class="wallpaper-thumb chicago-night"></span><b>Chicago Night</b></button><button data-wallpaper-choice="lake"><span class="wallpaper-thumb lake"></span><b>Lake Michigan</b></button><button data-wallpaper-choice="classic"><span class="wallpaper-thumb classic"></span><b>Classic Rizvisions</b></button></div></div>
-      </article>
-    </section>
-
-    <div id="context-menu" class="context-menu menu-panel">
-      <button data-action="open" data-app="about">Get Info</button><button data-action="new-note">New Note</button><button data-action="sort-icons">Sort Icons</button><div class="menu-separator"></div><button data-action="open-wallpapers">Change Wallpaper…</button><button data-action="theme-light">Use Light Appearance</button><button data-action="theme-dark">Use Dark Appearance</button>
-    </div>
-
-    <div id="control-panel" class="control-panel menu-panel">
-      <div class="control-grid"><button id="control-wifi" class="active"><span>⌁</span><b>Wi‑Fi</b><small>Rizvisions</small></button><button id="control-sound" class="active"><span>◉</span><b>Sound</b><small>On</small></button><button id="control-theme"><span>◐</span><b>Appearance</b><small>Light</small></button><button data-action="open" data-app="weather"><span>☁</span><b>Chicago</b><small id="control-temp">--°</small></button></div><div class="brightness"><span>☀</span><input type="range" min="60" max="110" value="100" id="brightness-range" /></div>
-    </div>
-
-    <div id="toast" class="toast" role="status"></div>
-    <div id="love-burst" class="love-burst" aria-hidden="true"></div>
-  </main>
-
-  <nav id="dock" class="dock" aria-label="Dock">
-    <button data-app="about" title="About"><span class="app-icon icon-about">R</span><i></i></button>
-    <button data-app="work" title="Selected Work"><span class="app-icon icon-folder">▰</span><i></i></button>
-    <button data-app="photos" title="Photos"><span class="app-icon icon-photos">✿</span><i></i></button>
-    <button data-app="parker" title="Parker"><span class="app-icon icon-parker">P</span><i></i></button>
-    <button data-app="socials" title="Instagram"><span class="app-icon icon-instagram">◎</span><i></i></button>
-    <button data-app="spotify" title="Spotify"><span class="app-icon icon-spotify">≋</span><i></i></button>
-    <button data-app="messages" title="Messages"><span class="app-icon icon-messages">●</span><i></i></button>
-    <span class="dock-separator"></span>
-    <button data-app="trash" title="Trash"><span class="app-icon icon-trash">♲</span><i></i></button>
-  </nav>
-
-  <div class="mobile-notice">The desktop is the site. An actual iOS version comes next.</div>
   <script src="app.js"></script>
 </body>
 </html>
