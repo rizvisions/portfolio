@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Rizvisions Admin</title>
+  <link rel="icon" href="../assets/icons/macos/rizvisions.png?v=10">
+  <link rel="stylesheet" href="admin.css?v=10">
+</head>
+<body>
+  <main class="admin-shell">
+    <header class="admin-header">
+      <a class="brand" href="../" aria-label="Back to Rizvisions">
+        <img src="../assets/icons/macos/rizvisions.png?v=10" alt="">
+        <span><strong>Rizvisions</strong><small>Media Admin</small></span>
+      </a>
+      <div class="header-actions" id="headerActions" hidden>
+        <a href="../" target="_blank" rel="noopener">View site</a>
+        <button id="signOutButton" type="button">Sign out</button>
+      </div>
+    </header>
+
+    <section class="auth-view" id="authView">
+      <div class="auth-card">
+        <img class="auth-icon" src="../assets/icons/macos/rizvisions.png?v=10" alt="Rizvisions">
+        <span class="eyebrow">PRIVATE</span>
+        <h1>Manage the archive.</h1>
+        <p>Upload photos and videos, decide what appears on the desktop, and publish without touching GitHub.</p>
+
+        <div class="auth-status" id="authStatus" role="status"></div>
+
+        <form id="signInForm" class="auth-form">
+          <label>Email<input id="emailInput" type="email" autocomplete="username" required></label>
+          <label>Password<input id="passwordInput" type="password" autocomplete="current-password" minlength="8" required></label>
+          <button class="primary-button" type="submit">Sign in</button>
+        </form>
+
+        <div class="auth-secondary">
+          <button id="createAccountButton" type="button">First time? Create account</button>
+          <button id="forgotPasswordButton" type="button">Forgot password</button>
+          <button id="magicLinkButton" type="button">Email me a login link</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="recovery-view" id="recoveryView" hidden>
+      <div class="auth-card">
+        <span class="eyebrow">PASSWORD RECOVERY</span>
+        <h1>Choose a new password.</h1>
+        <form id="recoveryForm" class="auth-form">
+          <label>New password<input id="newPasswordInput" type="password" minlength="12" autocomplete="new-password" required></label>
+          <button class="primary-button" type="submit">Update password</button>
+        </form>
+        <div class="auth-status" id="recoveryStatus" role="status"></div>
+      </div>
+    </section>
+
+    <section class="manager-view" id="managerView" hidden>
+      <div class="manager-hero">
+        <div><span class="eyebrow">RIZVISIONS ARCHIVE</span><h1>Photos & videos</h1><p>Drag in a batch. Everything publishes directly to the site.</p></div>
+        <div class="usage-note"><strong>Free plan</strong><span>50 MB maximum per file</span></div>
+      </div>
+
+      <section class="upload-panel" id="uploadPanel">
+        <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/heic,image/heif,.heic,.heif,video/mp4,video/webm,video/quicktime,video/x-m4v" multiple hidden>
+        <div class="upload-illustration">＋</div>
+        <h2>Drop photos and videos here</h2>
+        <p>Or choose files. Photos are resized for the web before upload; videos must be under 50 MB.</p>
+        <button class="primary-button" id="chooseFilesButton" type="button">Choose files</button>
+      </section>
+
+      <section class="upload-queue" id="uploadQueue" hidden>
+        <div class="section-heading"><h2>Uploading</h2><span id="queueSummary"></span></div>
+        <div id="queueItems"></div>
+      </section>
+
+      <section class="library-section">
+        <div class="section-heading library-heading">
+          <div><h2>Library</h2><span id="libraryCount">Loading…</span></div>
+          <div class="library-controls">
+            <input id="searchInput" type="search" placeholder="Search media">
+            <select id="filterSelect" aria-label="Filter media">
+              <option value="all">All media</option>
+              <option value="desktop">On desktop</option>
+              <option value="published">Published</option>
+              <option value="hidden">Hidden</option>
+              <option value="image">Photos</option>
+              <option value="video">Videos</option>
+            </select>
+          </div>
+        </div>
+        <div class="library-status" id="libraryStatus" role="status"></div>
+        <div class="media-grid" id="mediaGrid"></div>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="editDialog" class="edit-dialog">
+    <form method="dialog" id="editForm">
+      <header><div><span class="eyebrow">MEDIA DETAILS</span><h2 id="editTitle">Edit media</h2></div><button class="icon-button" value="cancel" aria-label="Close">×</button></header>
+      <div id="editPreview" class="edit-preview"></div>
+      <div class="edit-fields">
+        <label>Caption<textarea id="captionInput" rows="3"></textarea></label>
+        <label>Alt text<input id="altInput" type="text"></label>
+        <label>Album<input id="albumInput" type="text" placeholder="Library"></label>
+        <div class="toggle-row"><label><input id="publishedInput" type="checkbox"> Published</label><label><input id="desktopInput" type="checkbox"> Show on desktop</label><label><input id="featuredInput" type="checkbox"> Featured</label></div><fieldset class="desktop-fields"><legend>Default desktop placement</legend><label>X position<input id="desktopXInput" type="number" min="5" max="95" step="0.1" placeholder="Auto"></label><label>Y position<input id="desktopYInput" type="number" min="8" max="88" step="0.1" placeholder="Auto"></label><label>Rotation<input id="desktopRotationInput" type="number" min="-20" max="20" step="1" value="0"></label></fieldset>
+      </div>
+      <footer><button id="deleteButton" class="danger-button" type="button">Delete</button><span></span><button value="cancel">Cancel</button><button id="saveButton" class="primary-button" type="button">Save changes</button></footer>
+    </form>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase-config.js?v=10"></script>
+  <script src="admin.js?v=10"></script>
+</body>
+</html>

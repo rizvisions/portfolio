@@ -1,7 +1,7 @@
 /*
-  V9.6 automatically discovers photos and videos placed in assets/media/.
-  assets/media/ is the only folder you should use for uploads.
-  The lists below are just offline fallbacks in case GitHub media auto-discovery is unavailable.
+  V10 loads published media from Supabase.
+  The lists below are bundled placeholders used only before the Supabase setup is complete
+  or when the public media library is empty.
 */
 window.RIZVISIONS_CONTENT = {
   mediaLibrary: {
