@@ -634,3 +634,241 @@ body.desktop-dragging, body.desktop-dragging * { cursor: grabbing !important; }
 .finder-video-file { position: relative; width: 72px; height: 64px; overflow: hidden; border-radius: 7px; background: #222; box-shadow: 0 5px 7px rgba(0,0,0,.22), inset 0 0 0 1px rgba(255,255,255,.16); }
 .finder-video-file img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(.75) contrast(1.05); }
 .finder-video-file i { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; padding-left: 2px; background: rgba(255,255,255,.88); color: #111; font-style: normal; font-size: 10px; box-shadow: 0 2px 7px rgba(0,0,0,.3); }
+
+/* V8 — Rizvisions identity, true desktop selection, resizable windows, themes, customizable Dock */
+.os {
+  --accent: #0a84ff;
+  --shell-text: #202022;
+  --menu-glass: rgba(248,248,248,.82);
+  --popover-glass: rgba(246,246,246,.9);
+  --dock-glass-top: rgba(255,255,255,.76);
+  --dock-glass-bottom: rgba(239,239,239,.58);
+  --window-surface: rgba(247,247,247,.985);
+  --window-chrome-top: rgba(247,247,247,.97);
+  --window-chrome-bottom: rgba(229,229,229,.94);
+  --window-content: #fff;
+  --window-text: #1d1d1f;
+  --window-muted: #737378;
+  --hairline: rgba(0,0,0,.14);
+  --grid-line: rgba(45,45,45,.09);
+  --wall-base: #f6f6f5;
+  --blue: var(--accent);
+}
+.os[data-wallpaper="dark"] {
+  --accent: #0a84ff;
+  --shell-text: #f5f5f7;
+  --menu-glass: rgba(29,29,31,.77);
+  --popover-glass: rgba(40,40,43,.9);
+  --dock-glass-top: rgba(64,64,68,.68);
+  --dock-glass-bottom: rgba(32,32,35,.64);
+  --window-surface: rgba(38,38,41,.985);
+  --window-chrome-top: rgba(55,55,58,.98);
+  --window-chrome-bottom: rgba(39,39,42,.96);
+  --window-content: #1e1e20;
+  --window-text: #f5f5f7;
+  --window-muted: #a9a9af;
+  --hairline: rgba(255,255,255,.13);
+  --grid-line: rgba(255,255,255,.065);
+  --wall-base: #0f1012;
+}
+.os[data-wallpaper="maroon"] {
+  --accent: #e56a83;
+  --shell-text: #fff8fa;
+  --menu-glass: rgba(61,16,28,.82);
+  --popover-glass: rgba(73,20,35,.92);
+  --dock-glass-top: rgba(105,38,57,.66);
+  --dock-glass-bottom: rgba(57,16,29,.68);
+  --window-surface: rgba(54,21,31,.985);
+  --window-chrome-top: rgba(79,31,45,.98);
+  --window-chrome-bottom: rgba(54,20,31,.96);
+  --window-content: #32151f;
+  --window-text: #fff7f9;
+  --window-muted: #d3afb9;
+  --hairline: rgba(255,235,241,.16);
+  --grid-line: rgba(255,235,241,.072);
+  --wall-base: #3d101c;
+}
+.os[data-wallpaper="forest"] {
+  --accent: #6bc99a;
+  --shell-text: #f4fff8;
+  --menu-glass: rgba(13,47,35,.82);
+  --popover-glass: rgba(17,60,45,.92);
+  --dock-glass-top: rgba(37,94,69,.67);
+  --dock-glass-bottom: rgba(12,50,36,.7);
+  --window-surface: rgba(18,54,41,.985);
+  --window-chrome-top: rgba(29,76,57,.98);
+  --window-chrome-bottom: rgba(17,53,40,.96);
+  --window-content: #10382a;
+  --window-text: #f3fff7;
+  --window-muted: #acd2be;
+  --hairline: rgba(232,255,243,.16);
+  --grid-line: rgba(233,255,243,.073);
+  --wall-base: #0e3023;
+}
+
+.menu-bar { color: var(--shell-text); background: var(--menu-glass); border-color: var(--hairline); }
+.menu-trigger:hover, .menu-trigger.open, .brand-menu:hover, .brand-menu.open,
+.control-center:hover, .status-button:hover, .clock-button:hover, .clock-button:focus-visible { background: color-mix(in srgb, var(--shell-text) 10%, transparent); }
+.brand-menu img { filter: none; }
+.menu-popover, .context-menu { background: var(--popover-glass); color: var(--shell-text); border-color: var(--hairline); }
+.menu-popover button:disabled { color: color-mix(in srgb, var(--shell-text) 34%, transparent); }
+.menu-separator { background: var(--hairline); }
+
+.wallpaper-grid, .wallpaper-dark, .wallpaper-maroon, .wallpaper-forest {
+  background-color: var(--wall-base);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    radial-gradient(circle at 52% 42%, rgba(255,255,255,.055), transparent 56%);
+  background-size: 56px 56px, 56px 56px, 100% 100%;
+  background-position: -1px -1px, -1px -1px, 0 0;
+}
+.wallpaper-dark { --wall-base:#0f1012; --grid-line:rgba(255,255,255,.065); }
+.wallpaper-maroon { --wall-base:#3d101c; --grid-line:rgba(255,235,241,.072); }
+.wallpaper-forest { --wall-base:#0e3023; --grid-line:rgba(233,255,243,.073); }
+.os[data-wallpaper="grid"] .wallpaper-grid,
+.os[data-wallpaper="dark"] .wallpaper-dark,
+.os[data-wallpaper="maroon"] .wallpaper-maroon,
+.os[data-wallpaper="forest"] .wallpaper-forest { opacity: 1; }
+.watermark-wordmark {
+  position:absolute; left:50%; top:48%; width:min(68vw,1080px); height:auto; transform:translate(-50%,-50%) rotate(-6deg);
+  opacity:.052; pointer-events:none; user-select:none; -webkit-user-drag:none;
+}
+.watermark-light { display:none; }
+.os[data-wallpaper="dark"] .watermark-dark,
+.os[data-wallpaper="maroon"] .watermark-dark,
+.os[data-wallpaper="forest"] .watermark-dark { display:none; }
+.os[data-wallpaper="dark"] .watermark-light,
+.os[data-wallpaper="maroon"] .watermark-light,
+.os[data-wallpaper="forest"] .watermark-light { display:block; opacity:.067; }
+
+.now-widget { background: color-mix(in srgb, var(--window-surface) 88%, transparent); color: var(--window-text); border-color: var(--hairline); }
+.now-sub, .now-actions .muted { color: var(--window-muted); }
+.now-actions { border-color: var(--hairline); }
+.now-actions button + button { border-color: var(--hairline); }
+.now-actions button:first-child { color: var(--accent); }
+
+.selection-rectangle {
+  position:absolute; z-index:9; display:none; pointer-events:none;
+  border:1px solid color-mix(in srgb, var(--accent) 85%, white 15%);
+  background:color-mix(in srgb, var(--accent) 18%, transparent);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);
+}
+.selection-rectangle.active { display:block; }
+.desktop-item.selected .desktop-label, .photo-file.selected span { background:var(--accent); }
+.photo-file.selected { filter:brightness(.88); box-shadow:0 14px 30px rgba(0,0,0,.28),0 0 0 3px color-mix(in srgb,var(--accent) 80%,white 20%); }
+
+.dock { background:linear-gradient(var(--dock-glass-top),var(--dock-glass-bottom)); border-color:var(--hairline); }
+.dock.no-magnify .dock-item:hover { transform:none; margin:0; }
+.dock-item.dock-dragging { opacity:.72; transform:translateY(-15px) scale(1.12); z-index:8; }
+.running-dot { background:color-mix(in srgb,var(--shell-text) 78%,transparent); }
+.dock-item.running .running-dot { opacity:.95; }
+.temporary-window .minimized-preview { width:54px; height:43px; }
+.trash-dock img { width:58px; height:64px; }
+
+.mac-window { resize:none; min-width:410px; min-height:280px; background:var(--window-surface); color:var(--window-text); }
+.window-titlebar { background:linear-gradient(var(--window-chrome-top),var(--window-chrome-bottom)); border-color:var(--hairline); }
+.window-title { color:var(--window-text); }
+.window-body { background:var(--window-content); color:var(--window-text); }
+.window-resize-handle { position:absolute; z-index:20; display:block; touch-action:none; }
+.resize-n { left:12px; right:12px; top:-4px; height:9px; cursor:ns-resize; }
+.resize-s { left:12px; right:12px; bottom:-4px; height:9px; cursor:ns-resize; }
+.resize-e { right:-4px; top:12px; bottom:12px; width:9px; cursor:ew-resize; }
+.resize-w { left:-4px; top:12px; bottom:12px; width:9px; cursor:ew-resize; }
+.resize-ne,.resize-se,.resize-sw,.resize-nw { width:17px; height:17px; }
+.resize-ne { right:-5px; top:-5px; cursor:nesw-resize; }
+.resize-se { right:-5px; bottom:-5px; cursor:nwse-resize; }
+.resize-sw { left:-5px; bottom:-5px; cursor:nesw-resize; }
+.resize-nw { left:-5px; top:-5px; cursor:nwse-resize; }
+.mac-window.maximized .window-resize-handle { display:none; }
+body.window-resizing, body.window-resizing * { user-select:none!important; }
+
+/* Dark/tinted appearances extend through application chrome and content. */
+.os:not([data-wallpaper="grid"]) .finder-shell,
+.os:not([data-wallpaper="grid"]) .settings-shell,
+.os:not([data-wallpaper="grid"]) .photos-shell,
+.os:not([data-wallpaper="grid"]) .messages-shell,
+.os:not([data-wallpaper="grid"]) .notes-shell,
+.os:not([data-wallpaper="grid"]) .calendar-shell,
+.os:not([data-wallpaper="grid"]) .empty-state,
+.os:not([data-wallpaper="grid"]) .reel-shell,
+.os:not([data-wallpaper="grid"]) .instagram-shell { background:var(--window-content); color:var(--window-text); }
+.os:not([data-wallpaper="grid"]) .finder-sidebar,
+.os:not([data-wallpaper="grid"]) .settings-sidebar,
+.os:not([data-wallpaper="grid"]) .photos-sidebar,
+.os:not([data-wallpaper="grid"]) .conversation-list,
+.os:not([data-wallpaper="grid"]) .notes-list,
+.os:not([data-wallpaper="grid"]) .calendar-sidebar { background:color-mix(in srgb,var(--window-content) 82%,white 5%); color:var(--window-text); border-color:var(--hairline); }
+.os:not([data-wallpaper="grid"]) .finder-main,
+.os:not([data-wallpaper="grid"]) .settings-main,
+.os:not([data-wallpaper="grid"]) .photos-main,
+.os:not([data-wallpaper="grid"]) .chat-pane,
+.os:not([data-wallpaper="grid"]) .note-editor,
+.os:not([data-wallpaper="grid"]) .calendar-main { background:var(--window-content); color:var(--window-text); }
+.os:not([data-wallpaper="grid"]) .finder-toolbar,
+.os:not([data-wallpaper="grid"]) .photos-toolbar,
+.os:not([data-wallpaper="grid"]) .chat-header,
+.os:not([data-wallpaper="grid"]) .chat-input { background:color-mix(in srgb,var(--window-content) 88%,white 4%); border-color:var(--hairline); color:var(--window-text); }
+.os:not([data-wallpaper="grid"]) .sidebar-row.active,
+.os:not([data-wallpaper="grid"]) .note-row.active,
+.os:not([data-wallpaper="grid"]) .conversation.active { background:color-mix(in srgb,var(--accent) 28%,transparent); }
+.os:not([data-wallpaper="grid"]) .profile-card,
+.os:not([data-wallpaper="grid"]) .settings-row,
+.os:not([data-wallpaper="grid"]) .reel-card,
+.os:not([data-wallpaper="grid"]) .account-row { background:color-mix(in srgb,var(--window-content) 90%,white 6%); color:var(--window-text); border-color:var(--hairline); }
+.os:not([data-wallpaper="grid"]) .note-editor textarea { background:transparent; color:var(--window-text); }
+.os:not([data-wallpaper="grid"]) .empty-state h2 { color:var(--window-text); }
+.os:not([data-wallpaper="grid"]) .finder-statusbar,
+.os:not([data-wallpaper="grid"]) .sidebar-title,
+.os:not([data-wallpaper="grid"]) .note-meta { color:var(--window-muted); }
+
+.control-center-panel,
+.notification-center > section { background:var(--popover-glass); color:var(--shell-text); border-color:var(--hairline); }
+.cc-tile,.cc-slider,.cc-wallpapers button { background:color-mix(in srgb,var(--window-surface) 75%,transparent); color:var(--window-text); }
+.cc-tile small,.cc-wallpapers button { color:var(--window-muted); }
+.cc-tile.active .cc-icon { background:var(--accent); }
+.cc-slider input { accent-color:var(--accent); }
+.cc-wallpapers { grid-template-columns:repeat(4,1fr); }
+.cc-wallpaper-preview.maroon { background-color:#3d101c; background-image:linear-gradient(rgba(255,255,255,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.12) 1px,transparent 1px); background-size:10px 10px; }
+.cc-wallpaper-preview.forest { background-color:#0e3023; background-image:linear-gradient(rgba(255,255,255,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.12) 1px,transparent 1px); background-size:10px 10px; }
+.cc-wallpaper-preview.dark { background-color:#0f1012; background-image:linear-gradient(rgba(255,255,255,.11) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.11) 1px,transparent 1px); background-size:10px 10px; }
+
+/* Dock customization sheet */
+.dock-customizer-backdrop {
+  position:fixed; inset:0; z-index:11950; display:grid; place-items:center; background:rgba(0,0,0,.18);
+  opacity:0; pointer-events:none; transition:opacity .16s ease; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+}
+.dock-customizer-backdrop.open { opacity:1; pointer-events:auto; }
+.dock-customizer {
+  width:min(520px,calc(100vw - 28px)); max-height:min(680px,calc(100vh - 64px)); overflow:hidden; display:flex; flex-direction:column;
+  border-radius:18px; border:1px solid var(--hairline); background:var(--window-surface); color:var(--window-text);
+  box-shadow:0 30px 90px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.2);
+}
+.dock-customizer header { display:flex; align-items:center; justify-content:space-between; padding:18px 20px 14px; border-bottom:1px solid var(--hairline); }
+.dock-customizer header strong,.dock-customizer header span { display:block; }
+.dock-customizer header strong { font-size:17px; }
+.dock-customizer header span { margin-top:3px; color:var(--window-muted); font-size:12px; }
+.dock-customizer header button,.dock-customizer footer button { border:0; border-radius:7px; padding:6px 12px; color:#fff; background:var(--accent); font-weight:600; }
+.dock-customizer-list { padding:8px 12px; overflow:auto; }
+.dock-customizer-row { min-height:52px; display:grid; grid-template-columns:42px 1fr auto; align-items:center; gap:10px; padding:5px 8px; border-radius:10px; }
+.dock-customizer-row:hover { background:color-mix(in srgb,var(--accent) 12%,transparent); }
+.dock-customizer-row img { width:38px; height:38px; object-fit:contain; }
+.dock-customizer-row label { display:flex; align-items:center; gap:8px; font-size:13px; }
+.dock-customizer-row input { accent-color:var(--accent); }
+.dock-customizer-row > div { display:flex; gap:5px; }
+.dock-customizer-row > div button { width:29px; height:27px; border:1px solid var(--hairline); border-radius:6px; background:color-mix(in srgb,var(--window-surface) 88%,white 6%); color:var(--window-text); }
+.dock-customizer-row > div button:disabled { opacity:.3; }
+.dock-customizer footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 20px 16px; border-top:1px solid var(--hairline); }
+.dock-customizer footer span { color:var(--window-muted); font-size:11px; }
+
+@media (max-width:760px) {
+  .watermark-wordmark { width:92vw; }
+  .cc-wallpapers { grid-template-columns:repeat(2,1fr); }
+  .dock-customizer { max-height:calc(100vh - 30px); }
+}
+.dock-customizer-row .customizer-calendar {
+  width:38px; height:38px; border-radius:9px; font-size:inherit;
+  box-shadow:0 2px 5px rgba(0,0,0,.18), inset 0 0 0 1px rgba(0,0,0,.09);
+}
+.dock-customizer-row .customizer-calendar .calendar-weekday { top:5px; font-size:7px; }
+.dock-customizer-row .customizer-calendar .calendar-day { top:13px; font-size:20px; }

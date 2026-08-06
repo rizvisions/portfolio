@@ -7,7 +7,7 @@
   <title>Rizvisions</title>
   <meta name="description" content="The internet home of Riz Zaheer — work, photography, projects, notes, and whatever else." />
   <link rel="icon" href="assets/icons/macos/rizvisions.png" />
-  <link rel="stylesheet" href="styles.css?v=7" />
+  <link rel="stylesheet" href="styles.css?v=8" />
 </head>
 <body>
   <div id="os" class="os" data-wallpaper="grid">
@@ -67,10 +67,12 @@
       <button role="menuitem" disabled>Paste <kbd>⌘V</kbd></button>
     </div>
     <div class="menu-popover" id="view-menu" role="menu">
-      <button role="menuitem" data-wallpaper="grid"><span class="menu-check" data-check="grid">✓</span> Grid Wallpaper</button>
-      <button role="menuitem" data-wallpaper="chicago"><span class="menu-check" data-check="chicago"></span> Chicago Wallpaper</button>
-      <button role="menuitem" data-wallpaper="dark"><span class="menu-check" data-check="dark"></span> Dark Wallpaper</button>
+      <button role="menuitem" data-wallpaper="grid"><span class="menu-check" data-check="grid">✓</span> Light Grid</button>
+      <button role="menuitem" data-wallpaper="dark"><span class="menu-check" data-check="dark"></span> Dark Grid</button>
+      <button role="menuitem" data-wallpaper="maroon"><span class="menu-check" data-check="maroon"></span> Maroon Grid</button>
+      <button role="menuitem" data-wallpaper="forest"><span class="menu-check" data-check="forest"></span> Forest Grid</button>
       <div class="menu-separator"></div>
+      <button role="menuitem" data-action="customize-dock">Customize Dock…</button>
       <button role="menuitem" data-action="reset-layout">Restore Default Layout</button>
     </div>
     <div class="menu-popover" id="go-menu" role="menu">
@@ -95,12 +97,12 @@
 
     <div class="desktop" id="desktop" tabindex="-1">
       <div class="wallpaper wallpaper-grid" aria-hidden="true">
-        <div class="watermark"><span>RIZ</span><span>VISIONS</span></div>
+        <img class="watermark-wordmark watermark-dark" src="assets/brand/rizvisions-wordmark-black.png" alt="" draggable="false" />
+        <img class="watermark-wordmark watermark-light" src="assets/brand/rizvisions-wordmark-white.png" alt="" draggable="false" />
       </div>
-      <div class="wallpaper wallpaper-chicago" aria-hidden="true"></div>
-      <div class="wallpaper wallpaper-dark" aria-hidden="true">
-        <div class="dark-orb dark-orb-a"></div><div class="dark-orb dark-orb-b"></div>
-      </div>
+      <div class="wallpaper wallpaper-dark" aria-hidden="true"></div>
+      <div class="wallpaper wallpaper-maroon" aria-hidden="true"></div>
+      <div class="wallpaper wallpaper-forest" aria-hidden="true"></div>
 
       <section class="now-widget" id="currentWidget" aria-label="Currently" title="Drag to move">
         <div class="now-copy">
@@ -136,51 +138,35 @@
           <span class="icon-frame"><img src="assets/icons/macos/photos.png" alt="" draggable="false" /></span>
           <span class="desktop-label">Photos</span>
         </button>
-        <button class="desktop-item" data-id="resume" data-app="resume" style="--x: 44.4%; --y: 40.9%;">
-          <span class="icon-frame icon-document"><img src="assets/icons/macos/document.png" alt="" draggable="false" /></span>
-          <span class="desktop-label">Resume.pdf</span>
-        </button>
-        <button class="desktop-item" data-id="calendar" data-app="calendar" style="--x: 52.6%; --y: 40.9%;">
+        <button class="desktop-item" data-id="calendar" data-app="calendar" style="--x: 44.4%; --y: 40.9%;">
           <span class="icon-frame calendar-icon" aria-hidden="true"><span class="calendar-weekday">WED</span><span class="calendar-day">5</span></span>
           <span class="desktop-label">Coffee Chat</span>
         </button>
-        <button class="desktop-item" data-id="instagram" data-app="instagram" style="--x: 60.8%; --y: 40.9%;">
+        <button class="desktop-item" data-id="instagram" data-app="instagram" style="--x: 52.6%; --y: 40.9%;">
           <span class="icon-frame"><img src="assets/icons/macos/instagram.png" alt="" draggable="false" /></span>
           <span class="desktop-label">Instagram</span>
         </button>
-        <button class="desktop-item" data-id="trash" data-app="trash" style="--x: 44.4%; --y: 57.1%;">
+        <button class="desktop-item" data-id="trash" data-app="trash" style="--x: 60.8%; --y: 40.9%;">
           <span class="icon-frame icon-trash"><img src="assets/icons/macos/trash.png" alt="" draggable="false" /></span>
           <span class="desktop-label">Trash</span>
         </button>
-        <button class="desktop-item" data-id="terminal" data-app="terminal" style="--x: 52.6%; --y: 57.1%;">
+        <button class="desktop-item" data-id="terminal" data-app="terminal" style="--x: 48.5%; --y: 57.1%;">
           <span class="icon-frame"><img src="assets/icons/macos/terminal.png" alt="" draggable="false" /></span>
           <span class="desktop-label">Terminal</span>
         </button>
-        <button class="desktop-item" data-id="spotify" data-app="spotify" style="--x: 60.8%; --y: 57.1%;">
+        <button class="desktop-item" data-id="spotify" data-app="spotify" style="--x: 56.7%; --y: 57.1%;">
           <span class="icon-frame"><img src="assets/icons/macos/spotify.png" alt="" draggable="false" /></span>
           <span class="desktop-label">Spotify</span>
         </button>
       </div>
 
       <aside class="photo-stack" id="desktopPhotos" aria-label="Photography files"></aside>
+      <div class="selection-rectangle" id="selectionRectangle" aria-hidden="true"></div>
 
       <div class="windows" id="windows" aria-live="polite"></div>
 
       <nav class="dock-wrap" aria-label="Dock">
-        <div class="dock" id="dock">
-          <button class="dock-item" data-app="work" data-tooltip="Finder"><img src="assets/icons/macos/finder.png" alt="Finder" draggable="false" /><span class="running-dot"></span></button>
-          <button class="dock-item" data-app="work" data-tooltip="Selected Work"><img src="assets/icons/macos/folder.png" alt="Selected Work" draggable="false" /></button>
-          <button class="dock-item" data-app="photos" data-tooltip="Photos"><img src="assets/icons/macos/photos.png" alt="Photos" draggable="false" /></button>
-          <button class="dock-item" data-app="about" data-tooltip="About Riz"><img src="assets/icons/macos/rizvisions.png" alt="About Riz" draggable="false" /></button>
-          <button class="dock-item" data-app="messages" data-tooltip="Messages"><img src="assets/icons/macos/messages.png" alt="Messages" draggable="false" /><span class="notification-badge dock-badge">1</span></button>
-          <button class="dock-item dock-calendar" data-app="calendar" data-tooltip="Calendar"><span class="calendar-icon"><span class="calendar-weekday">WED</span><span class="calendar-day">5</span></span></button>
-          <span class="dock-separator" aria-hidden="true"></span>
-          <div class="minimized-dock" id="minimizedDock" aria-label="Minimized windows"></div>
-          <button class="dock-item" data-app="notes" data-tooltip="Notes"><img src="assets/icons/macos/notes.png" alt="Notes" draggable="false" /></button>
-          <button class="dock-item" data-app="terminal" data-tooltip="Terminal"><img src="assets/icons/macos/terminal.png" alt="Terminal" draggable="false" /></button>
-          <button class="dock-item" data-app="spotify" data-tooltip="Spotify"><img src="assets/icons/macos/spotify.png" alt="Spotify" draggable="false" /></button>
-          <button class="dock-item trash-dock" data-app="trash" data-tooltip="Trash"><img src="assets/icons/macos/trash.png" alt="Trash" draggable="false" /></button>
-        </div>
+        <div class="dock" id="dock"></div>
       </nav>
 
       <div class="context-menu" id="desktopContextMenu" role="menu">
@@ -204,6 +190,25 @@
         <button role="menuitem" data-action="reset-photo-position">Put Back</button>
       </div>
 
+
+      <div class="context-menu" id="dockContextMenu" role="menu">
+        <button role="menuitem" data-action="customize-dock">Customize Dock…</button>
+        <button role="menuitem" data-action="dock-reset">Restore Default Dock</button>
+        <div class="menu-separator"></div>
+        <button role="menuitem" data-action="dock-magnification">Toggle Magnification</button>
+      </div>
+
+      <div class="dock-customizer-backdrop" id="dockCustomizerBackdrop" aria-hidden="true">
+        <section class="dock-customizer" role="dialog" aria-modal="true" aria-label="Customize Dock">
+          <header>
+            <div><strong>Customize Dock</strong><span>Choose apps and drag to reorder.</span></div>
+            <button type="button" id="dockCustomizerDone">Done</button>
+          </header>
+          <div class="dock-customizer-list" id="dockCustomizerList"></div>
+          <footer><button type="button" data-action="dock-reset">Restore Defaults</button><span>Changes save automatically on this browser.</span></footer>
+        </section>
+      </div>
+
       <div class="control-center-panel" id="controlCenterPanel" aria-hidden="true">
         <div class="cc-grid">
           <button class="cc-tile active"><span class="cc-icon">⌁</span><span><strong>Wi‑Fi</strong><small>Home</small></span></button>
@@ -213,10 +218,11 @@
         </div>
         <label class="cc-slider"><span>Display</span><input id="brightnessSlider" type="range" min="45" max="100" value="100" /></label>
         <label class="cc-slider"><span>Sound</span><input id="volumeSlider" type="range" min="0" max="100" value="54" /></label>
-        <div class="cc-wallpapers" aria-label="Wallpaper shortcuts">
-          <button type="button" data-wallpaper="grid" aria-label="Grid wallpaper"><span class="cc-wallpaper-preview grid"></span>Grid</button>
-          <button type="button" data-wallpaper="chicago" aria-label="Chicago wallpaper"><span class="cc-wallpaper-preview chicago"></span>Chicago</button>
-          <button type="button" data-wallpaper="dark" aria-label="Dark wallpaper"><span class="cc-wallpaper-preview dark"></span>Dark</button>
+        <div class="cc-wallpapers" aria-label="Appearance shortcuts">
+          <button type="button" data-wallpaper="grid" aria-label="Light grid"><span class="cc-wallpaper-preview grid"></span>Light</button>
+          <button type="button" data-wallpaper="dark" aria-label="Dark grid"><span class="cc-wallpaper-preview dark"></span>Dark</button>
+          <button type="button" data-wallpaper="maroon" aria-label="Maroon grid"><span class="cc-wallpaper-preview maroon"></span>Maroon</button>
+          <button type="button" data-wallpaper="forest" aria-label="Forest grid"><span class="cc-wallpaper-preview forest"></span>Forest</button>
         </div>
       </div>
 
@@ -284,11 +290,18 @@
         <div class="window-title-spacer"></div>
       </header>
       <div class="window-body"></div>
-      <div class="resize-grip" aria-hidden="true"></div>
+      <span class="window-resize-handle resize-n" data-resize="n" aria-hidden="true"></span>
+      <span class="window-resize-handle resize-e" data-resize="e" aria-hidden="true"></span>
+      <span class="window-resize-handle resize-s" data-resize="s" aria-hidden="true"></span>
+      <span class="window-resize-handle resize-w" data-resize="w" aria-hidden="true"></span>
+      <span class="window-resize-handle resize-ne" data-resize="ne" aria-hidden="true"></span>
+      <span class="window-resize-handle resize-se" data-resize="se" aria-hidden="true"></span>
+      <span class="window-resize-handle resize-sw" data-resize="sw" aria-hidden="true"></span>
+      <span class="window-resize-handle resize-nw" data-resize="nw" aria-hidden="true"></span>
     </section>
   </template>
 
-  <script src="site-content.js?v=7"></script>
-  <script src="app.js?v=7"></script>
+  <script src="site-content.js?v=8"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

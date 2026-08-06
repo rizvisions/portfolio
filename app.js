@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "rizvisions-os-v7";
+  const STORAGE_KEY = "rizvisions-os-v8";
   const os = document.getElementById("os");
   const desktop = document.getElementById("desktop");
   const windowsRoot = document.getElementById("windows");
@@ -15,7 +15,12 @@
   const desktopPhotosRoot = document.getElementById("desktopPhotos");
   const currentWidget = document.getElementById("currentWidget");
   const photoContextMenu = document.getElementById("photoContextMenu");
-  const minimizedDock = document.getElementById("minimizedDock");
+  const dock = document.getElementById("dock");
+  const dockContextMenu = document.getElementById("dockContextMenu");
+  const dockCustomizerBackdrop = document.getElementById("dockCustomizerBackdrop");
+  const dockCustomizerList = document.getElementById("dockCustomizerList");
+  const dockCustomizerDone = document.getElementById("dockCustomizerDone");
+  const selectionRectangle = document.getElementById("selectionRectangle");
   const spotlightButton = document.getElementById("spotlightButton");
   const spotlightBackdrop = document.getElementById("spotlightBackdrop");
   const spotlightInput = document.getElementById("spotlightInput");
@@ -45,12 +50,30 @@
   ]));
   const defaultWidget = { x: 55, y: 5.8, z: 12 };
 
+  const DOCK_CATALOG = {
+    finder: { label: "Finder", app: "work", icon: "assets/icons/macos/finder.png", alwaysRunning: true, tracksRunning: true },
+    work: { label: "Selected Work", app: "work", icon: "assets/icons/macos/folder.png", tracksRunning: false },
+    photos: { label: "Photos", app: "photos", icon: "assets/icons/macos/photos.png", tracksRunning: true },
+    about: { label: "About Riz", app: "about", icon: "assets/icons/macos/rizvisions.png", tracksRunning: true },
+    messages: { label: "Messages", app: "messages", icon: "assets/icons/macos/messages.png", badge: "1", tracksRunning: true },
+    calendar: { label: "Calendar", app: "calendar", kind: "calendar", tracksRunning: true },
+    instagram: { label: "Instagram", app: "instagram", icon: "assets/icons/macos/instagram.png", tracksRunning: true },
+    reel: { label: "Live Reel", app: "reel", icon: "assets/icons/macos/photos.png", tracksRunning: true },
+    notes: { label: "Notes", app: "notes", icon: "assets/icons/macos/notes.png", tracksRunning: true },
+    terminal: { label: "Terminal", app: "terminal", icon: "assets/icons/macos/terminal.png", tracksRunning: true },
+    spotify: { label: "Spotify", app: "spotify", icon: "assets/icons/macos/spotify.png", tracksRunning: true },
+    trash: { label: "Trash", app: "trash", icon: "assets/icons/macos/trash.png", kind: "trash", tracksRunning: true }
+  };
+  const DEFAULT_DOCK = ["finder", "work", "photos", "about", "messages", "calendar", "notes", "terminal", "spotify", "trash"];
+
   const DEFAULT_STATE = {
     wallpaper: "grid",
     sound: true,
     volume: 54,
     brightness: 100,
     focus: false,
+    dock: [...DEFAULT_DOCK],
+    dockMagnification: true,
     widgetIndex: 0,
     icons: clone(defaultIcons),
     photos: clone(defaultPhotos),
@@ -82,7 +105,6 @@
     spotify: { name: "Spotify", title: "Spotify", size: [690, 520], render: renderSpotify },
     calendar: { name: "Calendar", title: "Calendar", size: [720, 510], render: renderCalendar },
     trash: { name: "Finder", title: "Trash", size: [620, 430], render: renderTrash },
-    resume: { name: "Preview", title: "Resume.pdf", size: [690, 650], render: renderResume },
     reel: { name: "QuickTime Player", title: "Live Reel", size: [850, 570], render: renderLiveReel }
   };
 
@@ -128,7 +150,6 @@
     { eyebrow: "CURRENTLY", title: "Parker", subtitle: "AI creative strategy", kind: "project", target: "parker" },
     { eyebrow: "CREATOR", title: "30M+ views", subtitle: "short-form videos and internet experiments", kind: "app", target: "reel" },
     { eyebrow: "BUILT AT 18", title: "Blue Specs", subtitle: "$40K+ ecommerce story", kind: "project", target: "bluespecs" },
-    { eyebrow: "BASED IN", title: "Chicago", subtitle: "Gold Coast · forever a Midwest person", kind: "wallpaper", target: "chicago" },
     { eyebrow: "CREATOR ECONOMY", title: "Whop + WAP", subtitle: "$20K+ earned building reward systems", kind: "project", target: "whop" }
   ]).map((card) => ({ ...card }));
 
@@ -136,7 +157,7 @@
     work: "assets/icons/macos/finder.png", settings: "assets/icons/macos/settings.png", about: "assets/icons/macos/rizvisions.png", photos: "assets/icons/macos/photos.png",
     messages: "assets/icons/macos/messages.png", instagram: "assets/icons/macos/instagram.png", terminal: "assets/icons/macos/terminal.png",
     notes: "assets/icons/macos/notes.png", spotify: "assets/icons/macos/spotify.png", calendar: "assets/icons/macos/document.png",
-    trash: "assets/icons/macos/trash.png", resume: "assets/icons/macos/document.png", reel: "assets/icons/macos/document.png"
+    trash: "assets/icons/macos/trash.png", reel: "assets/icons/macos/photos.png"
   };
 
   const spotlightItems = [
@@ -151,8 +172,7 @@
     { title:"Blue Specs", subtitle:"The ecommerce business built at 18", icon:appIconMap.work, keywords:"blue specs ecommerce", run:()=>openProject("bluespecs") },
     { title:"Whop + WAP", subtitle:"Creator rewards and distribution", icon:appIconMap.work, keywords:"whop wap creator rewards", run:()=>openProject("whop") },
     { title:"Windsurf", subtitle:"3.6M-view creator campaign", icon:appIconMap.work, keywords:"windsurf campaign views", run:()=>openProject("windsurf") },
-    { title:"Resume.pdf", subtitle:"Career timeline and experience", icon:appIconMap.resume, keywords:"resume career databricks rewards network", run:()=>openApp("resume") },
-    { title:"Change Wallpaper", subtitle:"Cycle Grid, Chicago, and Dark", icon:appIconMap.photos, keywords:"wallpaper background appearance", run:()=>cycleWallpaper() },
+    { title:"Change Wallpaper", subtitle:"Cycle Light, Dark, Maroon, and Forest", icon:appIconMap.photos, keywords:"wallpaper background appearance", run:()=>cycleWallpaper() },
     { title:"Restore Default Layout", subtitle:"Put desktop objects back", icon:appIconMap.settings, keywords:"reset restore layout", run:()=>resetLayout() }
   ];
 
@@ -166,6 +186,8 @@
         icons: { ...clone(defaultIcons), ...(parsed.icons || {}) },
         photos: { ...clone(defaultPhotos), ...(parsed.photos || {}) },
         widget: { ...clone(defaultWidget), ...(parsed.widget || {}) },
+        dock: Array.isArray(parsed.dock) ? parsed.dock.filter((key) => DOCK_CATALOG[key]) : [...DEFAULT_DOCK],
+        dockMagnification: parsed.dockMagnification !== false,
         windows: parsed.windows || {}
       };
     } catch {
@@ -202,7 +224,7 @@
   }
 
   function setWallpaper(name, persist = true) {
-    if (!["grid", "chicago", "dark"].includes(name)) return;
+    if (!["grid", "dark", "maroon", "forest"].includes(name)) return;
     state.wallpaper = name;
     os.dataset.wallpaper = name;
     document.querySelectorAll(".menu-check").forEach((check) => {
@@ -256,7 +278,7 @@
       file.addEventListener("click", (event) => {
         event.stopPropagation();
         if (file._suppressClick) { event.preventDefault(); return; }
-        selectDesktopPhoto(file);
+        selectDesktopPhoto(file, event.shiftKey || event.metaKey || event.ctrlKey);
       });
       file.addEventListener("dblclick", (event) => {
         if (file._suppressClick) { event.preventDefault(); return; }
@@ -490,7 +512,7 @@
   }
 
   function fullReset() {
-    const confirmed = window.confirm("Reset Rizvisions? This clears the wallpaper, desktop icon and photo positions, window positions, and saved Notes on this browser.");
+    const confirmed = window.confirm("Reset Rizvisions? This clears appearance, Dock, desktop icon and photo positions, window positions, and saved Notes on this browser.");
     if (!confirmed) return;
     try {
       const keys = [];
@@ -838,7 +860,6 @@
             <button class="file-item" data-project="creator"><span class="finder-folder"><img src="assets/icons/macos/folder.png" alt=""><i style="--tag:#8e8e93"></i></span><span class="file-name">Creator Work</span></button>
             <button class="file-item" data-app="photos"><img src="assets/icons/macos/photos.png" alt=""><span class="file-name">Photography</span></button>
             <button class="file-item" data-app="reel"><span class="finder-video-file"><img src="assets/photos/chicago-river-bw.jpg" alt=""><i>▶</i></span><span class="file-name">Live Reel.mov</span></button>
-            <button class="file-item" data-app="resume"><img src="assets/icons/macos/document.png" alt=""><span class="file-name">Resume.pdf</span></button>
             <button class="file-item" data-app="notes"><img src="assets/icons/macos/notes.png" alt=""><span class="file-name">Random Notes</span></button>
           </div></div>
           <div class="finder-statusbar">9 items, 42.6 GB available</div>
@@ -971,9 +992,6 @@
     return `<div class="empty-state"><div><img src="assets/icons/macos/trash.png" alt="Trash"><h2>Nothing worth deleting</h2><p>Old domains, failed ideas, embarrassing drafts, and abandoned businesses will eventually live here.</p></div></div>`;
   }
 
-  function renderResume() {
-    return `<div style="height:100%;background:#707070;padding:25px;overflow:auto"><article style="width:min(100%,560px);min-height:760px;margin:auto;background:white;box-shadow:0 8px 30px rgba(0,0,0,.35);padding:48px 54px;color:#1e1e1f;user-select:text"><h1 style="margin:0;font-size:29px;letter-spacing:-.04em">Riz Zaheer</h1><p style="margin:5px 0 28px;color:#666;font-size:12px">Chicago, IL · Creator, operator, GTM person</p><h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid #bbb;padding-bottom:5px">Experience</h2><h3 style="font-size:15px;margin-bottom:3px">Parker AI</h3><p style="font-size:12px;color:#666;margin-top:0">Sales, customer success, GTM, product feedback, pricing, content and operations · 2026—present</p><h3 style="font-size:15px;margin-bottom:3px">Databricks</h3><p style="font-size:12px;color:#666;margin-top:0">Solutions Specialist · 2025</p><h3 style="font-size:15px;margin-bottom:3px">Rewards Network</h3><p style="font-size:12px;color:#666;margin-top:0">#1 SDR / Qualification Specialist · 2024—2025</p><h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid #bbb;padding-bottom:5px;margin-top:30px">Things built</h2><p style="font-size:12px;line-height:1.6">Blue Specs · Rizvisions · Whop creator programs · WAP · short-form content · various internet experiments</p><p style="font-size:11px;color:#888;margin-top:45px">This is intentionally not the final downloadable résumé yet.</p></article></div>`;
-  }
 
   function renderLiveReel() {
     const reelItems = [
@@ -1056,7 +1074,7 @@
   }
 
   function cycleWallpaper() {
-    const order = ["grid", "chicago", "dark"];
+    const order = ["grid", "dark", "maroon", "forest"];
     setWallpaper(order[(order.indexOf(state.wallpaper) + 1) % order.length]);
     showToast(`${state.wallpaper[0].toUpperCase()}${state.wallpaper.slice(1)} wallpaper`);
   }
@@ -1232,6 +1250,243 @@
     }
   }
 
+
+  /* V8: Mac-like selection, window resizing, and a customizable Dock. */
+  function clearDesktopSelection() {
+    iconNodes.forEach((node) => node.classList.remove("selected"));
+    desktopPhotosRoot?.querySelectorAll(".photo-file").forEach((node) => node.classList.remove("selected"));
+    selectedPhotoId = null;
+  }
+
+  function selectedDesktopObjects() {
+    return [...iconNodes, ...(desktopPhotosRoot ? [...desktopPhotosRoot.querySelectorAll(".photo-file")] : [])]
+      .filter((node) => node.classList.contains("selected"));
+  }
+
+  function selectDesktopItem(item, additive = false) {
+    if (!additive) clearDesktopSelection();
+    item.classList.toggle("selected", additive ? !item.classList.contains("selected") : true);
+    playSound("select");
+  }
+
+  function selectDesktopPhoto(file, additive = false) {
+    if (!additive) clearDesktopSelection();
+    file.classList.toggle("selected", additive ? !file.classList.contains("selected") : true);
+    selectedPhotoId = file.classList.contains("selected") ? file.dataset.photoId : null;
+    playSound("select");
+  }
+
+  function objectCenter(node) {
+    const dr = desktop.getBoundingClientRect();
+    const r = node.getBoundingClientRect();
+    return { x: r.left - dr.left + r.width / 2, y: r.top - dr.top + r.height / 2, width: r.width, height: r.height };
+  }
+
+  function persistMovedObject(node) {
+    const x = (parseFloat(node.style.left) / desktop.clientWidth) * 100;
+    const y = (parseFloat(node.style.top) / desktop.clientHeight) * 100;
+    if (node.classList.contains("desktop-item")) {
+      state.icons[node.dataset.id] = { x: +x.toFixed(3), y: +y.toFixed(3) };
+      node.style.setProperty("--x", `${x}%`); node.style.setProperty("--y", `${y}%`);
+      node.style.left = "var(--x)"; node.style.top = "var(--y)";
+    } else if (node.classList.contains("photo-file")) {
+      const id = node.dataset.photoId;
+      const current = state.photos[id] || defaultPhotos[id] || {};
+      state.photos[id] = { ...current, x: +x.toFixed(3), y: +y.toFixed(3), z: Number(node.style.zIndex) || current.z || 1 };
+      node.style.setProperty("--photo-x", `${x}%`); node.style.setProperty("--photo-y", `${y}%`);
+      node.style.left = "var(--photo-x)"; node.style.top = "var(--photo-y)";
+    }
+  }
+
+  function beginDesktopObjectDrag(event, target) {
+    if (event.button !== 0) return;
+    event.preventDefault(); event.stopPropagation();
+    const additive = event.shiftKey || event.metaKey || event.ctrlKey;
+    if (!target.classList.contains("selected")) {
+      if (target.classList.contains("photo-file")) selectDesktopPhoto(target, additive);
+      else selectDesktopItem(target, additive);
+    }
+    let group = selectedDesktopObjects();
+    if (!group.length) group = [target];
+    const start = new Map(group.map((node) => [node, objectCenter(node)]));
+    const startX = event.clientX, startY = event.clientY, pointerId = event.pointerId;
+    let moved = false, latestX = startX, latestY = startY, frame = 0;
+
+    const bounds = { minX: -Infinity, maxX: Infinity, minY: -Infinity, maxY: Infinity };
+    group.forEach((node) => {
+      const st = start.get(node);
+      const pad = node.classList.contains("photo-file") ? 8 : 4;
+      const bottomPad = node.classList.contains("photo-file") ? 106 : 112;
+      bounds.minX = Math.max(bounds.minX, pad + st.width/2 - st.x);
+      bounds.maxX = Math.min(bounds.maxX, desktop.clientWidth - pad - st.width/2 - st.x);
+      bounds.minY = Math.max(bounds.minY, pad + st.height/2 - st.y);
+      bounds.maxY = Math.min(bounds.maxY, desktop.clientHeight - bottomPad - st.height/2 - st.y);
+    });
+
+    group.filter((node) => node.classList.contains("photo-file")).forEach((node) => {
+      photoZCounter += 1; node.style.zIndex = String(photoZCounter);
+    });
+    document.body.classList.add("desktop-dragging");
+
+    const paint = () => {
+      frame = 0;
+      let dx = latestX - startX, dy = latestY - startY;
+      if (!moved && Math.hypot(dx,dy) < 3) return;
+      moved = true;
+      dx = Math.max(bounds.minX, Math.min(bounds.maxX, dx));
+      dy = Math.max(bounds.minY, Math.min(bounds.maxY, dy));
+      group.forEach((node) => {
+        node.classList.add("dragging");
+        const st = start.get(node);
+        node.style.left = `${st.x + dx}px`;
+        node.style.top = `${st.y + dy}px`;
+      });
+    };
+    const onMove = (e) => { if (e.pointerId !== pointerId) return; e.preventDefault(); latestX=e.clientX; latestY=e.clientY; if(!frame) frame=requestAnimationFrame(paint); };
+    const finish = (e) => {
+      if (e && e.pointerId !== pointerId) return;
+      document.removeEventListener("pointermove",onMove,true); document.removeEventListener("pointerup",finish,true); document.removeEventListener("pointercancel",finish,true);
+      if(frame){cancelAnimationFrame(frame);paint();}
+      document.body.classList.remove("desktop-dragging");
+      group.forEach((node) => {
+        node.classList.remove("dragging");
+        if(moved){ persistMovedObject(node); node._suppressClick=true; setTimeout(()=>{node._suppressClick=false;},0); }
+      });
+      if(moved) saveState();
+    };
+    document.addEventListener("pointermove",onMove,true); document.addEventListener("pointerup",finish,true); document.addEventListener("pointercancel",finish,true);
+  }
+
+  function beginIconDrag(event, item) { beginDesktopObjectDrag(event, item); }
+  function beginPhotoDrag(event, file) { beginDesktopObjectDrag(event, file); }
+
+  function rectsIntersect(a,b) { return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top; }
+  function beginMarqueeSelection(event) {
+    if (event.button !== 0 || event.target !== desktop && !event.target.classList.contains("wallpaper")) return;
+    if (event.target.closest(".mac-window,.dock,.now-widget,.photo-file,.desktop-item,.menu-bar")) return;
+    event.preventDefault(); closeMenus();
+    const dr=desktop.getBoundingClientRect(); const sx=event.clientX-dr.left, sy=event.clientY-dr.top; const additive=event.shiftKey||event.metaKey||event.ctrlKey;
+    const preserved = new Set(additive ? selectedDesktopObjects() : []);
+    if(!additive) clearDesktopSelection();
+    let moved=false;
+    selectionRectangle.style.left=`${sx}px`; selectionRectangle.style.top=`${sy}px`; selectionRectangle.style.width="0px"; selectionRectangle.style.height="0px";
+    selectionRectangle.classList.add("active");
+    const onMove=(e)=>{
+      const x=e.clientX-dr.left,y=e.clientY-dr.top; if(!moved&&Math.hypot(x-sx,y-sy)<2)return; moved=true;
+      const left=Math.max(0,Math.min(sx,x)), top=Math.max(0,Math.min(sy,y)); const right=Math.min(desktop.clientWidth,Math.max(sx,x)), bottom=Math.min(desktop.clientHeight,Math.max(sy,y));
+      Object.assign(selectionRectangle.style,{left:`${left}px`,top:`${top}px`,width:`${right-left}px`,height:`${bottom-top}px`});
+      const selection={left:dr.left+left,top:dr.top+top,right:dr.left+right,bottom:dr.top+bottom};
+      [...iconNodes,...(desktopPhotosRoot?[...desktopPhotosRoot.querySelectorAll(".photo-file")]:[])].forEach((node)=>{
+        node.classList.toggle("selected",preserved.has(node)||rectsIntersect(selection,node.getBoundingClientRect()));
+      });
+      const selectedPhoto=desktopPhotosRoot?.querySelector(".photo-file.selected"); selectedPhotoId=selectedPhoto?.dataset.photoId||null;
+    };
+    const finish=()=>{window.removeEventListener("pointermove",onMove);window.removeEventListener("pointerup",finish);selectionRectangle.classList.remove("active"); if(moved){desktop._suppressClear=true;setTimeout(()=>desktop._suppressClear=false,0);}};
+    window.addEventListener("pointermove",onMove); window.addEventListener("pointerup",finish,{once:true});
+  }
+
+  function clampWindowRect(rect) {
+    const maxWidth = desktop.clientWidth;
+    const maxHeight = desktop.clientHeight - 91;
+    const width = Math.min(Math.max(410, rect.width), maxWidth);
+    const height = Math.min(Math.max(280, rect.height), maxHeight);
+    return { width, height, left: Math.min(Math.max(-width + 110, rect.left), maxWidth - 110), top: Math.min(Math.max(0, rect.top), maxHeight - 52) };
+  }
+
+  function beginWindowResize(event, win, direction) {
+    if(event.button!==0||win.classList.contains("maximized"))return;
+    event.preventDefault();event.stopPropagation();focusWindow(win);
+    const start={x:event.clientX,y:event.clientY,left:win.offsetLeft,top:win.offsetTop,width:win.offsetWidth,height:win.offsetHeight};
+    const minW=410,minH=280,maxW=desktop.clientWidth,maxH=desktop.clientHeight-91;
+    document.body.classList.add("window-resizing");
+    const move=(e)=>{
+      const dx=e.clientX-start.x,dy=e.clientY-start.y; let {left,top,width,height}=start;
+      if(direction.includes("e"))width=Math.min(maxW-left,Math.max(minW,start.width+dx));
+      if(direction.includes("s"))height=Math.min(maxH-top,Math.max(minH,start.height+dy));
+      if(direction.includes("w")){const nl=Math.max(0,Math.min(start.left+start.width-minW,start.left+dx));width=start.width+(start.left-nl);left=nl;}
+      if(direction.includes("n")){const nt=Math.max(0,Math.min(start.top+start.height-minH,start.top+dy));height=start.height+(start.top-nt);top=nt;}
+      Object.assign(win.style,{left:`${left}px`,top:`${top}px`,width:`${width}px`,height:`${height}px`});
+    };
+    const up=()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);document.body.classList.remove("window-resizing");saveWindowRect(win);};
+    window.addEventListener("pointermove",move);window.addEventListener("pointerup",up,{once:true});
+  }
+
+  function wireWindow(win) {
+    win.addEventListener("pointerdown",()=>focusWindow(win));
+    win.querySelectorAll("[data-window-action]").forEach((button)=>button.addEventListener("click",(event)=>{event.stopPropagation();const action=button.dataset.windowAction;if(action==="close")closeWindow(win);if(action==="minimize")minimizeWindow(win);if(action==="zoom")zoomWindow(win);}));
+    win.querySelector(".drag-handle").addEventListener("pointerdown",(event)=>beginWindowDrag(event,win));
+    win.querySelectorAll("[data-resize]").forEach((handle)=>handle.addEventListener("pointerdown",(event)=>beginWindowResize(event,win,handle.dataset.resize)));
+    const observer=new ResizeObserver(()=>{clearTimeout(win._saveTimer);win._saveTimer=setTimeout(()=>saveWindowRect(win),260);});observer.observe(win);
+  }
+
+  function updateDateIcons() {
+    const now = new Date();
+    const weekday = new Intl.DateTimeFormat("en-US", { timeZone:"America/Chicago", weekday:"short" }).format(now).toUpperCase();
+    const day = new Intl.DateTimeFormat("en-US", { timeZone:"America/Chicago", day:"numeric" }).format(now);
+    document.querySelectorAll(".calendar-weekday").forEach((node) => { node.textContent = weekday; });
+    document.querySelectorAll(".calendar-day").forEach((node) => { node.textContent = day; });
+  }
+
+  function dockItemMarkup(key, item) {
+    const runningDot = item.tracksRunning || item.alwaysRunning ? '<span class="running-dot"></span>' : '';
+    const badge = item.badge ? `<span class="notification-badge dock-badge">${item.badge}</span>` : '';
+    const content = item.kind === "calendar" ? '<span class="calendar-icon"><span class="calendar-weekday">WED</span><span class="calendar-day">5</span></span>' : `<img src="${item.icon}" alt="${escapeHtml(item.label)}" draggable="false" />`;
+    return `<button class="dock-item ${item.kind==="trash"?"trash-dock":""}" data-dock-key="${key}" data-app="${item.app}" data-tooltip="${escapeHtml(item.label)}">${content}${badge}${runningDot}</button>`;
+  }
+
+  function renderDock() {
+    if(!dock)return;
+    const keys=(state.dock||DEFAULT_DOCK).filter((key)=>DOCK_CATALOG[key]);
+    state.dock=keys;
+    const normal=keys.filter((key)=>key!=="trash"), hasTrash=keys.includes("trash");
+    dock.innerHTML=normal.map((key)=>dockItemMarkup(key,DOCK_CATALOG[key])).join("") + (hasTrash?'<span class="dock-separator" aria-hidden="true"></span>'+dockItemMarkup("trash",DOCK_CATALOG.trash):"");
+    dock.classList.toggle("no-magnify",state.dockMagnification===false);
+    renderMinimizedDock();
+    dock.querySelectorAll("[data-dock-key]").forEach(wireDockReorder);
+    updateDockRunning();
+    updateDateIcons();
+  }
+
+  function wireDockReorder(item) {
+    item.addEventListener("pointerdown",(event)=>{
+      if(event.button!==0)return; const startX=event.clientX; let moved=false;
+      const move=(e)=>{if(!moved&&Math.abs(e.clientX-startX)<7)return;moved=true;item.classList.add("dock-dragging");const over=document.elementFromPoint(e.clientX,e.clientY)?.closest(".dock-item[data-dock-key]");if(!over||over===item||!dock.contains(over))return;const r=over.getBoundingClientRect();dock.insertBefore(item,e.clientX<r.left+r.width/2?over:over.nextSibling);};
+      const up=()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);item.classList.remove("dock-dragging");if(moved){state.dock=[...dock.querySelectorAll(".dock-item[data-dock-key]")].map((n)=>n.dataset.dockKey).filter((key)=>DOCK_CATALOG[key]);saveState();item._suppressClick=true;setTimeout(()=>item._suppressClick=false,0);renderDock();}};
+      window.addEventListener("pointermove",move);window.addEventListener("pointerup",up,{once:true});
+    });
+  }
+
+  function isAppRunning(appId) { return [...windowsRoot.children].some((win)=>win.dataset.appWindow===appId||(appId==="work"&&win.dataset.appWindow.startsWith("project-"))); }
+  function updateDockRunning() {
+    dock?.querySelectorAll(".dock-item[data-dock-key]").forEach((node)=>{const item=DOCK_CATALOG[node.dataset.dockKey];node.classList.toggle("running",!!item&&(item.alwaysRunning||item.tracksRunning&&isAppRunning(item.app)));});
+  }
+  function renderMinimizedDock() {
+    if(!dock)return;
+    dock.querySelectorAll(".temporary-window").forEach((node)=>node.remove());
+    const pinnedApps=new Set((state.dock||[]).map((key)=>DOCK_CATALOG[key]?.app));
+    const hidden=[...windowsRoot.children].filter((win)=>win.hidden&&!pinnedApps.has(win.dataset.appWindow));
+    if(!hidden.length)return;
+    let separator=dock.querySelector(".dock-separator");
+    hidden.forEach((win)=>{const id=win.dataset.appWindow;const button=document.createElement("button");button.type="button";button.className="dock-item temporary-window";button.dataset.restoreWindow=id;button.dataset.tooltip=win.querySelector(".window-title")?.textContent||"Window";button.innerHTML=`<span class="minimized-preview"><img src="${appIconMap[id]||appIconMap.work}" alt=""></span>`;button.addEventListener("click",()=>{win.hidden=false;focusWindow(win);playSound("open");renderDock();});dock.insertBefore(button,separator||null);});
+  }
+  function removeMinimizedWindow(){ renderDock(); }
+  function bounceDock(appId){const item=dock?.querySelector(`.dock-item[data-app="${CSS.escape(appId)}"]`);if(!item)return;item.classList.remove("bounce");void item.offsetWidth;item.classList.add("bounce");setTimeout(()=>item.classList.remove("bounce"),700);}
+
+  function openApp(appId) {
+    closeMenus(); let win=windowsRoot.querySelector(`[data-app-window="${CSS.escape(appId)}"]`); if(!win)win=createWindow(appId); if(!win)return;
+    win.hidden=false;win.classList.remove("minimizing");focusWindow(win);bounceDock(appId);playSound("open");renderDock();
+  }
+  function closeWindow(win=activeWindow){if(!win)return;saveWindowRect(win);playSound("close");win.remove();activeWindow=[...windowsRoot.children].filter((node)=>!node.hidden).sort((a,b)=>(+a.style.zIndex)-(+b.style.zIndex)).pop()||null;if(activeWindow)focusWindow(activeWindow);else activeAppName.textContent="Rizvisions";renderDock();}
+  function minimizeWindow(win=activeWindow){if(!win)return;saveWindowRect(win);win.classList.add("minimizing");setTimeout(()=>{win.hidden=true;win.classList.remove("minimizing");activeWindow=[...windowsRoot.children].filter((node)=>!node.hidden).sort((a,b)=>(+a.style.zIndex)-(+b.style.zIndex)).pop()||null;if(activeWindow)focusWindow(activeWindow);else activeAppName.textContent="Rizvisions";renderDock();},230);}
+
+  function openDockCustomizer(){closeMenus();renderDockCustomizer();dockCustomizerBackdrop.classList.add("open");dockCustomizerBackdrop.setAttribute("aria-hidden","false");}
+  function closeDockCustomizer(){dockCustomizerBackdrop.classList.remove("open");dockCustomizerBackdrop.setAttribute("aria-hidden","true");}
+  function renderDockCustomizer(){
+    dockCustomizerList.innerHTML=Object.entries(DOCK_CATALOG).map(([key,item])=>{const index=state.dock.indexOf(key),enabled=index>=0;const preview=item.kind==="calendar"?`<span class="calendar-icon customizer-calendar"><span class="calendar-weekday">WED</span><span class="calendar-day">5</span></span>`:`<img src="${item.icon||appIconMap.work}" alt="">`;return `<div class="dock-customizer-row" data-customize-key="${key}">${preview}<label><input type="checkbox" ${enabled?"checked":""}> <span>${escapeHtml(item.label)}</span></label><div><button type="button" data-dock-move="up" ${!enabled||index<=0?"disabled":""}>↑</button><button type="button" data-dock-move="down" ${!enabled||index===state.dock.length-1?"disabled":""}>↓</button></div></div>`;}).join("");
+    dockCustomizerList.querySelectorAll("[data-customize-key]").forEach((row)=>{const key=row.dataset.customizeKey;row.querySelector("input").addEventListener("change",(e)=>{if(e.target.checked&&!state.dock.includes(key))state.dock.push(key);if(!e.target.checked)state.dock=state.dock.filter((k)=>k!==key);saveState();renderDock();renderDockCustomizer();});row.querySelectorAll("[data-dock-move]").forEach((button)=>button.addEventListener("click",()=>{const i=state.dock.indexOf(key),d=button.dataset.dockMove==="up"?-1:1,j=i+d;if(i<0||j<0||j>=state.dock.length)return;[state.dock[i],state.dock[j]]=[state.dock[j],state.dock[i]];saveState();renderDock();renderDockCustomizer();}));});
+  }
+  function resetDock(){state.dock=[...DEFAULT_DOCK];state.dockMagnification=true;saveState();renderDock();if(dockCustomizerBackdrop.classList.contains("open"))renderDockCustomizer();showToast("Dock restored");}
+
   function handleAction(action) {
     if (action === "open-about") openApp("about");
     if (action === "open-settings") openApp("about");
@@ -1245,11 +1500,14 @@
     if (action === "open-spotlight") openSpotlight();
     if (action === "cycle-wallpaper") cycleWallpaper();
     if (action === "sort-icons") sortIcons();
-    if (action === "desktop-info") showToast("Rizvisions Desktop · Chicago · Version 6");
+    if (action === "desktop-info") showToast("Rizvisions Desktop · Version 8");
     if (action === "quick-look-photo") openQuickLook(contextPhotoId || selectedPhotoId);
     if (action === "bring-photo-front") bringPhotoToFront(contextPhotoId);
     if (action === "reset-photo-position") resetPhotoPosition(contextPhotoId);
     if (action === "show-current-card") showCurrentCard();
+    if (action === "customize-dock") openDockCustomizer();
+    if (action === "dock-reset") resetDock();
+    if (action === "dock-magnification") { state.dockMagnification = !state.dockMagnification; saveState(); renderDock(); showToast(state.dockMagnification ? "Dock magnification on" : "Dock magnification off"); }
   }
 
   document.querySelectorAll(".menu-trigger").forEach((trigger) => trigger.addEventListener("click", (event) => {
@@ -1291,15 +1549,14 @@
     if (event.target.closest(".menu-popover, .context-menu, .control-center-panel, .notification-center, .spotlight-panel, .quicklook-panel")) event.stopPropagation();
     if (projectTarget) { event.preventDefault(); openProject(projectTarget.dataset.project); return; }
     if (externalTarget) { event.preventDefault(); window.open(externalTarget.dataset.external, "_blank", "noopener"); return; }
-    if (appTarget && !appTarget.classList.contains("desktop-item")) { event.preventDefault(); openApp(appTarget.dataset.app); return; }
+    if (appTarget && !appTarget.classList.contains("desktop-item")) {
+      if (appTarget._suppressClick) { event.preventDefault(); return; }
+      event.preventDefault(); openApp(appTarget.dataset.app); return;
+    }
     if (actionTarget) { event.preventDefault(); handleAction(actionTarget.dataset.action); closeMenus(); return; }
     if (wallpaperTarget && wallpaperTarget.dataset.wallpaper) { event.preventDefault(); setWallpaper(wallpaperTarget.dataset.wallpaper); closeMenus(); return; }
     if (!event.target.closest(".menu-bar, .menu-popover, .context-menu, .control-center-panel, .notification-center, .spotlight-panel, .quicklook-panel")) closeMenus();
-    if (event.target === desktop || event.target.classList.contains("wallpaper")) {
-      iconNodes.forEach(node => node.classList.remove("selected"));
-      desktopPhotosRoot?.querySelectorAll(".photo-file").forEach(node => node.classList.remove("selected"));
-      selectedPhotoId = null;
-    }
+    if ((event.target === desktop || event.target.classList.contains("wallpaper")) && !desktop._suppressClear) clearDesktopSelection();
   });
 
   desktop.addEventListener("contextmenu", (event) => {
@@ -1312,10 +1569,15 @@
 
   iconNodes.forEach((item) => {
     item.addEventListener("pointerdown", (event) => beginIconDrag(event, item));
-    item.addEventListener("click", (event) => { event.stopPropagation(); selectDesktopItem(item); });
+    item.addEventListener("click", (event) => { event.stopPropagation(); if (item._suppressClick) { event.preventDefault(); return; } selectDesktopItem(item, event.shiftKey || event.metaKey || event.ctrlKey); });
     item.addEventListener("dblclick", (event) => { event.preventDefault(); openApp(item.dataset.app); });
   });
 
+
+  desktop.addEventListener("pointerdown", beginMarqueeSelection);
+  dock?.addEventListener("contextmenu", (event) => { event.preventDefault(); event.stopPropagation(); closeMenus(); dockContextMenu.style.left=`${Math.min(event.clientX,window.innerWidth-240)}px`; dockContextMenu.style.top=`${Math.max(42,Math.min(event.clientY-150,window.innerHeight-180))}px`; dockContextMenu.classList.add("open"); });
+  dockCustomizerDone?.addEventListener("click", closeDockCustomizer);
+  dockCustomizerBackdrop?.addEventListener("click", (event) => { if(event.target===dockCustomizerBackdrop) closeDockCustomizer(); });
 
   document.getElementById("widgetNext")?.addEventListener("click", (event) => { event.stopPropagation(); state.widgetIndex = (Number(state.widgetIndex || 0) + 1) % currentCards.length; saveState(); updateCurrentWidget(true); });
   document.getElementById("widgetShow")?.addEventListener("click", (event) => { event.stopPropagation(); showCurrentCard(); });
@@ -1374,7 +1636,7 @@
   applyWidgetLayout();
   applyDisplayState();
   updateCurrentWidget();
-  renderMinimizedDock();
+  renderDock();
   updateClockAndCalendar();
   setInterval(updateClockAndCalendar, 30_000);
   updateWeather();

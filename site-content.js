@@ -10,7 +10,6 @@ window.RIZVISIONS_CONTENT = {
     { eyebrow: "CURRENTLY", title: "Parker", subtitle: "AI creative strategy", kind: "project", target: "parker" },
     { eyebrow: "CREATOR", title: "30M+ views", subtitle: "short-form videos and internet experiments", kind: "app", target: "reel" },
     { eyebrow: "BUILT AT 18", title: "Blue Specs", subtitle: "$40K+ ecommerce story", kind: "project", target: "bluespecs" },
-    { eyebrow: "BASED IN", title: "Chicago", subtitle: "Gold Coast · forever a Midwest person", kind: "wallpaper", target: "chicago" },
     { eyebrow: "CREATOR ECONOMY", title: "Whop + WAP", subtitle: "$20K+ earned building reward systems", kind: "project", target: "whop" }
   ],
 

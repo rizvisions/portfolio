@@ -1,21 +1,22 @@
-# Rizvisions macOS V6
+# Rizvisions macOS V8
 
 Interactive macOS-style personal desktop for rizvisions.com.
 
-## V6 additions
+## V8 changes
 
-- Spotlight search with `Command + Space`
-- Searchable apps, projects, socials, resume, and desktop actions
-- Draggable rotating **Currently** widget with five personal cards
-- macOS-style Quick Look for desktop photos, including arrow navigation
-- Right-click photo actions: Quick Look, open in Photos, bring forward, and reset position
-- Notification Center with Chicago date, calendar, weather, and current project
-- Functional Control Center: display brightness, sound level, Focus, and wallpaper shortcuts
-- Minimized windows now appear as restorable Dock thumbnails
-- New Live Reel app for creator profiles and short-form work
-- Expanded desktop context menu and icon sorting
-- V6 drag hotfix retained: desktop photos and widget follow the pointer in real time without browser ghost images
-- Fresh local-storage namespace so the new defaults load cleanly
+- Rubber-band desktop selection: drag an empty area to select multiple icons and photos
+- Group dragging for selected desktop objects
+- Every application window resizes from all four edges and all four corners
+- Rizvisions eye icon and faint `RIZVISIONS` wordmark wallpaper branding
+- Four coordinated grid appearances: Light, Dark, Maroon, and Forest
+- Chicago wallpaper removed
+- Résumé app and résumé search results removed
+- Customizable Dock with add/remove controls, ordering controls, direct drag reordering, magnification toggle, and restore defaults
+- Pinned minimized apps stay in place and use a running dot instead of creating duplicate Dock thumbnails
+- Temporary minimized thumbnails are only used for windows whose app is not pinned
+- Silver macOS-style Trash artwork replaces the black Trash
+- Updated folder artwork, plus an optional one-click extractor for the exact folder and Trash assets installed on your Mac
+- Existing V6 features remain: Spotlight, Quick Look, Notification Center, Control Center, Live Reel, draggable photos, draggable Currently widget, Spotify playlist, and local persistence
 
 ## Deploy
 
@@ -28,6 +29,7 @@ assets/
 app.js
 CNAME
 CUSTOMIZE_PHOTOS.md
+EXTRACT_MACOS_SYSTEM_ICONS.command
 index.html
 README.md
 site-content.js
@@ -35,6 +37,19 @@ styles.css
 ```
 
 After GitHub Pages finishes deploying, hard-refresh with `Command + Shift + R`.
+
+V8 uses a fresh local-storage namespace, so its default layout loads independently from the older builds.
+
+## Exact icons from your Mac
+
+Apple's public design resources provide macOS UI kits and app-icon templates, but not a standalone downloadable Finder folder PNG. The included assets are already usable. To substitute the exact icons shipped by your own macOS installation:
+
+1. On your Mac, right-click `EXTRACT_MACOS_SYSTEM_ICONS.command` and choose **Open**.
+2. Approve it if macOS asks.
+3. The script searches the protected system resource bundles, converts the installed folder and empty-Trash assets to PNG, and replaces:
+   - `assets/icons/macos/folder.png`
+   - `assets/icons/macos/trash.png`
+4. Upload those two changed files to GitHub.
 
 ## Keyboard shortcuts
 
