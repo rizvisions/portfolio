@@ -1381,3 +1381,169 @@ body.window-resizing, body.window-resizing * { user-select:none!important; }
 
 /* Ensure Preview/QuickTime titles remain readable on the dark media chrome. */
 .media-window .window-title { color:#f5f5f7 !important; text-shadow:0 1px 1px rgba(0,0,0,.45); }
+
+/* ========================================================================== */
+/* V9.5 — regression fixes, simplified utilities, auto media library          */
+/* ========================================================================== */
+
+/* Desktop media files: the white rectangle bug came from the generic span
+   selector styling the photo-paper wrapper like a filename. Keep the paper
+   and the filename as two explicit layers. */
+.photo-file {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+.photo-file > .photo-paper {
+  position: relative;
+  inset: auto;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  display: block;
+  width: 100%;
+  padding: 7px 7px 24px;
+  border-radius: 1px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 12px 25px rgba(0,0,0,.23), 0 0 0 1px rgba(0,0,0,.15);
+}
+.photo-file > .photo-paper img,
+.photo-file > .photo-paper video {
+  display: block;
+  width: 100%;
+  aspect-ratio: .89;
+  object-fit: cover;
+  border-radius: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+.photo-file > .photo-paper.monochrome img,
+.photo-file > .photo-paper.monochrome video { filter: grayscale(1) contrast(1.08); }
+.photo-file > .photo-label {
+  position: absolute;
+  left: 50%;
+  bottom: -24px;
+  transform: translateX(-50%);
+  max-width: 170px;
+  padding: 2px 5px 3px;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 560;
+  line-height: 1.15;
+  text-shadow: 0 1px 2px rgba(0,0,0,.95), 0 0 4px rgba(0,0,0,.65);
+}
+.photo-file.selected > .photo-label { background: #0a84ff; text-shadow: none; }
+.photo-file.selected > .photo-paper { filter: brightness(.88); box-shadow: 0 14px 30px rgba(0,0,0,.28), 0 0 0 3px rgba(10,132,255,.82); }
+.photo-file.dragging > .photo-paper { box-shadow: 0 20px 38px rgba(0,0,0,.31), 0 0 0 1px rgba(0,0,0,.16); }
+.desktop-video-badge { position:absolute !important; left:50% !important; top:50% !important; bottom:auto !important; transform:translate(-50%,-50%) !important; width:31px; height:31px; border-radius:50% !important; display:grid !important; place-items:center; padding:0 0 0 2px !important; background:rgba(255,255,255,.9) !important; color:#111 !important; text-shadow:none !important; font-size:11px !important; box-shadow:0 3px 10px rgba(0,0,0,.25); }
+
+/* The marquee stays Apple-blue in every appearance and sits above wallpaper. */
+.selection-rectangle {
+  z-index: 75;
+  display: none;
+  border: 1px solid rgba(0,122,255,.96);
+  border-radius: 2px;
+  background: rgba(0,122,255,.18);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.2);
+}
+.selection-rectangle.active { display: block !important; }
+
+/* Exact supplied artwork, without extra artificial gloss or optical transforms. */
+.icon-rizvisions img,
+.dock-item[data-dock-key="about"] img,
+.about-eye,
+.settings-profile-mini img,
+.about-rail > img { transform: none !important; }
+.icon-rizvisions img { width: 76px; height: 76px; }
+.dock-item[data-dock-key="about"] img { width: 61px; height: 61px; }
+.dock-item[data-dock-key="settings"] img,
+.dock-item[data-dock-key="safari"] img,
+.dock-item[data-dock-key="parker"] img { width: 61px; height: 61px; }
+.dock-item[data-dock-key="trash"] img { width: 53px; height: 61px; }
+
+/* Instagram account chooser: constrained icon, native list rows, real buttons. */
+.instagram-shell { padding: 30px; display:flex; flex-direction:column; justify-content:center; background:var(--window-content); }
+.instagram-heading { margin: 0 0 22px; text-align: center; }
+.instagram-heading img { display:block; width:68px; height:68px; margin:0 auto; object-fit:contain; }
+.instagram-heading h2 { margin:11px 0 4px; font-size:24px; letter-spacing:-.035em; }
+.instagram-heading p { margin:0; color:var(--window-muted); font-size:13px; }
+.account-list { width:min(560px,100%); margin:0 auto; background:var(--surface-3); border-color:var(--hairline); }
+.account-row { width:100%; border:0; border-bottom:1px solid var(--hairline); background:transparent; color:var(--window-text); cursor:pointer; text-align:left; }
+.account-row:last-child { border-bottom:0; }
+.account-row:hover { background:var(--hover-surface); }
+.account-row:active { background:color-mix(in srgb,var(--accent) 14%,transparent); }
+
+/* Simplified Control Center: no fake Wi-Fi/media modules. */
+.control-center-panel {
+  width: 340px;
+  padding: 14px;
+  border-radius: 22px;
+  background: color-mix(in srgb,var(--surface-1) 76%,transparent);
+}
+.cc-header { display:flex; align-items:baseline; justify-content:space-between; padding:3px 4px 12px; }
+.cc-header strong { font-size:15px; }
+.cc-header small { color:var(--window-muted); font-size:11px; }
+.cc-focus-row {
+  width:100%; min-height:58px; display:grid; grid-template-columns:42px 1fr 34px; align-items:center; gap:10px;
+  border:0; border-radius:16px; padding:8px 11px; background:var(--field-surface); color:var(--window-text); text-align:left;
+}
+.cc-focus-icon { width:38px; height:38px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); font-size:20px; }
+.cc-focus-row span:nth-child(2) strong,.cc-focus-row span:nth-child(2) small { display:block; }
+.cc-focus-row span:nth-child(2) small { margin-top:2px; color:var(--window-muted); }
+.cc-focus-row i { width:31px; height:19px; border-radius:12px; background:var(--surface-2); position:relative; }
+.cc-focus-row i::after { content:""; position:absolute; width:15px; height:15px; left:2px; top:2px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.28); transition:.18s; }
+.cc-focus-row.active i { background:var(--accent); }
+.cc-focus-row.active i::after { left:14px; }
+.cc-volume-row { display:block; margin-top:10px; padding:13px 14px; border-radius:16px; background:var(--field-surface); }
+.cc-volume-row span { display:block; margin-bottom:9px; font-size:13px; font-weight:650; }
+.cc-volume-row input { width:100%; accent-color:var(--accent); }
+.cc-section-label { margin:14px 4px 8px; color:var(--window-muted); font-size:11px; font-weight:650; text-transform:uppercase; letter-spacing:.08em; }
+.cc-appearance-row { gap:8px; }
+.cc-appearance-row button { min-width:0; padding:8px 5px 6px; border-radius:13px; }
+.cc-wallpaper-preview { width:50px; height:42px; border-radius:9px; }
+
+/* Date panel is intentionally useful and compact: date/time, current work,
+   and two shortcuts. Weather/calendar grids were removed rather than faked. */
+.notification-center.compact { width: 360px; gap:10px; }
+.nc-date-card { min-height:130px; padding:20px 22px; border-radius:24px; display:flex; justify-content:space-between; align-items:flex-start; }
+.nc-date-card > div > span { display:block; color:#ff453a; font-size:12px; font-weight:750; text-transform:uppercase; letter-spacing:.05em; }
+.nc-date-card > div > strong { display:block; margin-top:3px; font-size:58px; line-height:.95; font-weight:390; letter-spacing:-.07em; }
+.nc-date-card > div > small { display:block; margin-top:8px; color:var(--window-muted); }
+.nc-date-card > time { padding-top:4px; font-size:24px; font-weight:550; letter-spacing:-.035em; }
+.notification-center.compact .nc-now-card { min-height:112px; }
+.nc-shortcuts { padding:8px; border-radius:24px; display:grid; gap:4px; }
+.nc-shortcuts button { min-height:58px; display:grid; grid-template-columns:42px 1fr; gap:11px; align-items:center; border:0; border-radius:16px; padding:8px 10px; color:var(--window-text); background:transparent; text-align:left; }
+.nc-shortcuts button:hover { background:var(--hover-surface); }
+.nc-shortcuts img { width:42px; height:42px; object-fit:contain; }
+.nc-shortcuts strong,.nc-shortcuts small { display:block; }
+.nc-shortcuts small { margin-top:2px; color:var(--window-muted); }
+
+/* Auto-loaded Photos library and video thumbnails. */
+.photo-tile video { width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; }
+.photos-feature video { width:100%; height:100%; object-fit:cover; display:block; }
+.photos-empty { min-height:calc(100% - 80px); display:grid; place-content:center; justify-items:center; text-align:center; padding:40px; }
+.photos-empty img { width:92px; height:92px; }
+.photos-empty h2 { margin:16px 0 5px; font-size:24px; letter-spacing:-.035em; }
+.photos-empty p { max-width:430px; margin:0 0 18px; color:var(--window-muted); line-height:1.45; }
+.photos-empty code { padding:2px 5px; border-radius:5px; background:var(--field-surface); }
+
+/* Temporary unpinned apps remain visible when open or minimized. */
+.dock-item.temporary-app::after { content:""; position:absolute; inset:5px; border-radius:15px; box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--shell-text) 9%,transparent); pointer-events:none; }
+.dock-item.temporary-app .running-dot { opacity:.95; }
+
+/* Trash supplied by Riz; keep it optically tall but not oversized. */
+.trash-dock img { width:54px !important; height:63px !important; }
+
+@media (max-width:760px) {
+  .notification-center.compact { width:calc(100vw - 16px); }
+  .instagram-shell { padding:20px; }
+}

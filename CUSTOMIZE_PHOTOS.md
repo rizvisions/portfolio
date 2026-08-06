@@ -1,149 +1,93 @@
-# Customize Photos and desktop media
+# Add photos and videos — simplest method
 
-Rizvisions uses `site-content.js` as a simple media manifest. You do not need to edit `index.html` or `app.js` to replace the temporary photography.
+V9.5 automatically discovers media from one folder. You do **not** need to edit `site-content.js` for normal uploads.
 
-## 1. Prepare the files
+## The entire workflow
 
-Recommended formats:
+1. Open your GitHub repository and enter:
 
-- Images: JPG, PNG, or WebP
-- Video: MP4 or WebM; MP4 with H.264 video and AAC audio has the broadest browser support
-- Image long edge: roughly 1600–2400 px
-- Image size: ideally below 1–2 MB each
-- Video size: keep short web clips reasonably compressed
-- Filenames: lowercase, hyphenated, and simple, such as `chicago-river.jpg` or `parker-launch.mp4`
+   `assets` → `media`
 
-GitHub Pages paths are case-sensitive.
+2. Click:
 
-## 2. Upload media to `assets/photos/`
+   `Add file` → `Upload files`
 
-On GitHub:
+3. Drag in all of the photos and videos you want, then commit the upload to `main`.
 
-1. Open `assets`, then `photos`.
-2. Choose **Add file → Upload files**.
-3. Drag the files into the upload area.
-4. Commit directly to `main`.
+After GitHub Pages finishes deploying, the files appear automatically in the Photos app.
 
-You can delete the temporary images only after nothing in `site-content.js` references them.
+## Put specific files on the desktop
 
-## 3. Edit `site-content.js`
-
-The file has three main lists:
-
-- `desktopPhotos`: loose, draggable image/video files on the desktop
-- `photoLibrary`: media shown inside the Photos app
-- `currentCards`: slides inside the draggable Currently widget
-
-The same media item may appear on the desktop and inside Photos.
-
-## Desktop image example
-
-```js
-{
-  id: "desktop-chicago-river",
-  type: "image",
-  src: "assets/photos/chicago-river.jpg",
-  alt: "Chicago River at night",
-  filename: "chicago-river.jpg",
-  x: 78,
-  y: 28,
-  rotation: -7,
-  width: 136,
-  monochrome: false
-}
-```
-
-## Desktop video example
-
-```js
-{
-  id: "desktop-parker-launch",
-  type: "video",
-  src: "assets/photos/parker-launch.mp4",
-  poster: "assets/photos/parker-launch-poster.jpg",
-  alt: "Parker launch video",
-  filename: "parker-launch.mp4",
-  x: 84,
-  y: 44,
-  rotation: 5,
-  width: 144,
-  monochrome: false
-}
-```
-
-Desktop media fields:
-
-- `id`: unique internal ID; never reuse it
-- `type`: `"image"` or `"video"`
-- `src`: exact path to the uploaded file
-- `poster`: optional preview image for a video
-- `alt`: accessible description
-- `filename`: desktop label and window title
-- `x`, `y`: default position as percentages of the desktop
-- `rotation`: default tilt in degrees
-- `width`: displayed desktop width in pixels
-- `monochrome`: whether the desktop thumbnail appears black-and-white
-
-Visitors can drag desktop media. Their arrangement is saved only in their own browser. Your manifest values remain the first-visit and reset defaults.
-
-Double-clicking a desktop item—or selecting it and pressing Space—opens only that file in its own Preview/QuickTime-style window. It does not start a slideshow or navigate to unrelated files.
-
-## Photos library image example
-
-```js
-{
-  id: "river-01",
-  type: "image",
-  src: "assets/photos/chicago-river.jpg",
-  alt: "Chicago River at night",
-  filename: "chicago-river.jpg",
-  date: "August 2026",
-  location: "Chicago"
-}
-```
-
-## Photos library video example
-
-```js
-{
-  id: "parker-video-01",
-  type: "video",
-  src: "assets/photos/parker-launch.mp4",
-  poster: "assets/photos/parker-launch-poster.jpg",
-  alt: "Parker launch video",
-  filename: "parker-launch.mp4",
-  date: "August 2026",
-  location: "Chicago"
-}
-```
-
-Photos automatically lays the library out responsively. Videos receive a duration/play treatment and open in their own native-control video window.
-
-## 4. Commit and test
-
-Commit the `site-content.js` edit, wait for GitHub Pages to deploy, and hard-refresh:
+Rename the files you want on the desktop so they begin with `desktop-`:
 
 ```text
-Command + Shift + R
+desktop-01-chicago-river.jpg
+desktop-02-camera.jpg
+desktop-03-friends.mp4
+desktop-04-film-scan.webp
 ```
 
-Use **View → Restore Default Layout** after changing public desktop positions. Use **Rizvisions → Reset Rizvisions…** for a completely clean browser test.
+The number controls the order. Up to six prefixed files appear on the desktop.
 
-## Customize the Currently widget
+When there are no `desktop-` files, the site temporarily uses the first four media files in alphabetical order.
 
-```js
-{
-  eyebrow: "CURRENTLY",
-  title: "Parker",
-  subtitle: "AI creative strategy",
-  kind: "app",
-  target: "parker"
-}
+## Recommended formats
+
+Photos:
+
+```text
+.jpg
+.jpeg
+.png
+.webp
+.gif
+.avif
 ```
 
-Supported actions:
+Videos:
 
-- `kind: "app"` opens an app such as `parker`, `photos`, `spotify`, `reel`, `about`, or `safari`
-- `kind: "project"` opens a project such as `bluespecs`, `whop`, or `windsurf`
-- `kind: "wallpaper"` changes the appearance to `grid`, `dark`, `maroon`, or `forest`
-- `kind: "external"` opens the URL in `target`
+```text
+.mp4   ← recommended
+.webm
+.m4v
+.mov
+```
+
+MP4 is the safest video format across browsers. Export web copies rather than uploading full-resolution camera originals.
+
+## Naming and order
+
+Files are sorted alphabetically. Number prefixes give you precise order:
+
+```text
+001-chicago.jpg
+002-parker-launch.mp4
+003-loyola.jpg
+```
+
+The filename is also used as the temporary caption, so readable names look better than `IMG_7392.JPG`.
+
+## Uploading a large batch
+
+For dozens or hundreds of files, the cleanest workflow is GitHub Desktop:
+
+1. Clone the `rizvisions/portfolio` repository in GitHub Desktop.
+2. Open the local repository folder.
+3. Drag the full batch into `assets/media` in Finder.
+4. Return to GitHub Desktop.
+5. Commit the files and click **Push origin**.
+
+That avoids selecting files one page at a time in GitHub's web uploader.
+
+## Important size note
+
+The GitHub browser uploader accepts individual files up to 25 MiB. Regular Git pushes are blocked above 100 MiB per file. Compress large videos before adding them. A dedicated media host such as Cloudinary can be added for V10 if the library becomes too large for a code repository.
+
+## Refreshing after an upload
+
+The site caches the directory listing for ten minutes to avoid repeatedly calling GitHub. After a new upload:
+
+- wait for the Pages deployment to finish, then
+- hard-refresh with `Command + Shift + R`.
+
+The new media usually appears immediately after the deployment; otherwise it appears when the short cache expires.

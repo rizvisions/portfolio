@@ -7,7 +7,7 @@
   <title>Rizvisions</title>
   <meta name="description" content="The internet home of Riz Zaheer — work, photography, projects, notes, and whatever else." />
   <link rel="icon" href="assets/icons/macos/rizvisions.png" />
-  <link rel="stylesheet" href="styles.css?v=9" />
+  <link rel="stylesheet" href="styles.css?v=9.5" />
 </head>
 <body>
   <div id="os" class="os" data-wallpaper="grid">
@@ -68,12 +68,10 @@
       <button role="menuitem" data-app="about">About Riz</button>
       <button role="menuitem" data-app="work">Selected Work</button>
       <button role="menuitem" data-app="photos">Photos</button>
-      <button role="menuitem" data-app="reel">Live Reel</button>
       <button role="menuitem" data-app="instagram">Instagram</button>
       <button role="menuitem" data-app="spotify">Spotify</button>
       <button role="menuitem" data-app="safari">Safari</button>
       <button role="menuitem" data-app="parker">Parker</button>
-      <button role="menuitem" data-app="reel">QuickTime Player</button>
       <button role="menuitem" data-app="settings">System Settings</button>
     </div>
     <div class="menu-popover" id="window-menu" role="menu">
@@ -136,27 +134,19 @@
           <span class="icon-frame"><img src="assets/icons/macos/photos.png" alt="" draggable="false" /></span>
           <span class="desktop-label">Photos</span>
         </button>
-        <button class="desktop-item" data-id="calendar" data-app="calendar" data-dock-key="calendar" style="--x: 42.2%; --y: 41.0%;">
-          <span class="icon-frame calendar-icon" aria-hidden="true"><span class="calendar-weekday">WED</span><span class="calendar-day">5</span></span>
-          <span class="desktop-label">Coffee Chat</span>
-        </button>
-        <button class="desktop-item" data-id="instagram" data-app="instagram" data-dock-key="instagram" style="--x: 50.4%; --y: 41.0%;">
+        <button class="desktop-item" data-id="instagram" data-app="instagram" data-dock-key="instagram" style="--x: 42.2%; --y: 41.0%;">
           <span class="icon-frame"><img src="assets/icons/macos/instagram.png" alt="" draggable="false" /></span>
           <span class="desktop-label">Instagram</span>
         </button>
-        <button class="desktop-item" data-id="safari" data-app="safari" data-dock-key="safari" style="--x: 58.6%; --y: 41.0%;">
+        <button class="desktop-item" data-id="safari" data-app="safari" data-dock-key="safari" style="--x: 50.4%; --y: 41.0%;">
           <span class="icon-frame"><img src="assets/icons/macos/safari.png" alt="" draggable="false" /></span>
           <span class="desktop-label">Safari</span>
         </button>
-        <button class="desktop-item" data-id="parker" data-app="parker" data-dock-key="parker" style="--x: 42.2%; --y: 57.2%;">
+        <button class="desktop-item" data-id="parker" data-app="parker" data-dock-key="parker" style="--x: 58.6%; --y: 41.0%;">
           <span class="icon-frame"><img src="assets/icons/macos/parker.png" alt="" draggable="false" /></span>
           <span class="desktop-label">Parker</span>
         </button>
-        <button class="desktop-item" data-id="reel" data-app="reel" data-dock-key="reel" style="--x: 50.4%; --y: 57.2%;">
-          <span class="icon-frame"><img src="assets/icons/macos/quicktime.png" alt="" draggable="false" /></span>
-          <span class="desktop-label">QuickTime Player</span>
-        </button>
-        <button class="desktop-item" data-id="spotify" data-app="spotify" data-dock-key="spotify" style="--x: 58.6%; --y: 57.2%;">
+        <button class="desktop-item" data-id="spotify" data-app="spotify" data-dock-key="spotify" style="--x: 50.4%; --y: 57.2%;">
           <span class="icon-frame"><img src="assets/icons/macos/spotify.png" alt="" draggable="false" /></span>
           <span class="desktop-label">Spotify</span>
         </button>
@@ -173,7 +163,6 @@
 
       <div class="context-menu" id="desktopContextMenu" role="menu">
         <button role="menuitem" data-action="open-spotlight">Spotlight Search <kbd>⌘Space</kbd></button>
-        <button role="menuitem" data-app="reel">Open Live Reel</button>
         <button role="menuitem" data-app="work">New Finder Window</button>
         <button role="menuitem" data-app="notes">New Note</button>
         <div class="menu-separator"></div>
@@ -200,19 +189,12 @@
       </div>
 
       <div class="control-center-panel liquid-panel" id="controlCenterPanel" aria-hidden="true">
-        <div class="cc-top-grid">
-          <button class="cc-focus-card" id="ccFocus" type="button">
-            <span class="cc-round-icon">☾</span>
-            <span><strong>Focus</strong><small id="ccFocusLabel">Off</small></span>
-          </button>
-          <div class="cc-now-playing">
-            <span class="cc-album-art"></span>
-            <span><strong>Not Playing</strong><small>Media controls</small></span>
-            <div class="cc-player-controls"><button type="button" aria-label="Previous">◀</button><button type="button" aria-label="Play">▶</button><button type="button" aria-label="Next">▶▶</button></div>
-          </div>
-        </div>
-        <label class="cc-liquid-slider"><span>Display</span><input id="brightnessSlider" type="range" min="45" max="100" value="100" /></label>
-        <label class="cc-liquid-slider"><span>Sound</span><input id="volumeSlider" type="range" min="0" max="100" value="54" /></label>
+        <div class="cc-header"><strong>Control Center</strong><small>Rizvisions</small></div>
+        <button class="cc-focus-row" id="ccFocus" type="button">
+          <span class="cc-focus-icon">☾</span><span><strong>Focus</strong><small id="ccFocusLabel">Off</small></span><i></i>
+        </button>
+        <label class="cc-volume-row"><span>Sound</span><input id="volumeSlider" type="range" min="0" max="100" value="54" /></label>
+        <div class="cc-section-label">Appearance</div>
         <div class="cc-appearance-row" aria-label="Appearance shortcuts">
           <button type="button" data-wallpaper="grid" aria-label="Light grid"><span class="cc-wallpaper-preview grid"></span><small>Light</small></button>
           <button type="button" data-wallpaper="dark" aria-label="Dark grid"><span class="cc-wallpaper-preview dark"></span><small>Dark</small></button>
@@ -221,20 +203,20 @@
         </div>
       </div>
 
-      <aside class="notification-center" id="notificationCenter" aria-hidden="true">
-        <section class="nc-calendar-widget liquid-widget">
-          <div class="nc-date-column"><span id="ncWeekday">Wednesday</span><strong id="ncDay">5</strong><small>No Events Today</small></div>
-          <div class="nc-month-column"><div class="nc-month" id="ncMonth">August</div><div class="nc-mini-grid" id="ncMiniGrid" aria-label="Current month"></div></div>
-        </section>
-        <section class="nc-weather-widget liquid-widget">
-          <div class="nc-weather-top"><span><small>Chicago</small><strong id="ncWeatherTemp">—°</strong></span><span><b id="ncWeatherSummary">Loading…</b><small>H:<span id="ncHigh">—°</span> L:<span id="ncLow">—°</span></small></span></div>
-          <div class="nc-hourly-row" id="ncHourlyRow"><span>Now<br><b id="ncFeels">—°</b></span><span>2AM<br><b>—°</b></span><span>3AM<br><b>—°</b></span><span>4AM<br><b>—°</b></span><span>5AM<br><b>—°</b></span></div>
+      <aside class="notification-center compact" id="notificationCenter" aria-hidden="true">
+        <section class="nc-date-card liquid-widget">
+          <div><span id="ncWeekday">Thursday</span><strong id="ncDay">6</strong><small id="ncMonth">August 2026</small></div>
+          <time id="ncLargeTime">2:36 AM</time>
         </section>
         <section class="nc-now-card liquid-widget">
           <span class="eyebrow">CURRENTLY</span>
           <strong id="ncCurrentTitle">Parker</strong>
           <p id="ncCurrentSubtitle">AI creative strategy</p>
           <button type="button" data-action="show-current-card">Open</button>
+        </section>
+        <section class="nc-shortcuts liquid-widget">
+          <button type="button" data-app="photos"><img src="assets/icons/macos/photos.png" alt=""><span><strong>Photos</strong><small>Open the visual archive</small></span></button>
+          <button type="button" data-app="parker"><img src="assets/icons/macos/parker.png" alt=""><span><strong>Parker</strong><small>What I’m working on</small></span></button>
         </section>
       </aside>
 
@@ -254,7 +236,6 @@
         <section class="quicklook-panel"><header><button id="quickLookClose"></button><span id="quickLookTitle"></span></header><img id="quickLookImage" alt=""><footer id="quickLookMeta"></footer><button id="quickLookPrev"></button><button id="quickLookNext"></button></section>
       </div>
 
-      <div class="display-dimmer" id="displayDimmer" aria-hidden="true"></div>
       <div class="toast" id="toast" role="status"></div>
     </div>
   </div>
@@ -282,7 +263,7 @@
     </section>
   </template>
 
-  <script src="site-content.js?v=9"></script>
-  <script src="app.js?v=9"></script>
+  <script src="site-content.js?v=9.5"></script>
+  <script src="app.js?v=9.5"></script>
 </body>
 </html>

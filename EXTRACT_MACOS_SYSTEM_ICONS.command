@@ -76,9 +76,6 @@ extract_named_app notes '/System/Applications/Notes.app'
 extract_named_app terminal \
   '/System/Applications/Utilities/Terminal.app' \
   '/Applications/Utilities/Terminal.app'
-extract_named_app quicktime \
-  '/System/Applications/QuickTime Player.app' \
-  '/Applications/QuickTime Player.app'
 extract_named_app safari \
   '/Applications/Safari.app' \
   '/System/Applications/Safari.app'

@@ -1,12 +1,22 @@
 /*
-  Replace these temporary files with your own photos and videos.
-  Put media in assets/photos/, then update the objects below.
-  Supported types: image and video (mp4, mov, m4v, webm).
+  V9.5 can automatically discover photos and videos placed in assets/media/.
+  You no longer need to edit this file for ordinary uploads.
+  The lists below are fallbacks used only when assets/media/ is empty or unavailable.
 */
 window.RIZVISIONS_CONTENT = {
+  mediaLibrary: {
+    autoDiscover: true,
+    owner: "rizvisions",
+    repo: "portfolio",
+    branch: "main",
+    path: "assets/media",
+    desktopPrefix: "desktop-",
+    maxDesktopItems: 6
+  },
+
   currentCards: [
     { eyebrow: "CURRENTLY", title: "Parker", subtitle: "AI creative strategy", kind: "app", target: "parker" },
-    { eyebrow: "CREATOR", title: "30M+ views", subtitle: "short-form videos and internet experiments", kind: "app", target: "reel" },
+    { eyebrow: "CREATOR", title: "30M+ views", subtitle: "short-form videos and internet experiments", kind: "external", target: "https://www.tiktok.com/@riz.com" },
     { eyebrow: "BUILT AT 18", title: "Blue Specs", subtitle: "$40K+ ecommerce story", kind: "project", target: "bluespecs" },
     { eyebrow: "CREATOR ECONOMY", title: "Whop + WAP", subtitle: "$20K+ earned building reward systems", kind: "project", target: "whop" }
   ],
