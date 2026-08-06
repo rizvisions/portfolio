@@ -7,7 +7,7 @@
   <title>Rizvisions</title>
   <meta name="description" content="The internet home of Riz Zaheer — work, photography, projects, notes, and whatever else." />
   <link rel="icon" href="assets/icons/macos/rizvisions.png" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=7" />
 </head>
 <body>
   <div id="os" class="os" data-wallpaper="grid">
@@ -25,6 +25,9 @@
         <button class="menu-trigger" data-menu="help-menu">Help</button>
       </div>
       <div class="menu-right">
+        <button class="status-button" id="spotlightButton" aria-label="Spotlight Search" title="Spotlight Search (⌘ Space)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.2"></circle><path d="m15 15 4.7 4.7"></path></svg>
+        </button>
         <button class="status-button" id="soundStatus" aria-label="Sound on" title="Sound">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm12.4-1.5a6 6 0 0 1 0 9M18.8 5a10 10 0 0 1 0 14"/></svg>
         </button>
@@ -38,7 +41,7 @@
         <button class="status-item control-center" id="controlCenterButton" aria-label="Control Center">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M8 14v6"/></svg>
         </button>
-        <time class="clock" id="clock">Wed Aug 5 1:29 AM</time>
+        <button class="clock-button" id="clockButton" aria-label="Open Notification Center"><time class="clock" id="clock">Wed Aug 5 1:29 AM</time></button>
       </div>
     </header>
 
@@ -74,6 +77,7 @@
       <button role="menuitem" data-app="about">About Riz</button>
       <button role="menuitem" data-app="work">Selected Work</button>
       <button role="menuitem" data-app="photos">Photos</button>
+      <button role="menuitem" data-app="reel">Live Reel</button>
       <button role="menuitem" data-app="instagram">Instagram</button>
       <button role="menuitem" data-app="spotify">Spotify</button>
     </div>
@@ -100,14 +104,15 @@
 
       <section class="now-widget" id="currentWidget" aria-label="Currently" title="Drag to move">
         <div class="now-copy">
-          <span class="eyebrow">CURRENTLY</span>
-          <strong>Parker</strong>
-          <span class="now-sub">AI creative strategy</span>
+          <span class="eyebrow" id="widgetEyebrow">CURRENTLY</span>
+          <strong id="widgetTitle">Parker</strong>
+          <span class="now-sub" id="widgetSubtitle">AI creative strategy</span>
         </div>
         <div class="now-actions">
-          <button data-project="parker">Open</button>
-          <button data-app="about" class="muted">More</button>
+          <button id="widgetShow" type="button">Show</button>
+          <button id="widgetNext" type="button" class="muted">Next</button>
         </div>
+        <div class="widget-progress" id="widgetProgress" aria-hidden="true"></div>
       </section>
 
       <div class="desktop-icons" id="desktopIcons" aria-label="Desktop items">
@@ -170,6 +175,7 @@
           <button class="dock-item" data-app="messages" data-tooltip="Messages"><img src="assets/icons/macos/messages.png" alt="Messages" draggable="false" /><span class="notification-badge dock-badge">1</span></button>
           <button class="dock-item dock-calendar" data-app="calendar" data-tooltip="Calendar"><span class="calendar-icon"><span class="calendar-weekday">WED</span><span class="calendar-day">5</span></span></button>
           <span class="dock-separator" aria-hidden="true"></span>
+          <div class="minimized-dock" id="minimizedDock" aria-label="Minimized windows"></div>
           <button class="dock-item" data-app="notes" data-tooltip="Notes"><img src="assets/icons/macos/notes.png" alt="Notes" draggable="false" /></button>
           <button class="dock-item" data-app="terminal" data-tooltip="Terminal"><img src="assets/icons/macos/terminal.png" alt="Terminal" draggable="false" /></button>
           <button class="dock-item" data-app="spotify" data-tooltip="Spotify"><img src="assets/icons/macos/spotify.png" alt="Spotify" draggable="false" /></button>
@@ -178,26 +184,90 @@
       </nav>
 
       <div class="context-menu" id="desktopContextMenu" role="menu">
+        <button role="menuitem" data-action="open-spotlight">Spotlight Search <kbd>⌘Space</kbd></button>
+        <button role="menuitem" data-app="reel">Open Live Reel</button>
         <button role="menuitem" data-app="work">New Finder Window</button>
         <button role="menuitem" data-app="notes">New Note</button>
         <div class="menu-separator"></div>
-        <button role="menuitem" data-wallpaper="grid">Use Grid Wallpaper</button>
-        <button role="menuitem" data-wallpaper="chicago">Use Chicago Wallpaper</button>
+        <button role="menuitem" data-action="sort-icons">Sort Icons</button>
+        <button role="menuitem" data-action="cycle-wallpaper">Change Wallpaper</button>
         <div class="menu-separator"></div>
+        <button role="menuitem" data-action="desktop-info">Get Info</button>
         <button role="menuitem" data-action="reset-layout">Restore Default Layout</button>
+      </div>
+
+      <div class="context-menu" id="photoContextMenu" role="menu">
+        <button role="menuitem" data-action="quick-look-photo">Quick Look <kbd>Space</kbd></button>
+        <button role="menuitem" data-app="photos">Open in Photos</button>
+        <div class="menu-separator"></div>
+        <button role="menuitem" data-action="bring-photo-front">Bring to Front</button>
+        <button role="menuitem" data-action="reset-photo-position">Put Back</button>
       </div>
 
       <div class="control-center-panel" id="controlCenterPanel" aria-hidden="true">
         <div class="cc-grid">
           <button class="cc-tile active"><span class="cc-icon">⌁</span><span><strong>Wi‑Fi</strong><small>Home</small></span></button>
           <button class="cc-tile active"><span class="cc-icon">ᛒ</span><span><strong>Bluetooth</strong><small>On</small></span></button>
-          <button class="cc-tile"><span class="cc-icon">☾</span><span><strong>Focus</strong><small>Off</small></span></button>
-          <button class="cc-tile" id="ccSound"><span class="cc-icon">◖</span><span><strong>Sound</strong><small>On</small></span></button>
+          <button class="cc-tile" id="ccFocus"><span class="cc-icon">☾</span><span><strong>Focus</strong><small id="ccFocusLabel">Off</small></span></button>
+          <button class="cc-tile" id="ccSound"><span class="cc-icon">◖</span><span><strong>Sound</strong><small id="ccSoundLabel">On</small></span></button>
         </div>
-        <label class="cc-slider"><span>Display</span><input type="range" min="20" max="100" value="82" /></label>
-        <label class="cc-slider"><span>Sound</span><input type="range" min="0" max="100" value="54" /></label>
+        <label class="cc-slider"><span>Display</span><input id="brightnessSlider" type="range" min="45" max="100" value="100" /></label>
+        <label class="cc-slider"><span>Sound</span><input id="volumeSlider" type="range" min="0" max="100" value="54" /></label>
+        <div class="cc-wallpapers" aria-label="Wallpaper shortcuts">
+          <button type="button" data-wallpaper="grid" aria-label="Grid wallpaper"><span class="cc-wallpaper-preview grid"></span>Grid</button>
+          <button type="button" data-wallpaper="chicago" aria-label="Chicago wallpaper"><span class="cc-wallpaper-preview chicago"></span>Chicago</button>
+          <button type="button" data-wallpaper="dark" aria-label="Dark wallpaper"><span class="cc-wallpaper-preview dark"></span>Dark</button>
+        </div>
       </div>
 
+      <aside class="notification-center" id="notificationCenter" aria-hidden="true">
+        <section class="nc-calendar-card">
+          <div class="nc-date"><span id="ncWeekday">Wednesday</span><strong id="ncDay">5</strong></div>
+          <div class="nc-month" id="ncMonth">August 2026</div>
+          <div class="nc-mini-grid" id="ncMiniGrid" aria-label="Current month"></div>
+        </section>
+        <section class="nc-weather-card">
+          <div class="nc-weather-top"><span><small>Chicago</small><strong id="ncWeatherTemp">—°</strong></span><span class="nc-weather-icon" id="ncWeatherIcon">☁︎</span></div>
+          <div class="nc-weather-summary" id="ncWeatherSummary">Loading Chicago weather…</div>
+          <div class="nc-weather-stats"><span>Feels like <strong id="ncFeels">—°</strong></span><span>High <strong id="ncHigh">—°</strong></span><span>Low <strong id="ncLow">—°</strong></span></div>
+        </section>
+        <section class="nc-now-card">
+          <span class="eyebrow">CURRENTLY</span>
+          <strong id="ncCurrentTitle">Parker</strong>
+          <p id="ncCurrentSubtitle">AI creative strategy</p>
+          <button type="button" data-action="show-current-card">Open</button>
+        </section>
+      </aside>
+
+      <div class="spotlight-backdrop" id="spotlightBackdrop" aria-hidden="true">
+        <section class="spotlight-panel" role="dialog" aria-modal="true" aria-label="Spotlight Search">
+          <div class="spotlight-search-row">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.2"></circle><path d="m15 15 4.7 4.7"></path></svg>
+            <input id="spotlightInput" type="search" autocomplete="off" spellcheck="false" placeholder="Spotlight Search" aria-label="Spotlight Search" />
+            <kbd>esc</kbd>
+          </div>
+          <div class="spotlight-results" id="spotlightResults"></div>
+          <footer class="spotlight-footer"><span>↑↓ navigate</span><span>↵ open</span></footer>
+        </section>
+      </div>
+
+      <div class="quicklook-backdrop" id="quickLookBackdrop" aria-hidden="true">
+        <section class="quicklook-panel" role="dialog" aria-modal="true" aria-label="Quick Look">
+          <header class="quicklook-toolbar">
+            <button type="button" class="quicklook-close" id="quickLookClose" aria-label="Close Quick Look"></button>
+            <span id="quickLookTitle">photo.jpg</span>
+            <button type="button" class="quicklook-open-photos" data-app="photos">Open with Photos</button>
+          </header>
+          <div class="quicklook-stage">
+            <button type="button" class="quicklook-nav previous" id="quickLookPrev" aria-label="Previous photo">‹</button>
+            <img id="quickLookImage" alt="" draggable="false" />
+            <button type="button" class="quicklook-nav next" id="quickLookNext" aria-label="Next photo">›</button>
+          </div>
+          <footer class="quicklook-meta" id="quickLookMeta"></footer>
+        </section>
+      </div>
+
+      <div class="display-dimmer" id="displayDimmer" aria-hidden="true"></div>
       <div class="toast" id="toast" role="status"></div>
     </div>
   </div>
@@ -218,7 +288,7 @@
     </section>
   </template>
 
-  <script src="site-content.js"></script>
-  <script src="app.js"></script>
+  <script src="site-content.js?v=7"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

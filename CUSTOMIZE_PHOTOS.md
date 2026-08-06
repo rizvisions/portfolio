@@ -99,3 +99,26 @@ Command + Shift + R
 ```
 
 Because your browser remembers prior photo positions, use **View → Restore Default Layout** after changing public defaults. Use **Rizvisions → Reset Rizvisions…** for a full clean test.
+
+## Customize the rotating Currently widget
+
+The `currentCards` list at the top of `site-content.js` controls the draggable widget.
+
+```js
+{
+  eyebrow: "CURRENTLY",
+  title: "Parker",
+  subtitle: "AI creative strategy",
+  kind: "project",
+  target: "parker"
+}
+```
+
+Supported actions:
+
+- `kind: "project"` opens a project such as `parker`, `bluespecs`, `whop`, or `windsurf`.
+- `kind: "app"` opens an app such as `photos`, `spotify`, `reel`, or `about`.
+- `kind: "wallpaper"` changes the wallpaper to `grid`, `chicago`, or `dark`.
+- `kind: "external"` opens the URL in `target`.
+
+Desktop photos now support Quick Look. Single-click a photo and press Space, or double-click it. Visitors can drag the photos around, and their personal layout remains stored only in their own browser.

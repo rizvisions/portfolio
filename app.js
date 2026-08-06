@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "rizvisions-os-v5";
+  const STORAGE_KEY = "rizvisions-os-v7";
   const os = document.getElementById("os");
   const desktop = document.getElementById("desktop");
   const windowsRoot = document.getElementById("windows");
@@ -14,8 +14,25 @@
   const soundStatus = document.getElementById("soundStatus");
   const desktopPhotosRoot = document.getElementById("desktopPhotos");
   const currentWidget = document.getElementById("currentWidget");
+  const photoContextMenu = document.getElementById("photoContextMenu");
+  const minimizedDock = document.getElementById("minimizedDock");
+  const spotlightButton = document.getElementById("spotlightButton");
+  const spotlightBackdrop = document.getElementById("spotlightBackdrop");
+  const spotlightInput = document.getElementById("spotlightInput");
+  const spotlightResults = document.getElementById("spotlightResults");
+  const notificationCenter = document.getElementById("notificationCenter");
+  const clockButton = document.getElementById("clockButton");
+  const quickLookBackdrop = document.getElementById("quickLookBackdrop");
+  const quickLookImage = document.getElementById("quickLookImage");
+  const quickLookTitle = document.getElementById("quickLookTitle");
+  const quickLookMeta = document.getElementById("quickLookMeta");
+  const displayDimmer = document.getElementById("displayDimmer");
+  const brightnessSlider = document.getElementById("brightnessSlider");
+  const volumeSlider = document.getElementById("volumeSlider");
+  const ccFocus = document.getElementById("ccFocus");
+  const ccSound = document.getElementById("ccSound");
 
-  const CONTENT = window.RIZVISIONS_CONTENT || { desktopPhotos: [], photoLibrary: [] };
+  const CONTENT = window.RIZVISIONS_CONTENT || { desktopPhotos: [], photoLibrary: [], currentCards: [] };
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const iconNodes = [...document.querySelectorAll(".desktop-item")];
   const defaultIcons = Object.fromEntries(iconNodes.map((node) => [
@@ -31,6 +48,10 @@
   const DEFAULT_STATE = {
     wallpaper: "grid",
     sound: true,
+    volume: 54,
+    brightness: 100,
+    focus: false,
+    widgetIndex: 0,
     icons: clone(defaultIcons),
     photos: clone(defaultPhotos),
     widget: clone(defaultWidget),
@@ -43,6 +64,11 @@
   let activeWindow = null;
   let audioContext = null;
   let toastTimer = null;
+  let selectedPhotoId = null;
+  let contextPhotoId = null;
+  let quickLookIndex = 0;
+  let spotlightIndex = 0;
+  let spotlightMatches = [];
   let photoZCounter = Math.max(20, ...(Object.values(state.photos || {}).map((photo) => Number(photo.z) || 0)));
 
   const appDefinitions = {
@@ -56,7 +82,8 @@
     spotify: { name: "Spotify", title: "Spotify", size: [690, 520], render: renderSpotify },
     calendar: { name: "Calendar", title: "Calendar", size: [720, 510], render: renderCalendar },
     trash: { name: "Finder", title: "Trash", size: [620, 430], render: renderTrash },
-    resume: { name: "Preview", title: "Resume.pdf", size: [690, 650], render: renderResume }
+    resume: { name: "Preview", title: "Resume.pdf", size: [690, 650], render: renderResume },
+    reel: { name: "QuickTime Player", title: "Live Reel", size: [850, 570], render: renderLiveReel }
   };
 
   const projectDefinitions = {
@@ -97,6 +124,38 @@
     }
   };
 
+  const currentCards = (CONTENT.currentCards && CONTENT.currentCards.length ? CONTENT.currentCards : [
+    { eyebrow: "CURRENTLY", title: "Parker", subtitle: "AI creative strategy", kind: "project", target: "parker" },
+    { eyebrow: "CREATOR", title: "30M+ views", subtitle: "short-form videos and internet experiments", kind: "app", target: "reel" },
+    { eyebrow: "BUILT AT 18", title: "Blue Specs", subtitle: "$40K+ ecommerce story", kind: "project", target: "bluespecs" },
+    { eyebrow: "BASED IN", title: "Chicago", subtitle: "Gold Coast · forever a Midwest person", kind: "wallpaper", target: "chicago" },
+    { eyebrow: "CREATOR ECONOMY", title: "Whop + WAP", subtitle: "$20K+ earned building reward systems", kind: "project", target: "whop" }
+  ]).map((card) => ({ ...card }));
+
+  const appIconMap = {
+    work: "assets/icons/macos/finder.png", settings: "assets/icons/macos/settings.png", about: "assets/icons/macos/rizvisions.png", photos: "assets/icons/macos/photos.png",
+    messages: "assets/icons/macos/messages.png", instagram: "assets/icons/macos/instagram.png", terminal: "assets/icons/macos/terminal.png",
+    notes: "assets/icons/macos/notes.png", spotify: "assets/icons/macos/spotify.png", calendar: "assets/icons/macos/document.png",
+    trash: "assets/icons/macos/trash.png", resume: "assets/icons/macos/document.png", reel: "assets/icons/macos/document.png"
+  };
+
+  const spotlightItems = [
+    { title:"About Riz", subtitle:"Riz Zaheer · Chicago · internet home", icon:appIconMap.about, keywords:"about bio riz zaheer", run:()=>openApp("about") },
+    { title:"Selected Work", subtitle:"Parker, Blue Specs, Whop, Windsurf", icon:appIconMap.work, keywords:"finder work portfolio projects", run:()=>openApp("work") },
+    { title:"Photos", subtitle:"Photography and camera roll", icon:appIconMap.photos, keywords:"photos photography film chicago", run:()=>openApp("photos") },
+    { title:"Live Reel", subtitle:"Creator work and short-form videos", icon:appIconMap.reel, keywords:"video tiktok reel creator", run:()=>openApp("reel") },
+    { title:"Messages", subtitle:"Find the best way to reach Riz", icon:appIconMap.messages, keywords:"message contact email linkedin", run:()=>openApp("messages") },
+    { title:"Instagram", subtitle:"Choose one of Riz's three accounts", icon:appIconMap.instagram, keywords:"instagram social rizvisions rizgoestomarket", run:()=>openApp("instagram") },
+    { title:"Spotify", subtitle:"Play Riz's current playlist", icon:appIconMap.spotify, keywords:"spotify music playlist", run:()=>openApp("spotify") },
+    { title:"Parker", subtitle:"Current work · AI creative strategy", icon:appIconMap.work, keywords:"parker ai work", run:()=>openProject("parker") },
+    { title:"Blue Specs", subtitle:"The ecommerce business built at 18", icon:appIconMap.work, keywords:"blue specs ecommerce", run:()=>openProject("bluespecs") },
+    { title:"Whop + WAP", subtitle:"Creator rewards and distribution", icon:appIconMap.work, keywords:"whop wap creator rewards", run:()=>openProject("whop") },
+    { title:"Windsurf", subtitle:"3.6M-view creator campaign", icon:appIconMap.work, keywords:"windsurf campaign views", run:()=>openProject("windsurf") },
+    { title:"Resume.pdf", subtitle:"Career timeline and experience", icon:appIconMap.resume, keywords:"resume career databricks rewards network", run:()=>openApp("resume") },
+    { title:"Change Wallpaper", subtitle:"Cycle Grid, Chicago, and Dark", icon:appIconMap.photos, keywords:"wallpaper background appearance", run:()=>cycleWallpaper() },
+    { title:"Restore Default Layout", subtitle:"Put desktop objects back", icon:appIconMap.settings, keywords:"reset restore layout", run:()=>resetLayout() }
+  ];
+
   function loadState() {
     try {
       const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -134,7 +193,8 @@
       oscillator.type = "sine";
       oscillator.frequency.value = kind === "close" ? 310 : kind === "select" ? 520 : 420;
       gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
-      gain.gain.exponentialRampToValueAtTime(kind === "select" ? 0.018 : 0.028, audioContext.currentTime + 0.01);
+      const volumeScale = Math.max(0.02, Number(state.volume || 54) / 100);
+      gain.gain.exponentialRampToValueAtTime((kind === "select" ? 0.018 : 0.028) * volumeScale, audioContext.currentTime + 0.01);
       gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.12);
       oscillator.connect(gain).connect(audioContext.destination);
       oscillator.start(); oscillator.stop(audioContext.currentTime + 0.13);
@@ -176,10 +236,12 @@
     desktopPhotosRoot.innerHTML = "";
     (CONTENT.desktopPhotos || []).forEach((photo, index) => {
       const saved = state.photos[photo.id] || defaultPhotos[photo.id] || { x: photo.x, y: photo.y, rotation: photo.rotation || 0, z: index + 1 };
-      const file = document.createElement("button");
-      file.type = "button";
+      const file = document.createElement("div");
       file.className = `photo-file${photo.monochrome ? " monochrome" : ""}`;
       file.dataset.photoId = photo.id;
+      file.setAttribute("role", "button");
+      file.setAttribute("tabindex", "0");
+      file.setAttribute("draggable", "false");
       file.setAttribute("aria-label", `${photo.filename}. Double-click to open Photos.`);
       file.style.setProperty("--photo-x", `${saved.x}%`);
       file.style.setProperty("--photo-y", `${saved.y}%`);
@@ -187,7 +249,9 @@
       file.style.setProperty("--photo-width", `${photo.width || 132}px`);
       file.style.zIndex = String(saved.z || index + 1);
       file.innerHTML = `<img src="${escapeHtml(photo.src)}" alt="${escapeHtml(photo.alt || "")}" draggable="false"><span>${escapeHtml(photo.filename || "photo.jpg")}</span>`;
-      file.addEventListener("dragstart", (event) => event.preventDefault());
+      file.ondragstart = () => false;
+      file.addEventListener("dragstart", (event) => event.preventDefault(), true);
+      file.addEventListener("mousedown", (event) => event.preventDefault(), true);
       file.addEventListener("pointerdown", (event) => beginPhotoDrag(event, file));
       file.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -197,7 +261,23 @@
       file.addEventListener("dblclick", (event) => {
         if (file._suppressClick) { event.preventDefault(); return; }
         event.preventDefault();
-        openApp("photos");
+        openQuickLook(photo.id);
+      });
+      file.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        contextPhotoId = photo.id;
+        selectDesktopPhoto(file);
+        closeMenus();
+        photoContextMenu.style.left = `${Math.min(event.clientX, window.innerWidth - 250)}px`;
+        photoContextMenu.style.top = `${Math.min(event.clientY, window.innerHeight - 190)}px`;
+        photoContextMenu.classList.add("open");
+      });
+      file.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openApp("photos");
+        }
       });
       desktopPhotosRoot.appendChild(file);
     });
@@ -224,28 +304,30 @@
 
     const desktopRect = desktop.getBoundingClientRect();
     const fileRect = file.getBoundingClientRect();
+    const pointerId = event.pointerId;
     const startX = event.clientX;
     const startY = event.clientY;
     const startLeft = fileRect.left - desktopRect.left + fileRect.width / 2;
     const startTop = fileRect.top - desktopRect.top + fileRect.height / 2;
-    const pointerId = event.pointerId;
     let moved = false;
+    let latestX = startX;
+    let latestY = startY;
+    let frame = 0;
 
     photoZCounter += 1;
     file.style.zIndex = String(photoZCounter);
     selectDesktopPhoto(file);
-    try { file.setPointerCapture(pointerId); } catch { /* pointer capture is progressive enhancement */ }
+    file.classList.add("pointer-active");
+    document.body.classList.add("desktop-dragging");
 
-    const onMove = (moveEvent) => {
-      if (moveEvent.pointerId !== pointerId) return;
-      moveEvent.preventDefault();
-      const dx = moveEvent.clientX - startX;
-      const dy = moveEvent.clientY - startY;
+    const paint = () => {
+      frame = 0;
+      const dx = latestX - startX;
+      const dy = latestY - startY;
       if (!moved && Math.hypot(dx, dy) < 3) return;
       if (!moved) {
         moved = true;
         file.classList.add("dragging");
-        document.body.classList.add("desktop-dragging");
       }
       const halfW = file.offsetWidth / 2;
       const halfH = file.offsetHeight / 2;
@@ -255,13 +337,26 @@
       file.style.top = `${top}px`;
     };
 
+    const onMove = (moveEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
+      moveEvent.preventDefault();
+      latestX = moveEvent.clientX;
+      latestY = moveEvent.clientY;
+      if (!frame) frame = requestAnimationFrame(paint);
+    };
+
     const finish = (upEvent) => {
       if (upEvent && upEvent.pointerId !== pointerId) return;
-      file.removeEventListener("pointermove", onMove);
-      file.removeEventListener("pointerup", finish);
-      file.removeEventListener("pointercancel", finish);
-      try { file.releasePointerCapture(pointerId); } catch { /* no-op */ }
+      document.removeEventListener("pointermove", onMove, true);
+      document.removeEventListener("pointerup", finish, true);
+      document.removeEventListener("pointercancel", finish, true);
+      window.removeEventListener("blur", finish);
+      if (frame) {
+        cancelAnimationFrame(frame);
+        paint();
+      }
       document.body.classList.remove("desktop-dragging");
+      file.classList.remove("dragging", "pointer-active");
 
       const current = state.photos[file.dataset.photoId] || defaultPhotos[file.dataset.photoId] || {};
       if (moved) {
@@ -272,7 +367,6 @@
         file.style.setProperty("--photo-y", `${y}%`);
         file.style.left = "var(--photo-x)";
         file.style.top = "var(--photo-y)";
-        file.classList.remove("dragging");
         file._suppressClick = true;
         setTimeout(() => { file._suppressClick = false; }, 0);
       } else {
@@ -281,9 +375,10 @@
       saveState();
     };
 
-    file.addEventListener("pointermove", onMove);
-    file.addEventListener("pointerup", finish);
-    file.addEventListener("pointercancel", finish);
+    document.addEventListener("pointermove", onMove, true);
+    document.addEventListener("pointerup", finish, true);
+    document.addEventListener("pointercancel", finish, true);
+    window.addEventListener("blur", finish, { once: true });
   }
 
   function beginWidgetDrag(event) {
@@ -293,26 +388,28 @@
 
     const desktopRect = desktop.getBoundingClientRect();
     const widgetRect = currentWidget.getBoundingClientRect();
+    const pointerId = event.pointerId;
     const startX = event.clientX;
     const startY = event.clientY;
     const startLeft = widgetRect.left - desktopRect.left + widgetRect.width / 2;
     const startTop = widgetRect.top - desktopRect.top;
-    const pointerId = event.pointerId;
     let moved = false;
+    let latestX = startX;
+    let latestY = startY;
+    let frame = 0;
 
     currentWidget.style.zIndex = "60";
-    try { currentWidget.setPointerCapture(pointerId); } catch { /* no-op */ }
+    currentWidget.classList.add("pointer-active");
+    document.body.classList.add("desktop-dragging");
 
-    const onMove = (moveEvent) => {
-      if (moveEvent.pointerId !== pointerId) return;
-      moveEvent.preventDefault();
-      const dx = moveEvent.clientX - startX;
-      const dy = moveEvent.clientY - startY;
+    const paint = () => {
+      frame = 0;
+      const dx = latestX - startX;
+      const dy = latestY - startY;
       if (!moved && Math.hypot(dx, dy) < 3) return;
       if (!moved) {
         moved = true;
         currentWidget.classList.add("dragging");
-        document.body.classList.add("desktop-dragging");
       }
       const halfW = widgetRect.width / 2;
       const left = Math.min(Math.max(halfW + 8, startLeft + dx), desktop.clientWidth - halfW - 8);
@@ -321,14 +418,26 @@
       currentWidget.style.top = `${top}px`;
     };
 
+    const onMove = (moveEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
+      moveEvent.preventDefault();
+      latestX = moveEvent.clientX;
+      latestY = moveEvent.clientY;
+      if (!frame) frame = requestAnimationFrame(paint);
+    };
+
     const finish = (upEvent) => {
       if (upEvent && upEvent.pointerId !== pointerId) return;
-      currentWidget.removeEventListener("pointermove", onMove);
-      currentWidget.removeEventListener("pointerup", finish);
-      currentWidget.removeEventListener("pointercancel", finish);
-      try { currentWidget.releasePointerCapture(pointerId); } catch { /* no-op */ }
+      document.removeEventListener("pointermove", onMove, true);
+      document.removeEventListener("pointerup", finish, true);
+      document.removeEventListener("pointercancel", finish, true);
+      window.removeEventListener("blur", finish);
+      if (frame) {
+        cancelAnimationFrame(frame);
+        paint();
+      }
       document.body.classList.remove("desktop-dragging");
-      currentWidget.classList.remove("dragging");
+      currentWidget.classList.remove("dragging", "pointer-active");
 
       if (moved) {
         const x = (parseFloat(currentWidget.style.left) / desktop.clientWidth) * 100;
@@ -346,12 +455,14 @@
       }
     };
 
-    currentWidget.addEventListener("pointermove", onMove);
-    currentWidget.addEventListener("pointerup", finish);
-    currentWidget.addEventListener("pointercancel", finish);
+    document.addEventListener("pointermove", onMove, true);
+    document.addEventListener("pointerup", finish, true);
+    document.addEventListener("pointercancel", finish, true);
+    window.addEventListener("blur", finish, { once: true });
   }
 
   function selectDesktopPhoto(file) {
+    selectedPhotoId = file?.dataset.photoId || null;
     iconNodes.forEach((node) => node.classList.remove("selected"));
     desktopPhotosRoot?.querySelectorAll(".photo-file").forEach((node) => node.classList.toggle("selected", node === file));
     playSound("select");
@@ -363,6 +474,7 @@
     state.widget = clone(defaultWidget);
     photoZCounter = Math.max(20, ...(Object.values(state.photos || {}).map((photo) => Number(photo.z) || 0)));
     state.windows = {};
+    state.widgetIndex = 0;
     saveState();
     applyIconLayout();
     applyPhotoLayout();
@@ -370,6 +482,9 @@
     [...windowsRoot.children].forEach((win) => win.remove());
     activeWindow = null;
     activeAppName.textContent = "Rizvisions";
+    renderMinimizedDock();
+    updateCurrentWidget();
+    applyDisplayState();
     updateDockRunning();
     showToast("Desktop layout restored");
   }
@@ -394,7 +509,10 @@
     [...windowsRoot.children].forEach((win) => win.remove());
     activeWindow = null;
     activeAppName.textContent = "Rizvisions";
-    soundStatus.style.opacity = "1";
+    selectedPhotoId = null;
+    renderMinimizedDock();
+    updateCurrentWidget();
+    applyDisplayState();
     updateDockRunning();
     saveState();
     showToast("Rizvisions reset");
@@ -452,6 +570,7 @@
     if (!win) return;
     win.hidden = false;
     win.classList.remove("minimizing");
+    removeMinimizedWindow(appId);
     focusWindow(win);
     bounceDock(appId);
     playSound("open");
@@ -504,6 +623,7 @@
     if (!win) return;
     saveWindowRect(win);
     playSound("close");
+    removeMinimizedWindow(win.dataset.appWindow);
     win.remove();
     activeWindow = [...windowsRoot.children].filter((node) => !node.hidden).sort((a, b) => (+a.style.zIndex) - (+b.style.zIndex)).pop() || null;
     if (activeWindow) focusWindow(activeWindow); else activeAppName.textContent = "Rizvisions";
@@ -519,6 +639,7 @@
       win.classList.remove("minimizing");
       activeWindow = [...windowsRoot.children].filter((node) => !node.hidden).sort((a, b) => (+a.style.zIndex) - (+b.style.zIndex)).pop() || null;
       if (activeWindow) focusWindow(activeWindow); else activeAppName.textContent = "Rizvisions";
+      renderMinimizedDock();
       updateDockRunning();
     }, 230);
   }
@@ -656,6 +777,8 @@
     document.querySelectorAll(".menu-trigger.open").forEach((trigger) => trigger.classList.remove("open"));
     controlCenter.classList.remove("open");
     controlCenter.setAttribute("aria-hidden", "true");
+    notificationCenter?.classList.remove("open");
+    notificationCenter?.setAttribute("aria-hidden", "true");
   }
 
   function toggleMenu(trigger) {
@@ -670,6 +793,9 @@
 
   function wireAppSpecific(win, appId) {
     if (appId === "terminal") wireTerminal(win);
+    if (appId === "photos") {
+      win.querySelectorAll("[data-photo-library-index]").forEach((button) => button.addEventListener("dblclick", () => openQuickLookByLibraryIndex(Number(button.dataset.photoLibraryIndex))));
+    }
     if (appId === "notes") {
       const textarea = win.querySelector("textarea");
       textarea.value = state.notes;
@@ -711,10 +837,11 @@
             <button class="file-item" data-project="windsurf"><span class="finder-folder"><img src="assets/icons/macos/folder.png" alt=""><i style="--tag:#30b0c7"></i></span><span class="file-name">Windsurf</span></button>
             <button class="file-item" data-project="creator"><span class="finder-folder"><img src="assets/icons/macos/folder.png" alt=""><i style="--tag:#8e8e93"></i></span><span class="file-name">Creator Work</span></button>
             <button class="file-item" data-app="photos"><img src="assets/icons/macos/photos.png" alt=""><span class="file-name">Photography</span></button>
+            <button class="file-item" data-app="reel"><span class="finder-video-file"><img src="assets/photos/chicago-river-bw.jpg" alt=""><i>▶</i></span><span class="file-name">Live Reel.mov</span></button>
             <button class="file-item" data-app="resume"><img src="assets/icons/macos/document.png" alt=""><span class="file-name">Resume.pdf</span></button>
             <button class="file-item" data-app="notes"><img src="assets/icons/macos/notes.png" alt=""><span class="file-name">Random Notes</span></button>
           </div></div>
-          <div class="finder-statusbar">8 items, 42.6 GB available</div>
+          <div class="finder-statusbar">9 items, 42.6 GB available</div>
         </main>
       </div>`;
   }
@@ -761,7 +888,7 @@
         <main class="photos-main">
           <div class="photos-toolbar"><h2>Library</h2><span class="toolbar-spacer"></span><button class="toolbar-button">−</button><button class="toolbar-button">+</button></div>
           <div class="photos-grid">
-            ${(CONTENT.photoLibrary || []).map((photo) => `<button class="${escapeHtml(photo.layout || "")}"><img src="${escapeHtml(photo.src)}" alt="${escapeHtml(photo.alt || "")}"></button>`).join("")}
+            ${(CONTENT.photoLibrary || []).map((photo, index) => `<button class="${escapeHtml(photo.layout || "")}" data-photo-library-index="${index}"><img src="${escapeHtml(photo.src)}" alt="${escapeHtml(photo.alt || "")}" draggable="false"></button>`).join("")}
           </div>
         </main>
       </div>`;
@@ -848,6 +975,15 @@
     return `<div style="height:100%;background:#707070;padding:25px;overflow:auto"><article style="width:min(100%,560px);min-height:760px;margin:auto;background:white;box-shadow:0 8px 30px rgba(0,0,0,.35);padding:48px 54px;color:#1e1e1f;user-select:text"><h1 style="margin:0;font-size:29px;letter-spacing:-.04em">Riz Zaheer</h1><p style="margin:5px 0 28px;color:#666;font-size:12px">Chicago, IL · Creator, operator, GTM person</p><h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid #bbb;padding-bottom:5px">Experience</h2><h3 style="font-size:15px;margin-bottom:3px">Parker AI</h3><p style="font-size:12px;color:#666;margin-top:0">Sales, customer success, GTM, product feedback, pricing, content and operations · 2026—present</p><h3 style="font-size:15px;margin-bottom:3px">Databricks</h3><p style="font-size:12px;color:#666;margin-top:0">Solutions Specialist · 2025</p><h3 style="font-size:15px;margin-bottom:3px">Rewards Network</h3><p style="font-size:12px;color:#666;margin-top:0">#1 SDR / Qualification Specialist · 2024—2025</p><h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid #bbb;padding-bottom:5px;margin-top:30px">Things built</h2><p style="font-size:12px;line-height:1.6">Blue Specs · Rizvisions · Whop creator programs · WAP · short-form content · various internet experiments</p><p style="font-size:11px;color:#888;margin-top:45px">This is intentionally not the final downloadable résumé yet.</p></article></div>`;
   }
 
+  function renderLiveReel() {
+    const reelItems = [
+      { eyebrow:"LIFESTYLE + CREATIVE", title:"@rizvisions", copy:"Photography, mixed-media reels, Chicago, and whatever I feel like making.", href:"https://www.instagram.com/rizvisions/", image:"assets/photos/chicago-river-bw.jpg" },
+      { eyebrow:"AI + GTM", title:"@rizgoestomarket", copy:"Parker, AI, ecommerce, product thinking, and the work-brain side of the internet.", href:"https://www.instagram.com/rizgoestomarket/", image:"assets/photos/camera-bw.jpg" },
+      { eyebrow:"SHORT FORM", title:"@riz.com", copy:"The TikTok account behind millions of views and years of internet experiments.", href:"https://www.tiktok.com/@riz.com", image:"assets/photos/chicago-skyline.jpg" }
+    ];
+    return `<div class="reel-shell"><header class="reel-header"><div><span>LIVE REEL</span><h1>Things I make</h1><p>A living index until the actual video archive is fully wired in.</p></div><button class="mac-button" data-external="https://www.tiktok.com/@riz.com">Open TikTok</button></header><div class="reel-grid">${reelItems.map((item,index)=>`<a class="reel-card" href="${item.href}" target="_blank" rel="noopener"><img src="${item.image}" alt=""><span class="reel-number">0${index+1}</span><div><small>${item.eyebrow}</small><strong>${item.title}</strong><p>${item.copy}</p><em>Open ↗</em></div></a>`).join("")}</div></div>`;
+  }
+
   function renderProject(project) {
     return `<div style="height:100%;display:flex;flex-direction:column;background:#f4f4f4;overflow:auto;user-select:text"><div style="min-height:230px;padding:34px 38px;color:white;background:linear-gradient(145deg,${project.color},color-mix(in srgb, ${project.color} 55%, #101014));display:flex;flex-direction:column;justify-content:flex-end"><span style="font-size:10px;font-weight:700;letter-spacing:.12em;opacity:.76">${project.eyebrow}</span><h1 style="margin:8px 0 0;font-size:48px;letter-spacing:-.055em">${project.title}</h1></div><div style="padding:28px 36px 36px"><p style="font-size:16px;line-height:1.52;margin:0 0 24px;max-width:640px">${project.description}</p><div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid rgba(0,0,0,.12);border-radius:11px;overflow:hidden;background:white">${project.facts.map((fact,i)=>`<div style="min-height:64px;padding:14px 16px;display:flex;align-items:center;font-size:13px;font-weight:600;border-${i%2===0?'right':'left'}:0;border-bottom:${i<2?'1px solid rgba(0,0,0,.09)':'0'}">${fact}</div>`).join("")}</div></div></div>`;
   }
@@ -863,10 +999,12 @@
       input.value = "";
       const lower = command.toLowerCase();
       if (!lower) return;
-      if (lower === "help") output.textContent += "about  work  photos  social  spotify  clear  reset\n";
+      if (lower === "help") output.textContent += "about  work  photos  reel  social  spotify  spotlight  clear  reset\n";
       else if (lower === "about") { output.textContent += "Opening About Riz…\n"; openApp("about"); }
       else if (lower === "work") { output.textContent += "Opening Selected Work…\n"; openApp("work"); }
       else if (lower === "photos") { output.textContent += "Opening Photos…\n"; openApp("photos"); }
+      else if (lower === "reel") { output.textContent += "Opening Live Reel…\n"; openApp("reel"); }
+      else if (lower === "spotlight") { output.textContent += "Opening Spotlight…\n"; openSpotlight(); }
       else if (lower === "social") { output.textContent += "Opening Instagram…\n"; openApp("instagram"); }
       else if (lower === "spotify") { output.textContent += "Opening Spotify…\n"; openApp("spotify"); }
       else if (lower === "clear") output.textContent = "";
@@ -875,6 +1013,176 @@
       else output.textContent += `zsh: command not found: ${command}\n`;
       output.scrollTop = output.scrollHeight;
     });
+  }
+
+  function applyDisplayState() {
+    const brightness = Math.min(100, Math.max(45, Number(state.brightness || 100)));
+    const dimOpacity = ((100 - brightness) / 100) * 0.62;
+    displayDimmer.style.opacity = String(dimOpacity);
+    brightnessSlider.value = String(brightness);
+    volumeSlider.value = String(Number(state.volume ?? 54));
+    soundStatus.style.opacity = state.sound ? "1" : ".42";
+    soundStatus.setAttribute("aria-label", state.sound ? "Sound on" : "Sound off");
+    ccSound.classList.toggle("active", state.sound);
+    document.getElementById("ccSoundLabel").textContent = state.sound ? `${state.volume || 54}%` : "Off";
+    ccFocus.classList.toggle("active", Boolean(state.focus));
+    document.getElementById("ccFocusLabel").textContent = state.focus ? "On" : "Off";
+    os.classList.toggle("focus-mode", Boolean(state.focus));
+  }
+
+  function updateCurrentWidget(animate = false) {
+    const normalizedIndex = (Number(state.widgetIndex || 0) % currentCards.length + currentCards.length) % currentCards.length;
+    state.widgetIndex = normalizedIndex;
+    const card = currentCards[normalizedIndex];
+    if (!card) return;
+    currentWidget.classList.toggle("changing", animate);
+    document.getElementById("widgetEyebrow").textContent = card.eyebrow;
+    document.getElementById("widgetTitle").textContent = card.title;
+    document.getElementById("widgetSubtitle").textContent = card.subtitle;
+    document.getElementById("ncCurrentTitle").textContent = card.title;
+    document.getElementById("ncCurrentSubtitle").textContent = card.subtitle;
+    const progress = document.getElementById("widgetProgress");
+    progress.innerHTML = currentCards.map((_, index) => `<i class="${index === normalizedIndex ? "active" : ""}"></i>`).join("");
+    if (animate) setTimeout(() => currentWidget.classList.remove("changing"), 240);
+  }
+
+  function showCurrentCard() {
+    const card = currentCards[Number(state.widgetIndex || 0) % currentCards.length];
+    if (!card) return;
+    if (card.kind === "project") openProject(card.target);
+    else if (card.kind === "app") openApp(card.target);
+    else if (card.kind === "external") window.open(card.target, "_blank", "noopener");
+    else if (card.kind === "wallpaper") { setWallpaper(card.target); showToast(`${card.title} wallpaper`); }
+  }
+
+  function cycleWallpaper() {
+    const order = ["grid", "chicago", "dark"];
+    setWallpaper(order[(order.indexOf(state.wallpaper) + 1) % order.length]);
+    showToast(`${state.wallpaper[0].toUpperCase()}${state.wallpaper.slice(1)} wallpaper`);
+  }
+
+  function sortIcons() {
+    const cols = [36.1, 44.4, 52.6, 60.8];
+    const rows = [24.8, 40.9, 57.1];
+    iconNodes.forEach((node, index) => { state.icons[node.dataset.id] = { x: cols[index % cols.length], y: rows[Math.floor(index / cols.length)] || 57.1 }; });
+    applyIconLayout(); saveState(); showToast("Icons sorted");
+  }
+
+  function getQuickLookPhotos() {
+    const seen = new Set();
+    const list = [];
+    (CONTENT.desktopPhotos || []).forEach((photo) => { if (!seen.has(photo.src)) { seen.add(photo.src); list.push({ ...photo }); } });
+    (CONTENT.photoLibrary || []).forEach((photo, index) => { if (!seen.has(photo.src)) { seen.add(photo.src); list.push({ ...photo, id:`library-${index}`, filename:(photo.src.split("/").pop() || `photo-${index+1}.jpg`) }); } });
+    return list;
+  }
+
+  function openQuickLook(photoId) {
+    const photos = getQuickLookPhotos();
+    const index = Math.max(0, photos.findIndex((photo) => photo.id === photoId));
+    quickLookIndex = index;
+    renderQuickLook();
+    quickLookBackdrop.classList.add("open");
+    quickLookBackdrop.setAttribute("aria-hidden", "false");
+    playSound("open");
+  }
+
+  function openQuickLookByLibraryIndex(index) {
+    const target = (CONTENT.photoLibrary || [])[index];
+    if (!target) return;
+    const photos = getQuickLookPhotos();
+    quickLookIndex = Math.max(0, photos.findIndex((photo) => photo.src === target.src));
+    renderQuickLook();
+    quickLookBackdrop.classList.add("open");
+    quickLookBackdrop.setAttribute("aria-hidden", "false");
+  }
+
+  function renderQuickLook() {
+    const photos = getQuickLookPhotos();
+    if (!photos.length) return;
+    quickLookIndex = (quickLookIndex + photos.length) % photos.length;
+    const photo = photos[quickLookIndex];
+    quickLookImage.src = photo.src;
+    quickLookImage.alt = photo.alt || "Photography by Riz";
+    quickLookTitle.textContent = photo.filename || photo.src.split("/").pop() || "photo.jpg";
+    quickLookMeta.textContent = `${quickLookIndex + 1} of ${photos.length} · ${photo.alt || "Rizvisions Photos"}`;
+  }
+
+  function stepQuickLook(direction) { quickLookIndex += direction; renderQuickLook(); }
+  function closeQuickLook() { quickLookBackdrop.classList.remove("open"); quickLookBackdrop.setAttribute("aria-hidden", "true"); }
+
+  function bringPhotoToFront(photoId) {
+    const file = desktopPhotosRoot.querySelector(`[data-photo-id="${CSS.escape(photoId || "")}"]`);
+    if (!file) return;
+    photoZCounter += 1; file.style.zIndex = String(photoZCounter);
+    const current = state.photos[photoId] || defaultPhotos[photoId]; state.photos[photoId] = { ...current, z: photoZCounter }; saveState();
+  }
+
+  function resetPhotoPosition(photoId) {
+    if (!photoId || !defaultPhotos[photoId]) return;
+    state.photos[photoId] = clone(defaultPhotos[photoId]); applyPhotoLayout(); saveState(); showToast("Photo put back");
+  }
+
+  function renderMinimizedDock() {
+    minimizedDock.innerHTML = "";
+    [...windowsRoot.children].filter((win) => win.hidden).forEach((win) => {
+      const id = win.dataset.appWindow;
+      const button = document.createElement("button");
+      button.type = "button"; button.className = "minimized-window"; button.dataset.restoreWindow = id;
+      button.innerHTML = `<span class="minimized-preview"><img src="${appIconMap[id] || appIconMap.work}" alt=""></span><small>${escapeHtml(win.querySelector(".window-title")?.textContent || "Window")}</small>`;
+      button.addEventListener("click", () => { win.hidden = false; button.remove(); focusWindow(win); playSound("open"); updateDockRunning(); });
+      minimizedDock.appendChild(button);
+    });
+  }
+
+  function removeMinimizedWindow(appId) { minimizedDock.querySelector(`[data-restore-window="${CSS.escape(appId)}"]`)?.remove(); }
+
+  function openSpotlight() {
+    closeMenus();
+    spotlightBackdrop.classList.add("open");
+    spotlightBackdrop.setAttribute("aria-hidden", "false");
+    spotlightInput.value = "";
+    renderSpotlightResults("");
+    requestAnimationFrame(() => spotlightInput.focus());
+  }
+
+  function closeSpotlight() { spotlightBackdrop.classList.remove("open"); spotlightBackdrop.setAttribute("aria-hidden", "true"); spotlightInput.blur(); }
+
+  function renderSpotlightResults(query) {
+    const q = query.trim().toLowerCase();
+    spotlightMatches = spotlightItems.filter((item) => !q || `${item.title} ${item.subtitle} ${item.keywords}`.toLowerCase().includes(q)).slice(0, 8);
+    spotlightIndex = Math.min(spotlightIndex, Math.max(0, spotlightMatches.length - 1));
+    spotlightResults.innerHTML = spotlightMatches.length ? spotlightMatches.map((item,index)=>`<button type="button" class="spotlight-result ${index===spotlightIndex?"active":""}" data-spotlight-index="${index}"><img src="${item.icon}" alt=""><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.subtitle)}</small></span><em>↵</em></button>`).join("") : `<div class="spotlight-empty">No results for “${escapeHtml(query)}”</div>`;
+    spotlightResults.querySelectorAll("[data-spotlight-index]").forEach((button) => button.addEventListener("click", () => runSpotlightItem(Number(button.dataset.spotlightIndex))));
+  }
+
+  function handleSpotlightKeys(event) {
+    if (event.key === "Escape") { event.preventDefault(); closeSpotlight(); return; }
+    if (event.key === "ArrowDown") { event.preventDefault(); spotlightIndex = Math.min(spotlightMatches.length - 1, spotlightIndex + 1); renderSpotlightResults(spotlightInput.value); }
+    if (event.key === "ArrowUp") { event.preventDefault(); spotlightIndex = Math.max(0, spotlightIndex - 1); renderSpotlightResults(spotlightInput.value); }
+    if (event.key === "Enter") { event.preventDefault(); runSpotlightItem(spotlightIndex); }
+  }
+
+  function runSpotlightItem(index) { const item = spotlightMatches[index]; if (!item) return; closeSpotlight(); item.run(); }
+
+  function renderMiniCalendar(date) {
+    const root = document.getElementById("ncMiniGrid");
+    const year = date.getFullYear(); const month = date.getMonth();
+    const first = new Date(year, month, 1); const days = new Date(year, month + 1, 0).getDate();
+    const labels = ["S","M","T","W","T","F","S"].map((label)=>`<b>${label}</b>`);
+    const blanks = Array(first.getDay()).fill("<span></span>");
+    const cells = Array.from({length:days},(_,index)=>`<span class="${index+1===date.getDate()?"today":""}">${index+1}</span>`);
+    root.innerHTML = [...labels,...blanks,...cells].join("");
+  }
+
+  function weatherLabel(code) {
+    if ([0].includes(code)) return { label:"Clear", icon:"☀︎" };
+    if ([1,2].includes(code)) return { label:"Partly cloudy", icon:"☀︎" };
+    if ([3].includes(code)) return { label:"Cloudy", icon:"☁︎" };
+    if ([45,48].includes(code)) return { label:"Foggy", icon:"≋" };
+    if ([51,53,55,61,63,65,80,81,82].includes(code)) return { label:"Rain", icon:"☂︎" };
+    if ([71,73,75,77,85,86].includes(code)) return { label:"Snow", icon:"❄︎" };
+    if ([95,96,99].includes(code)) return { label:"Storms", icon:"ϟ" };
+    return { label:"Chicago weather", icon:"☁︎" };
   }
 
   function escapeHtml(value) {
@@ -887,22 +1195,40 @@
       timeZone: "America/Chicago", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
     }).format(now).replace(",", "");
     document.getElementById("clock").textContent = chicago;
-    const parts = new Intl.DateTimeFormat("en-US", { timeZone:"America/Chicago", weekday:"short", day:"numeric" }).formatToParts(now);
-    const weekday = parts.find(p=>p.type==="weekday")?.value || "WED";
+    const chicagoDate = new Date(new Intl.DateTimeFormat("en-US", { timeZone:"America/Chicago", year:"numeric", month:"numeric", day:"numeric" }).format(now));
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone:"America/Chicago", weekday:"long", day:"numeric", month:"long", year:"numeric" }).formatToParts(now);
+    const weekday = parts.find(p=>p.type==="weekday")?.value || "Wednesday";
     const day = parts.find(p=>p.type==="day")?.value || "5";
-    document.querySelectorAll(".calendar-weekday").forEach(n => n.textContent = weekday.toUpperCase());
+    const month = parts.find(p=>p.type==="month")?.value || "August";
+    const year = parts.find(p=>p.type==="year")?.value || "2026";
+    document.querySelectorAll(".calendar-weekday").forEach(n => n.textContent = weekday.slice(0,3).toUpperCase());
     document.querySelectorAll(".calendar-day").forEach(n => n.textContent = day);
+    document.getElementById("ncWeekday").textContent = weekday;
+    document.getElementById("ncDay").textContent = day;
+    document.getElementById("ncMonth").textContent = `${month} ${year}`;
+    renderMiniCalendar(chicagoDate);
   }
 
   async function updateWeather() {
     const tempNode = document.getElementById("weatherTemp");
     try {
-      const response = await fetch("https://api.open-meteo.com/v1/forecast?latitude=41.8781&longitude=-87.6298&current=temperature_2m&temperature_unit=fahrenheit&timezone=America%2FChicago", { cache:"no-store" });
+      const url = "https://api.open-meteo.com/v1/forecast?latitude=41.8781&longitude=-87.6298&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FChicago&forecast_days=1";
+      const response = await fetch(url, { cache:"no-store" });
       if (!response.ok) throw new Error("weather unavailable");
       const data = await response.json();
-      tempNode.textContent = `${Math.round(data.current.temperature_2m)}°F`;
+      const current = data.current || {};
+      const temp = Math.round(current.temperature_2m);
+      tempNode.textContent = `${temp}°F`;
+      document.getElementById("ncWeatherTemp").textContent = `${temp}°`;
+      document.getElementById("ncFeels").textContent = `${Math.round(current.apparent_temperature)}°`;
+      document.getElementById("ncHigh").textContent = `${Math.round(data.daily.temperature_2m_max[0])}°`;
+      document.getElementById("ncLow").textContent = `${Math.round(data.daily.temperature_2m_min[0])}°`;
+      const weather = weatherLabel(current.weather_code);
+      document.getElementById("ncWeatherSummary").textContent = `${weather.label} · Humidity ${current.relative_humidity_2m}% · Wind ${Math.round(current.wind_speed_10m)} mph`;
+      document.getElementById("ncWeatherIcon").textContent = weather.icon;
     } catch {
       tempNode.textContent = "Chicago";
+      document.getElementById("ncWeatherSummary").textContent = "Chicago weather is temporarily unavailable.";
     }
   }
 
@@ -915,7 +1241,15 @@
     if (action === "minimize-active") minimizeWindow();
     if (action === "zoom-active") zoomWindow();
     if (action === "bring-all-front") [...windowsRoot.children].filter(n=>!n.hidden).forEach(focusWindow);
-    if (action === "show-shortcuts") window.alert("⌘N New Finder Window\n⌘W Close Window\n⌘M Minimize\nDouble-click desktop icons to open them.\nRight-click the desktop for more options.");
+    if (action === "show-shortcuts") window.alert("⌘Space Spotlight\nSpace Quick Look selected photo\n⌘N New Finder Window\n⌘W Close Window\n⌘M Minimize\nDouble-click desktop icons to open them.");
+    if (action === "open-spotlight") openSpotlight();
+    if (action === "cycle-wallpaper") cycleWallpaper();
+    if (action === "sort-icons") sortIcons();
+    if (action === "desktop-info") showToast("Rizvisions Desktop · Chicago · Version 6");
+    if (action === "quick-look-photo") openQuickLook(contextPhotoId || selectedPhotoId);
+    if (action === "bring-photo-front") bringPhotoToFront(contextPhotoId);
+    if (action === "reset-photo-position") resetPhotoPosition(contextPhotoId);
+    if (action === "show-current-card") showCurrentCard();
   }
 
   document.querySelectorAll(".menu-trigger").forEach((trigger) => trigger.addEventListener("click", (event) => {
@@ -924,15 +1258,26 @@
 
   controlCenterButton.addEventListener("click", (event) => {
     event.stopPropagation();
-    const open = controlCenter.classList.toggle("open");
-    controlCenter.setAttribute("aria-hidden", String(!open));
-    document.querySelectorAll(".menu-popover.open").forEach(m => m.classList.remove("open"));
+    const wasOpen = controlCenter.classList.contains("open");
+    closeMenus();
+    controlCenter.classList.toggle("open", !wasOpen);
+    controlCenter.setAttribute("aria-hidden", String(wasOpen));
+  });
+
+  spotlightButton.addEventListener("click", (event) => { event.stopPropagation(); openSpotlight(); });
+  clockButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const wasOpen = notificationCenter.classList.contains("open");
+    closeMenus();
+    notificationCenter.classList.toggle("open", !wasOpen);
+    notificationCenter.setAttribute("aria-hidden", String(wasOpen));
   });
 
   soundStatus.addEventListener("click", () => {
     state.sound = !state.sound; saveState();
     soundStatus.style.opacity = state.sound ? "1" : ".42";
     soundStatus.setAttribute("aria-label", state.sound ? "Sound on" : "Sound off");
+    applyDisplayState();
     showToast(state.sound ? "Sound on" : "Sound off");
   });
 
@@ -943,16 +1288,17 @@
     const projectTarget = event.target.closest("[data-project]");
     const externalTarget = event.target.closest("[data-external]");
 
-    if (event.target.closest(".menu-popover, .context-menu, .control-center-panel")) event.stopPropagation();
+    if (event.target.closest(".menu-popover, .context-menu, .control-center-panel, .notification-center, .spotlight-panel, .quicklook-panel")) event.stopPropagation();
     if (projectTarget) { event.preventDefault(); openProject(projectTarget.dataset.project); return; }
     if (externalTarget) { event.preventDefault(); window.open(externalTarget.dataset.external, "_blank", "noopener"); return; }
     if (appTarget && !appTarget.classList.contains("desktop-item")) { event.preventDefault(); openApp(appTarget.dataset.app); return; }
     if (actionTarget) { event.preventDefault(); handleAction(actionTarget.dataset.action); closeMenus(); return; }
     if (wallpaperTarget && wallpaperTarget.dataset.wallpaper) { event.preventDefault(); setWallpaper(wallpaperTarget.dataset.wallpaper); closeMenus(); return; }
-    if (!event.target.closest(".menu-bar, .menu-popover, .context-menu, .control-center-panel")) closeMenus();
+    if (!event.target.closest(".menu-bar, .menu-popover, .context-menu, .control-center-panel, .notification-center, .spotlight-panel, .quicklook-panel")) closeMenus();
     if (event.target === desktop || event.target.classList.contains("wallpaper")) {
       iconNodes.forEach(node => node.classList.remove("selected"));
       desktopPhotosRoot?.querySelectorAll(".photo-file").forEach(node => node.classList.remove("selected"));
+      selectedPhotoId = null;
     }
   });
 
@@ -971,16 +1317,43 @@
   });
 
 
-  currentWidget?.addEventListener("pointerdown", beginWidgetDrag);
-  currentWidget?.addEventListener("dragstart", (event) => event.preventDefault());
+  document.getElementById("widgetNext")?.addEventListener("click", (event) => { event.stopPropagation(); state.widgetIndex = (Number(state.widgetIndex || 0) + 1) % currentCards.length; saveState(); updateCurrentWidget(true); });
+  document.getElementById("widgetShow")?.addEventListener("click", (event) => { event.stopPropagation(); showCurrentCard(); });
+  document.getElementById("quickLookClose")?.addEventListener("click", closeQuickLook);
+  document.getElementById("quickLookPrev")?.addEventListener("click", () => stepQuickLook(-1));
+  document.getElementById("quickLookNext")?.addEventListener("click", () => stepQuickLook(1));
+  quickLookBackdrop?.addEventListener("click", (event) => { if (event.target === quickLookBackdrop) closeQuickLook(); });
+  spotlightBackdrop?.addEventListener("click", (event) => { if (event.target === spotlightBackdrop) closeSpotlight(); });
+  spotlightInput?.addEventListener("input", () => renderSpotlightResults(spotlightInput.value));
+  spotlightInput?.addEventListener("keydown", handleSpotlightKeys);
+  ccFocus?.addEventListener("click", () => { state.focus = !state.focus; saveState(); applyDisplayState(); showToast(state.focus ? "Focus on" : "Focus off"); });
+  ccSound?.addEventListener("click", () => { state.sound = !state.sound; saveState(); applyDisplayState(); });
+  brightnessSlider?.addEventListener("input", () => { state.brightness = Number(brightnessSlider.value); applyDisplayState(); saveState(); });
+  volumeSlider?.addEventListener("input", () => { state.volume = Number(volumeSlider.value); if (state.volume === 0) state.sound = false; else state.sound = true; applyDisplayState(); saveState(); });
 
-  document.addEventListener("dragstart", (event) => {
-    if (event.target.closest("#os img, #os a")) event.preventDefault();
-  });
+  currentWidget?.setAttribute("draggable", "false");
+  currentWidget?.addEventListener("pointerdown", beginWidgetDrag);
+  currentWidget?.addEventListener("mousedown", (event) => {
+    if (!event.target.closest("button")) event.preventDefault();
+  }, true);
+
+  // The desktop is an interface, not a browser drag surface. Disable native
+  // HTML dragging and selection so photos/widgets always follow our pointer logic.
+  os.addEventListener("dragstart", (event) => event.preventDefault(), true);
+  os.addEventListener("drop", (event) => event.preventDefault(), true);
+  os.addEventListener("selectstart", (event) => {
+    if (event.target.closest(".photo-file, .now-widget, .desktop-item")) event.preventDefault();
+  }, true);
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closeMenus();
+    if (spotlightBackdrop.classList.contains("open")) return;
+    if (event.key === "Escape") { closeQuickLook(); closeMenus(); return; }
+    const typingTarget = event.target instanceof Element && event.target.matches("input,textarea,[contenteditable=true]");
+    if (event.key === " " && selectedPhotoId && !typingTarget) { event.preventDefault(); openQuickLook(selectedPhotoId); return; }
+    if (quickLookBackdrop.classList.contains("open") && event.key === "ArrowLeft") { event.preventDefault(); stepQuickLook(-1); return; }
+    if (quickLookBackdrop.classList.contains("open") && event.key === "ArrowRight") { event.preventDefault(); stepQuickLook(1); return; }
     if (!(event.metaKey || event.ctrlKey)) return;
+    if (event.code === "Space") { event.preventDefault(); openSpotlight(); return; }
     if (event.key.toLowerCase() === "n" && !event.shiftKey) { event.preventDefault(); openApp("work"); }
     if (event.key.toLowerCase() === "n" && event.shiftKey) { event.preventDefault(); openApp("notes"); }
     if (event.key.toLowerCase() === "w") { event.preventDefault(); closeWindow(); }
@@ -999,7 +1372,9 @@
   renderDesktopPhotos();
   applyIconLayout();
   applyWidgetLayout();
-  soundStatus.style.opacity = state.sound ? "1" : ".42";
+  applyDisplayState();
+  updateCurrentWidget();
+  renderMinimizedDock();
   updateClockAndCalendar();
   setInterval(updateClockAndCalendar, 30_000);
   updateWeather();
