@@ -1,124 +1,149 @@
-# Add your own photos
+# Customize Photos and desktop media
 
-Rizvisions uses `site-content.js` as a simple photo manifest. You do not need to change the HTML or app logic.
+Rizvisions uses `site-content.js` as a simple media manifest. You do not need to edit `index.html` or `app.js` to replace the temporary photography.
 
 ## 1. Prepare the files
 
-Use JPG, PNG, or WebP files. For a fast-loading site, resize large originals before uploading:
+Recommended formats:
 
-- Long edge: roughly 1600–2400 px
-- File size: ideally below 1 MB each
-- Filenames: lowercase with hyphens, for example `chicago-river.jpg`
+- Images: JPG, PNG, or WebP
+- Video: MP4 or WebM; MP4 with H.264 video and AAC audio has the broadest browser support
+- Image long edge: roughly 1600–2400 px
+- Image size: ideally below 1–2 MB each
+- Video size: keep short web clips reasonably compressed
+- Filenames: lowercase, hyphenated, and simple, such as `chicago-river.jpg` or `parker-launch.mp4`
 
-GitHub Pages filenames are case-sensitive, so `Chicago.jpg` and `chicago.jpg` are different paths.
+GitHub Pages paths are case-sensitive.
 
-## 2. Upload them to `assets/photos/`
+## 2. Upload media to `assets/photos/`
 
 On GitHub:
 
 1. Open `assets`, then `photos`.
 2. Choose **Add file → Upload files**.
-3. Drag your images into the upload area.
+3. Drag the files into the upload area.
 4. Commit directly to `main`.
 
-You can delete the placeholder images after nothing in `site-content.js` references them.
+You can delete the temporary images only after nothing in `site-content.js` references them.
 
 ## 3. Edit `site-content.js`
 
-Open `site-content.js` on GitHub and click the pencil icon.
+The file has three main lists:
 
-There are two independent lists:
+- `desktopPhotos`: loose, draggable image/video files on the desktop
+- `photoLibrary`: media shown inside the Photos app
+- `currentCards`: slides inside the draggable Currently widget
 
-- `desktopPhotos`: loose photo files on the desktop
-- `photoLibrary`: images shown inside the Photos app
+The same media item may appear on the desktop and inside Photos.
 
-The same image may appear in both lists.
-
-## Desktop photo example
+## Desktop image example
 
 ```js
 {
-  id: "desktop-photo-chicago",
+  id: "desktop-chicago-river",
+  type: "image",
   src: "assets/photos/chicago-river.jpg",
   alt: "Chicago River at night",
-  filename: "chicago.jpg",
+  filename: "chicago-river.jpg",
   x: 78,
   y: 28,
   rotation: -7,
-  width: 132,
+  width: 136,
   monochrome: false
 }
 ```
 
-### Desktop photo fields
-
-- `id`: unique internal ID; never reuse an ID.
-- `src`: exact path to the uploaded image.
-- `alt`: accessible description of the image.
-- `filename`: label shown below the photo on the desktop.
-- `x`: default horizontal position as a percentage of the screen width.
-- `y`: default vertical position as a percentage of the desktop height.
-- `rotation`: default tilt in degrees. Negative tilts left; positive tilts right.
-- `width`: displayed photo width in pixels.
-- `monochrome`: `true` makes the image black-and-white; `false` preserves color.
-
-Visitors can drag these photo files anywhere. Their personal positions and stacking order are saved only in their browser. Your `x`, `y`, and `rotation` values remain the public first-visit and reset defaults.
-
-## Photos app example
+## Desktop video example
 
 ```js
 {
-  src: "assets/photos/chicago-river.jpg",
-  alt: "Chicago River at night",
-  layout: "wide"
+  id: "desktop-parker-launch",
+  type: "video",
+  src: "assets/photos/parker-launch.mp4",
+  poster: "assets/photos/parker-launch-poster.jpg",
+  alt: "Parker launch video",
+  filename: "parker-launch.mp4",
+  x: 84,
+  y: 44,
+  rotation: 5,
+  width: 144,
+  monochrome: false
 }
 ```
 
-### Photos app layout values
+Desktop media fields:
 
-- `""`: standard tile
-- `"wide"`: spans two columns
-- `"tall"`: spans two rows
+- `id`: unique internal ID; never reuse it
+- `type`: `"image"` or `"video"`
+- `src`: exact path to the uploaded file
+- `poster`: optional preview image for a video
+- `alt`: accessible description
+- `filename`: desktop label and window title
+- `x`, `y`: default position as percentages of the desktop
+- `rotation`: default tilt in degrees
+- `width`: displayed desktop width in pixels
+- `monochrome`: whether the desktop thumbnail appears black-and-white
 
-Example library:
+Visitors can drag desktop media. Their arrangement is saved only in their own browser. Your manifest values remain the first-visit and reset defaults.
+
+Double-clicking a desktop item—or selecting it and pressing Space—opens only that file in its own Preview/QuickTime-style window. It does not start a slideshow or navigate to unrelated files.
+
+## Photos library image example
 
 ```js
-photoLibrary: [
-  { src: "assets/photos/chicago-river.jpg", alt: "Chicago River", layout: "wide" },
-  { src: "assets/photos/portrait.jpg", alt: "Portrait", layout: "tall" },
-  { src: "assets/photos/film-camera.jpg", alt: "Film camera", layout: "" }
-]
+{
+  id: "river-01",
+  type: "image",
+  src: "assets/photos/chicago-river.jpg",
+  alt: "Chicago River at night",
+  filename: "chicago-river.jpg",
+  date: "August 2026",
+  location: "Chicago"
+}
 ```
+
+## Photos library video example
+
+```js
+{
+  id: "parker-video-01",
+  type: "video",
+  src: "assets/photos/parker-launch.mp4",
+  poster: "assets/photos/parker-launch-poster.jpg",
+  alt: "Parker launch video",
+  filename: "parker-launch.mp4",
+  date: "August 2026",
+  location: "Chicago"
+}
+```
+
+Photos automatically lays the library out responsively. Videos receive a duration/play treatment and open in their own native-control video window.
 
 ## 4. Commit and test
 
-Commit the `site-content.js` edit to `main`, wait for the GitHub Pages deployment, and hard-refresh the site with:
+Commit the `site-content.js` edit, wait for GitHub Pages to deploy, and hard-refresh:
 
 ```text
 Command + Shift + R
 ```
 
-Because your browser remembers prior photo positions, use **View → Restore Default Layout** after changing public defaults. Use **Rizvisions → Reset Rizvisions…** for a full clean test.
+Use **View → Restore Default Layout** after changing public desktop positions. Use **Rizvisions → Reset Rizvisions…** for a completely clean browser test.
 
-## Customize the rotating Currently widget
-
-The `currentCards` list at the top of `site-content.js` controls the draggable widget.
+## Customize the Currently widget
 
 ```js
 {
   eyebrow: "CURRENTLY",
   title: "Parker",
   subtitle: "AI creative strategy",
-  kind: "project",
+  kind: "app",
   target: "parker"
 }
 ```
 
 Supported actions:
 
-- `kind: "project"` opens a project such as `parker`, `bluespecs`, `whop`, or `windsurf`.
-- `kind: "app"` opens an app such as `photos`, `spotify`, `reel`, or `about`.
-- `kind: "wallpaper"` changes the wallpaper to `grid`, `chicago`, or `dark`.
-- `kind: "external"` opens the URL in `target`.
-
-Desktop photos now support Quick Look. Single-click a photo and press Space, or double-click it. Visitors can drag the photos around, and their personal layout remains stored only in their own browser.
+- `kind: "app"` opens an app such as `parker`, `photos`, `spotify`, `reel`, `about`, or `safari`
+- `kind: "project"` opens a project such as `bluespecs`, `whop`, or `windsurf`
+- `kind: "wallpaper"` changes the appearance to `grid`, `dark`, `maroon`, or `forest`
+- `kind: "external"` opens the URL in `target`

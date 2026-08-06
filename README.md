@@ -1,22 +1,29 @@
-# Rizvisions macOS V8
+# Rizvisions macOS V9
 
-Interactive macOS-style personal desktop for rizvisions.com.
+Interactive macOS-style personal desktop for `rizvisions.com`.
 
-## V8 changes
+## V9 changes
 
-- Rubber-band desktop selection: drag an empty area to select multiple icons and photos
-- Group dragging for selected desktop objects
-- Every application window resizes from all four edges and all four corners
-- Rizvisions eye icon and faint `RIZVISIONS` wordmark wallpaper branding
-- Four coordinated grid appearances: Light, Dark, Maroon, and Forest
-- Chicago wallpaper removed
-- Résumé app and résumé search results removed
-- Customizable Dock with add/remove controls, ordering controls, direct drag reordering, magnification toggle, and restore defaults
-- Pinned minimized apps stay in place and use a running dot instead of creating duplicate Dock thumbnails
-- Temporary minimized thumbnails are only used for windows whose app is not pinned
-- Silver macOS-style Trash artwork replaces the black Trash
-- Updated folder artwork, plus an optional one-click extractor for the exact folder and Trash assets installed on your Mac
-- Existing V6 features remain: Spotlight, Quick Look, Notification Center, Control Center, Live Reel, draggable photos, draggable Currently widget, Spotify playlist, and local persistence
+- Rizvisions wordmark watermark now appears on Light, Dark, Maroon, and Forest grid themes
+- Larger custom Rizvisions eye artwork inside the app icon
+- Spotify is now the native Spotify playlist embed, edge-to-edge inside its window
+- Dark, Maroon, and Forest legibility pass across the menu bar, windows, controls, apps, and widgets
+- Dock customization now works directly:
+  - drag a desktop app onto the Dock to pin it
+  - drag Dock icons to reorder them
+  - drag a removable Dock icon away from the Dock to unpin it
+  - Finder and Trash stay anchored
+- Open pinned apps use a running dot rather than creating duplicate minimized icons
+- Updated current-style Finder, Messages, Photos, Settings, Terminal, folder, and Trash artwork
+- New Safari, Parker, and QuickTime Player apps
+- Trash lives only in the Dock
+- Larger, app-appropriate default window sizes
+- About Riz and System Settings are now separate apps with separate purposes
+- Photos was rebuilt as the main visual showcase, with a library sidebar, featured image, masonry grid, dates, locations, and video support
+- Desktop image and video files open as individual Preview/QuickTime-style windows with all three traffic-light controls and no unrelated next/previous navigation
+- Liquid-glass-inspired Control Center and calendar/weather panel rebuilt around the current macOS interaction pattern
+- Top-right menu bar simplified to Search, Control Center, and Date/Time
+- Existing desktop behavior remains: marquee selection, multi-object dragging, draggable photos, draggable Currently widget, resizable windows, Spotlight, context menus, local state, and reset controls
 
 ## Deploy
 
@@ -30,35 +37,46 @@ app.js
 CNAME
 CUSTOMIZE_PHOTOS.md
 EXTRACT_MACOS_SYSTEM_ICONS.command
+ICON_CREDITS.md
 index.html
 README.md
 site-content.js
 styles.css
 ```
 
-After GitHub Pages finishes deploying, hard-refresh with `Command + Shift + R`.
+After GitHub Pages finishes deploying, hard-refresh with:
 
-V8 uses a fresh local-storage namespace, so its default layout loads independently from the older builds.
+```text
+Command + Shift + R
+```
+
+V9 uses a fresh local-storage namespace, so its default layout loads independently from older versions.
+
+## Direct Dock controls
+
+- **Pin:** drag a desktop app icon onto the Dock.
+- **Reorder:** drag a Dock icon left or right between other icons.
+- **Remove:** drag a removable Dock icon away from the Dock and release it.
+- **Open/minimized state:** a dot below a pinned app indicates that its window is open or minimized. Clicking the same icon restores it.
+- Finder and Trash are fixed bookends and cannot be removed.
 
 ## Exact icons from your Mac
 
-Apple's public design resources provide macOS UI kits and app-icon templates, but not a standalone downloadable Finder folder PNG. The included assets are already usable. To substitute the exact icons shipped by your own macOS installation:
+The bundled icons are production-ready current-style assets. To substitute the exact assets installed by your own version of macOS:
 
 1. On your Mac, right-click `EXTRACT_MACOS_SYSTEM_ICONS.command` and choose **Open**.
 2. Approve it if macOS asks.
-3. The script searches the protected system resource bundles, converts the installed folder and empty-Trash assets to PNG, and replaces:
-   - `assets/icons/macos/folder.png`
-   - `assets/icons/macos/trash.png`
-4. Upload those two changed files to GitHub.
+3. The script searches your installed system apps and replaces any matching assets it can locate in `assets/icons/macos/`.
+4. Upload the changed PNG files to GitHub.
+
+See `ICON_CREDITS.md` for asset notes and `CUSTOMIZE_PHOTOS.md` for adding your own photography and video.
 
 ## Keyboard shortcuts
 
 - `Command + Space` — Spotlight
-- `Space` — Quick Look the selected desktop photo
-- `Escape` — Close Spotlight, Quick Look, or menus
+- `Space` — open the selected desktop media file
+- `Escape` — close Spotlight, menus, and panels
 - `Command + N` — Finder
 - `Command + Shift + N` — Notes
-- `Command + W` — Close active window
-- `Command + M` — Minimize active window
-
-See `CUSTOMIZE_PHOTOS.md` to replace the photography and edit the rotating Currently widget.
+- `Command + W` — close the active window
+- `Command + M` — minimize the active window
