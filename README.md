@@ -1,8 +1,8 @@
-# Rizvisions macOS V9.5
+# Rizvisions macOS V9.6
 
-A stabilization and cleanup release before V10.
+A small hotfix pass before V10.
 
-## V9.5 fixes
+## V9.6 fixes
 
 - Restored the visible blue desktop selection marquee.
 - Fixed desktop photo/video files so their paper cards no longer render as long white bars.
@@ -23,3 +23,26 @@ After the Pages deployment turns green, hard-refresh `rizvisions.com` with `Comm
 ## Add media
 
 See [CUSTOMIZE_PHOTOS.md](CUSTOMIZE_PHOTOS.md). Normal uploads no longer require editing JavaScript.
+
+
+## Media
+
+Use `assets/media/` only. The old `assets/photos/` folder is deprecated and ignored by the current build.
+
+
+## V9.6 includes
+
+- Clean canonical icon folder at `assets/icons/macos/`
+- Rebuilt Parker app icon on purple background
+- Rebuilt Finder folder icon from the supplied asset
+- More consistent optical sizing across app icons
+- One media source of truth: `assets/media/`
+- Deprecated `assets/photos/` removed from the package
+- Desktop media controlled with the `desktop-` filename prefix
+
+
+## Corrected V9.6 build
+
+- Restored the complete black About Riz app icon.
+- Fixed local and fallback loading for the desktop media files in `assets/media/`.
+- Added cache-busting for the corrected assets.

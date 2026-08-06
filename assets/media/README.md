@@ -1,7 +1,10 @@
 # Media folder
 
-Upload photos and videos here. The site discovers supported files automatically.
+This is the one folder you should use for photos and videos.
 
-Prefix a filename with `desktop-` to place it on the desktop, for example:
+- Everything in `assets/media/` appears in the Photos app.
+- Files beginning with `desktop-` also appear on the desktop.
+
+Example:
 
 `desktop-01-chicago.jpg`

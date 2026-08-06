@@ -1,6 +1,6 @@
-# Add photos and videos — simplest method
+# Add photos and videos — the only folder you need
 
-V9.5 automatically discovers media from one folder. You do **not** need to edit `site-content.js` for normal uploads.
+Use only `assets/media/`. Do not add anything new to `assets/photos/`; that older folder is deprecated. You do **not** need to edit `site-content.js` for normal uploads.
 
 ## The entire workflow
 
@@ -91,3 +91,8 @@ The site caches the directory listing for ten minutes to avoid repeatedly callin
 - hard-refresh with `Command + Shift + R`.
 
 The new media usually appears immediately after the deployment; otherwise it appears when the short cache expires.
+
+
+## What about `assets/photos`?
+
+Ignore it. It is just a leftover from earlier versions. The current build reads from `assets/media/` only for real uploads.
