@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "rizvisions-os-v4";
+  const STORAGE_KEY = "rizvisions-os-v5";
   const os = document.getElementById("os");
   const desktop = document.getElementById("desktop");
   const windowsRoot = document.getElementById("windows");
@@ -13,6 +13,7 @@
   const controlCenterButton = document.getElementById("controlCenterButton");
   const soundStatus = document.getElementById("soundStatus");
   const desktopPhotosRoot = document.getElementById("desktopPhotos");
+  const currentWidget = document.getElementById("currentWidget");
 
   const CONTENT = window.RIZVISIONS_CONTENT || { desktopPhotos: [], photoLibrary: [] };
   const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -25,12 +26,14 @@
     photo.id,
     { x: photo.x, y: photo.y, rotation: photo.rotation || 0, z: index + 1 }
   ]));
+  const defaultWidget = { x: 55, y: 5.8, z: 12 };
 
   const DEFAULT_STATE = {
     wallpaper: "grid",
     sound: true,
     icons: clone(defaultIcons),
     photos: clone(defaultPhotos),
+    widget: clone(defaultWidget),
     windows: {},
     notes: "Rizvisions is supposed to be a permanent internet home.\n\nThings to add:\n• real photography archives\n• Parker work\n• Blue Specs story\n• WAP / Whop era\n• better easter eggs\n• an iOS version for mobile"
   };
@@ -103,6 +106,7 @@
         ...parsed,
         icons: { ...clone(defaultIcons), ...(parsed.icons || {}) },
         photos: { ...clone(defaultPhotos), ...(parsed.photos || {}) },
+        widget: { ...clone(defaultWidget), ...(parsed.widget || {}) },
         windows: parsed.windows || {}
       };
     } catch {
@@ -157,6 +161,16 @@
     });
   }
 
+  function applyWidgetLayout() {
+    if (!currentWidget) return;
+    const saved = state.widget || defaultWidget;
+    currentWidget.style.setProperty("--widget-x", `${saved.x}%`);
+    currentWidget.style.setProperty("--widget-y", `${saved.y}%`);
+    currentWidget.style.left = "var(--widget-x)";
+    currentWidget.style.top = "var(--widget-y)";
+    currentWidget.style.zIndex = String(saved.z || defaultWidget.z);
+  }
+
   function renderDesktopPhotos() {
     if (!desktopPhotosRoot) return;
     desktopPhotosRoot.innerHTML = "";
@@ -172,10 +186,19 @@
       file.style.setProperty("--photo-rotation", `${saved.rotation || 0}deg`);
       file.style.setProperty("--photo-width", `${photo.width || 132}px`);
       file.style.zIndex = String(saved.z || index + 1);
-      file.innerHTML = `<img src="${escapeHtml(photo.src)}" alt="${escapeHtml(photo.alt || "")}"><span>${escapeHtml(photo.filename || "photo.jpg")}</span>`;
+      file.innerHTML = `<img src="${escapeHtml(photo.src)}" alt="${escapeHtml(photo.alt || "")}" draggable="false"><span>${escapeHtml(photo.filename || "photo.jpg")}</span>`;
+      file.addEventListener("dragstart", (event) => event.preventDefault());
       file.addEventListener("pointerdown", (event) => beginPhotoDrag(event, file));
-      file.addEventListener("click", (event) => { event.stopPropagation(); selectDesktopPhoto(file); });
-      file.addEventListener("dblclick", (event) => { event.preventDefault(); openApp("photos"); });
+      file.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (file._suppressClick) { event.preventDefault(); return; }
+        selectDesktopPhoto(file);
+      });
+      file.addEventListener("dblclick", (event) => {
+        if (file._suppressClick) { event.preventDefault(); return; }
+        event.preventDefault();
+        openApp("photos");
+      });
       desktopPhotosRoot.appendChild(file);
     });
   }
@@ -196,24 +219,34 @@
 
   function beginPhotoDrag(event, file) {
     if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+
     const desktopRect = desktop.getBoundingClientRect();
     const fileRect = file.getBoundingClientRect();
     const startX = event.clientX;
     const startY = event.clientY;
     const startLeft = fileRect.left - desktopRect.left + fileRect.width / 2;
     const startTop = fileRect.top - desktopRect.top + fileRect.height / 2;
+    const pointerId = event.pointerId;
     let moved = false;
 
     photoZCounter += 1;
     file.style.zIndex = String(photoZCounter);
     selectDesktopPhoto(file);
+    try { file.setPointerCapture(pointerId); } catch { /* pointer capture is progressive enhancement */ }
 
     const onMove = (moveEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
+      moveEvent.preventDefault();
       const dx = moveEvent.clientX - startX;
       const dy = moveEvent.clientY - startY;
-      if (!moved && Math.hypot(dx, dy) < 4) return;
-      moved = true;
-      file.classList.add("dragging");
+      if (!moved && Math.hypot(dx, dy) < 3) return;
+      if (!moved) {
+        moved = true;
+        file.classList.add("dragging");
+        document.body.classList.add("desktop-dragging");
+      }
       const halfW = file.offsetWidth / 2;
       const halfH = file.offsetHeight / 2;
       const left = Math.min(Math.max(halfW + 8, startLeft + dx), desktop.clientWidth - halfW - 8);
@@ -222,9 +255,14 @@
       file.style.top = `${top}px`;
     };
 
-    const onUp = () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
+    const finish = (upEvent) => {
+      if (upEvent && upEvent.pointerId !== pointerId) return;
+      file.removeEventListener("pointermove", onMove);
+      file.removeEventListener("pointerup", finish);
+      file.removeEventListener("pointercancel", finish);
+      try { file.releasePointerCapture(pointerId); } catch { /* no-op */ }
+      document.body.classList.remove("desktop-dragging");
+
       const current = state.photos[file.dataset.photoId] || defaultPhotos[file.dataset.photoId] || {};
       if (moved) {
         const x = (parseFloat(file.style.left) / desktop.clientWidth) * 100;
@@ -232,15 +270,85 @@
         state.photos[file.dataset.photoId] = { ...current, x: +x.toFixed(3), y: +y.toFixed(3), z: photoZCounter };
         file.style.setProperty("--photo-x", `${x}%`);
         file.style.setProperty("--photo-y", `${y}%`);
+        file.style.left = "var(--photo-x)";
+        file.style.top = "var(--photo-y)";
         file.classList.remove("dragging");
+        file._suppressClick = true;
+        setTimeout(() => { file._suppressClick = false; }, 0);
       } else {
         state.photos[file.dataset.photoId] = { ...current, z: photoZCounter };
       }
       saveState();
     };
 
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp, { once: true });
+    file.addEventListener("pointermove", onMove);
+    file.addEventListener("pointerup", finish);
+    file.addEventListener("pointercancel", finish);
+  }
+
+  function beginWidgetDrag(event) {
+    if (!currentWidget || event.button !== 0 || event.target.closest("button")) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const desktopRect = desktop.getBoundingClientRect();
+    const widgetRect = currentWidget.getBoundingClientRect();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startLeft = widgetRect.left - desktopRect.left + widgetRect.width / 2;
+    const startTop = widgetRect.top - desktopRect.top;
+    const pointerId = event.pointerId;
+    let moved = false;
+
+    currentWidget.style.zIndex = "60";
+    try { currentWidget.setPointerCapture(pointerId); } catch { /* no-op */ }
+
+    const onMove = (moveEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
+      moveEvent.preventDefault();
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+      if (!moved && Math.hypot(dx, dy) < 3) return;
+      if (!moved) {
+        moved = true;
+        currentWidget.classList.add("dragging");
+        document.body.classList.add("desktop-dragging");
+      }
+      const halfW = widgetRect.width / 2;
+      const left = Math.min(Math.max(halfW + 8, startLeft + dx), desktop.clientWidth - halfW - 8);
+      const top = Math.min(Math.max(8, startTop + dy), desktop.clientHeight - widgetRect.height - 105);
+      currentWidget.style.left = `${left}px`;
+      currentWidget.style.top = `${top}px`;
+    };
+
+    const finish = (upEvent) => {
+      if (upEvent && upEvent.pointerId !== pointerId) return;
+      currentWidget.removeEventListener("pointermove", onMove);
+      currentWidget.removeEventListener("pointerup", finish);
+      currentWidget.removeEventListener("pointercancel", finish);
+      try { currentWidget.releasePointerCapture(pointerId); } catch { /* no-op */ }
+      document.body.classList.remove("desktop-dragging");
+      currentWidget.classList.remove("dragging");
+
+      if (moved) {
+        const x = (parseFloat(currentWidget.style.left) / desktop.clientWidth) * 100;
+        const y = (parseFloat(currentWidget.style.top) / desktop.clientHeight) * 100;
+        state.widget = { x: +x.toFixed(3), y: +y.toFixed(3), z: 12 };
+        currentWidget.style.setProperty("--widget-x", `${x}%`);
+        currentWidget.style.setProperty("--widget-y", `${y}%`);
+        currentWidget.style.left = "var(--widget-x)";
+        currentWidget.style.top = "var(--widget-y)";
+        currentWidget._suppressClick = true;
+        setTimeout(() => { currentWidget._suppressClick = false; }, 0);
+        saveState();
+      } else {
+        currentWidget.style.zIndex = String((state.widget || defaultWidget).z || 12);
+      }
+    };
+
+    currentWidget.addEventListener("pointermove", onMove);
+    currentWidget.addEventListener("pointerup", finish);
+    currentWidget.addEventListener("pointercancel", finish);
   }
 
   function selectDesktopPhoto(file) {
@@ -252,11 +360,13 @@
   function resetLayout() {
     state.icons = clone(defaultIcons);
     state.photos = clone(defaultPhotos);
+    state.widget = clone(defaultWidget);
     photoZCounter = Math.max(20, ...(Object.values(state.photos || {}).map((photo) => Number(photo.z) || 0)));
     state.windows = {};
     saveState();
     applyIconLayout();
     applyPhotoLayout();
+    applyWidgetLayout();
     [...windowsRoot.children].forEach((win) => win.remove());
     activeWindow = null;
     activeAppName.textContent = "Rizvisions";
@@ -280,6 +390,7 @@
     setWallpaper(state.wallpaper, false);
     applyIconLayout();
     renderDesktopPhotos();
+    applyWidgetLayout();
     [...windowsRoot.children].forEach((win) => win.remove());
     activeWindow = null;
     activeAppName.textContent = "Rizvisions";
@@ -494,6 +605,7 @@
 
   function beginIconDrag(event, item) {
     if (event.button !== 0) return;
+    event.preventDefault();
     const desktopRect = desktop.getBoundingClientRect();
     const itemRect = item.getBoundingClientRect();
     const startX = event.clientX;
@@ -523,6 +635,8 @@
         state.icons[item.dataset.id] = { x: +x.toFixed(3), y: +y.toFixed(3) };
         item.style.setProperty("--x", `${x}%`);
         item.style.setProperty("--y", `${y}%`);
+        item.style.left = "var(--x)";
+        item.style.top = "var(--y)";
         item.classList.remove("dragging");
         saveState();
       }
@@ -687,7 +801,7 @@
   }
 
   function renderTerminal() {
-    return `<div class="terminal-shell"><div class="terminal-output">Last login: ${new Date().toLocaleDateString()} on ttys001\n\nRizvisions OS 3.0\nType <span class="terminal-link">help</span> to see available commands.\n</div><div class="terminal-input-row"><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Terminal command"></div></div>`;
+    return `<div class="terminal-shell"><div class="terminal-output">Last login: ${new Date().toLocaleDateString()} on ttys001\n\nRizvisions OS 5.0\nType <span class="terminal-link">help</span> to see available commands.\n</div><div class="terminal-input-row"><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Terminal command"></div></div>`;
   }
 
   function renderNotes() {
@@ -695,7 +809,27 @@
   }
 
   function renderSpotify() {
-    return `<div class="spotify-shell"><div class="spotify-top"><img src="assets/icons/macos/spotify.png" alt="Spotify"><div><span class="type">Profile</span><h2>Riz</h2><p>Playlist coming soon. For now, open the actual profile.</p></div></div><div class="spotify-content"><button class="spotify-play" data-external="https://open.spotify.com/user/riz002?si=eb580719d3ed4637" aria-label="Open Spotify">▶</button><div class="spotify-row"><span>1</span><span><strong>Rizvisions playlist</strong><small>In progress</small></span><span>—</span></div><p><button class="mac-button spotify-link" data-external="https://open.spotify.com/user/riz002?si=eb580719d3ed4637">Open profile in Spotify</button></p></div></div>`;
+    return `
+      <div class="spotify-shell spotify-embed-shell">
+        <div class="spotify-window-header">
+          <img src="assets/icons/macos/spotify.png" alt="Spotify">
+          <div><span class="type">PLAYLIST</span><h2>Rizvisions</h2><p>A rotating soundtrack for the site.</p></div>
+          <button class="mac-button spotify-link" data-external="https://open.spotify.com/playlist/76WzEHradeFZfSUMLsxH7I?si=565dc6edf9be49a1">Open in Spotify</button>
+        </div>
+        <div class="spotify-embed-wrap">
+          <iframe
+            data-testid="embed-iframe"
+            src="https://open.spotify.com/embed/playlist/76WzEHradeFZfSUMLsxH7I?utm_source=generator&si=565dc6edf9be49a1"
+            width="100%"
+            height="352"
+            frameborder="0"
+            allowfullscreen
+            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+            loading="lazy"
+            title="Rizvisions Spotify playlist">
+          </iframe>
+        </div>
+      </div>`;
   }
 
   function renderCalendar() {
@@ -823,7 +957,7 @@
   });
 
   desktop.addEventListener("contextmenu", (event) => {
-    if (event.target.closest(".mac-window, .dock, .desktop-item, .photo-file")) return;
+    if (event.target.closest(".mac-window, .dock, .desktop-item, .photo-file, .now-widget")) return;
     event.preventDefault(); closeMenus();
     contextMenu.style.left = `${Math.min(event.clientX, window.innerWidth - 250)}px`;
     contextMenu.style.top = `${Math.min(event.clientY, window.innerHeight - 230)}px`;
@@ -836,6 +970,13 @@
     item.addEventListener("dblclick", (event) => { event.preventDefault(); openApp(item.dataset.app); });
   });
 
+
+  currentWidget?.addEventListener("pointerdown", beginWidgetDrag);
+  currentWidget?.addEventListener("dragstart", (event) => event.preventDefault());
+
+  document.addEventListener("dragstart", (event) => {
+    if (event.target.closest("#os img, #os a")) event.preventDefault();
+  });
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeMenus();
@@ -857,6 +998,7 @@
   setWallpaper(state.wallpaper, false);
   renderDesktopPhotos();
   applyIconLayout();
+  applyWidgetLayout();
   soundStatus.style.opacity = state.sound ? "1" : ".42";
   updateClockAndCalendar();
   setInterval(updateClockAndCalendar, 30_000);

@@ -110,18 +110,20 @@ button { color: inherit; }
 
 /* Top widget */
 .now-widget {
-  position: absolute; z-index: 8; top: 5.8%; left: 55%; transform: translateX(-50%);
+  position: absolute; z-index: 12; top: var(--widget-y, 5.8%); left: var(--widget-x, 55%); transform: translateX(-50%);
   width: 314px; min-height: 86px; display: grid; grid-template-columns: 1fr 78px;
   overflow: hidden; border-radius: 18px; border: 1px solid rgba(0,0,0,.12);
   background: rgba(249,249,249,.78); box-shadow: 0 18px 42px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.8);
   backdrop-filter: saturate(180%) blur(26px); -webkit-backdrop-filter: saturate(180%) blur(26px);
+  touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; will-change: left, top, transform;
 }
-.now-copy { padding: 13px 15px; display: flex; flex-direction: column; justify-content: center; }
+.now-widget.dragging { cursor: grabbing; box-shadow: 0 24px 55px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.86); transition: none; }
+.now-copy { padding: 13px 15px; cursor: grab; display: flex; flex-direction: column; justify-content: center; }
 .now-copy .eyebrow { color: #8b8b90; font-size: 11px; letter-spacing: .09em; font-weight: 650; margin-bottom: 3px; }
 .now-copy strong { font-size: 25px; letter-spacing: -.035em; line-height: 1.02; }
 .now-sub { margin-top: 3px; color: #7d7d82; font-size: 11px; }
 .now-actions { border-left: 1px solid rgba(0,0,0,.1); display: flex; flex-direction: column; }
-.now-actions button { flex: 1; border: 0; background: transparent; color: #007aff; font-weight: 600; font-size: 13px; }
+.now-actions button { flex: 1; cursor: pointer; border: 0; background: transparent; color: #007aff; font-weight: 600; font-size: 13px; }
 .now-actions button + button { border-top: 1px solid rgba(0,0,0,.1); }
 .now-actions .muted { color: #8b8b90; }
 .now-actions button:active { background: rgba(0,0,0,.055); }
@@ -164,16 +166,16 @@ button { color: inherit; }
 .calendar-day { font-size: 37px; font-weight: 300; letter-spacing: -.05em; line-height: .98; margin-top: 3px; }
 
 /* Photo stack */
-.photo-stack { position: absolute; z-index: 6; inset: 0; pointer-events: none; }
+.photo-stack { position: absolute; z-index: 11; inset: 0; pointer-events: none; }
 .photo-file {
   position: absolute; left: var(--photo-x); top: var(--photo-y); width: var(--photo-width, 132px);
   transform: translate(-50%, -50%) rotate(var(--photo-rotation, 0deg));
   padding: 7px 7px 24px; border: 0; background: #fff;
   box-shadow: 0 12px 25px rgba(0,0,0,.23), 0 0 0 1px rgba(0,0,0,.15);
   pointer-events: auto; cursor: grab; touch-action: none; transform-origin: 50% 50%;
-  transition: box-shadow .12s ease, filter .12s ease;
+  transition: box-shadow .12s ease, filter .12s ease; will-change: left, top, transform; user-select:none; -webkit-user-select:none;
 }
-.photo-file img { width: 100%; aspect-ratio: .89; object-fit: cover; display: block; }
+.photo-file img { width: 100%; aspect-ratio: .89; object-fit: cover; display: block; pointer-events:none; user-select:none; -webkit-user-select:none; -webkit-user-drag:none; }
 .photo-file.monochrome img { filter: grayscale(1) contrast(1.08); }
 .photo-file span {
   position: absolute; left: 50%; bottom: -23px; transform: translateX(-50%);
@@ -371,17 +373,16 @@ button { color: inherit; }
 .note-editor textarea { flex:1; resize:none; border:0; outline:0; padding:24px 28px; font:15px/1.55 -apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif; color:#252527; }
 
 /* Spotify */
-.spotify-shell { height:100%; color:#fff; background:linear-gradient(160deg,#203328 0%,#121212 44%); display:flex; flex-direction:column; }
-.spotify-top { padding:30px 31px 22px; display:grid; grid-template-columns:130px 1fr; gap:22px; align-items:end; }
-.spotify-top img { width:132px; height:132px; object-fit:contain; filter:drop-shadow(0 12px 22px rgba(0,0,0,.38)); }
-.spotify-top .type { font-size:10px; font-weight:700; text-transform:uppercase; }
-.spotify-top h2 { margin:7px 0 4px; font-size:38px; letter-spacing:-.05em; }
-.spotify-top p { margin:0; color:#c5c5c5; font-size:12px; }
-.spotify-content { flex:1; padding:18px 31px; background:linear-gradient(rgba(0,0,0,.1),#121212 150px); }
-.spotify-play { width:48px; height:48px; border-radius:50%; border:0; background:#1ed760; display:grid; place-items:center; font-size:20px; margin-bottom:18px; }
-.spotify-row { display:grid; grid-template-columns:32px 1fr auto; align-items:center; gap:10px; min-height:50px; border-bottom:1px solid rgba(255,255,255,.08); }
-.spotify-row small { color:#a9a9a9; }
-.spotify-link { color:#fff; }
+.spotify-shell { height:100%; color:#fff; background:#121212; display:flex; flex-direction:column; overflow:auto; }
+.spotify-embed-shell { background:linear-gradient(165deg,#1d3426 0,#121212 190px); }
+.spotify-window-header { min-height:118px; padding:20px 24px 17px; display:grid; grid-template-columns:72px 1fr auto; gap:16px; align-items:center; }
+.spotify-window-header img { width:72px; height:72px; object-fit:contain; filter:drop-shadow(0 10px 18px rgba(0,0,0,.35)); }
+.spotify-window-header .type { display:block; font-size:9px; font-weight:750; letter-spacing:.1em; color:#c7c7c7; }
+.spotify-window-header h2 { margin:4px 0 2px; font-size:28px; line-height:1; letter-spacing:-.045em; }
+.spotify-window-header p { margin:0; color:#b7b7b7; font-size:11.5px; }
+.spotify-window-header .spotify-link { color:#fff; background:rgba(255,255,255,.11); border-color:rgba(255,255,255,.18); white-space:nowrap; }
+.spotify-embed-wrap { flex:1; min-height:0; padding:0 18px 18px; }
+.spotify-embed-wrap iframe { display:block; width:100%; min-height:352px; border:0; border-radius:12px; background:#121212; }
 
 /* Calendar */
 .calendar-shell { height:100%; background:#fff; display:grid; grid-template-columns:180px 1fr; }
@@ -434,7 +435,7 @@ button { color: inherit; }
 @media (max-width: 1050px) {
   .photo-stack { display:none; }
   .desktop-item { transform:translate(-50%,-50%) scale(.9); }
-  .now-widget { left:50%; }
+  .now-widget { max-width:calc(100vw - 24px); }
   .clock { min-width:auto; }
   .weather-status { display:none; }
 }
@@ -451,3 +452,6 @@ button { color: inherit; }
   .finder-shell, .settings-shell, .photos-shell, .messages-shell, .notes-shell, .calendar-shell { grid-template-columns:1fr; }
   .finder-sidebar, .settings-sidebar, .photos-sidebar, .conversation-list, .notes-list, .calendar-sidebar { display:none; }
 }
+
+body.desktop-dragging, body.desktop-dragging * { cursor: grabbing !important; }
+#os img { -webkit-user-drag: none; }

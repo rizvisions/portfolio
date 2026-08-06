@@ -14,7 +14,7 @@
     <header class="menu-bar" aria-label="Menu bar">
       <div class="menu-left">
         <button class="brand-menu menu-trigger" data-menu="riz-menu" aria-label="Rizvisions menu">
-          <img src="assets/icons/macos/rizvisions.png" alt="" />
+          <img src="assets/icons/macos/rizvisions.png" alt="" draggable="false" />
         </button>
         <span class="active-app-name" id="activeAppName">Rizvisions</span>
         <button class="menu-trigger" data-menu="file-menu">File</button>
@@ -98,7 +98,7 @@
         <div class="dark-orb dark-orb-a"></div><div class="dark-orb dark-orb-b"></div>
       </div>
 
-      <section class="now-widget" aria-label="Currently">
+      <section class="now-widget" id="currentWidget" aria-label="Currently" title="Drag to move">
         <div class="now-copy">
           <span class="eyebrow">CURRENTLY</span>
           <strong>Parker</strong>
@@ -112,27 +112,27 @@
 
       <div class="desktop-icons" id="desktopIcons" aria-label="Desktop items">
         <button class="desktop-item" data-id="about" data-app="about" style="--x: 36.1%; --y: 24.8%;">
-          <span class="icon-frame"><img src="assets/icons/macos/rizvisions.png" alt="" /></span>
+          <span class="icon-frame"><img src="assets/icons/macos/rizvisions.png" alt="" draggable="false" /></span>
           <span class="desktop-label">About Riz</span>
         </button>
         <button class="desktop-item" data-id="work" data-app="work" style="--x: 44.4%; --y: 24.8%;">
-          <span class="icon-frame icon-folder"><img src="assets/icons/macos/folder.png" alt="" /></span>
+          <span class="icon-frame icon-folder"><img src="assets/icons/macos/folder.png" alt="" draggable="false" /></span>
           <span class="desktop-label">Selected Work</span>
         </button>
         <button class="desktop-item" data-id="settings" data-app="about" style="--x: 52.6%; --y: 24.8%;">
-          <span class="icon-frame"><img src="assets/icons/macos/settings.png" alt="" /></span>
+          <span class="icon-frame"><img src="assets/icons/macos/settings.png" alt="" draggable="false" /></span>
           <span class="desktop-label">About + Links</span>
         </button>
         <button class="desktop-item" data-id="messages" data-app="messages" style="--x: 60.8%; --y: 24.8%;">
-          <span class="icon-frame"><img src="assets/icons/macos/messages.png" alt="" /><span class="notification-badge">1</span></span>
+          <span class="icon-frame"><img src="assets/icons/macos/messages.png" alt="" draggable="false" /><span class="notification-badge">1</span></span>
           <span class="desktop-label">Message Riz</span>
         </button>
         <button class="desktop-item" data-id="photos" data-app="photos" style="--x: 36.1%; --y: 40.9%;">
-          <span class="icon-frame"><img src="assets/icons/macos/photos.png" alt="" /></span>
+          <span class="icon-frame"><img src="assets/icons/macos/photos.png" alt="" draggable="false" /></span>
           <span class="desktop-label">Photos</span>
         </button>
         <button class="desktop-item" data-id="resume" data-app="resume" style="--x: 44.4%; --y: 40.9%;">
-          <span class="icon-frame icon-document"><img src="assets/icons/macos/document.png" alt="" /></span>
+          <span class="icon-frame icon-document"><img src="assets/icons/macos/document.png" alt="" draggable="false" /></span>
           <span class="desktop-label">Resume.pdf</span>
         </button>
         <button class="desktop-item" data-id="calendar" data-app="calendar" style="--x: 52.6%; --y: 40.9%;">
@@ -140,19 +140,19 @@
           <span class="desktop-label">Coffee Chat</span>
         </button>
         <button class="desktop-item" data-id="instagram" data-app="instagram" style="--x: 60.8%; --y: 40.9%;">
-          <span class="icon-frame"><img src="assets/icons/macos/instagram.png" alt="" /></span>
+          <span class="icon-frame"><img src="assets/icons/macos/instagram.png" alt="" draggable="false" /></span>
           <span class="desktop-label">Instagram</span>
         </button>
         <button class="desktop-item" data-id="trash" data-app="trash" style="--x: 44.4%; --y: 57.1%;">
-          <span class="icon-frame icon-trash"><img src="assets/icons/macos/trash.png" alt="" /></span>
+          <span class="icon-frame icon-trash"><img src="assets/icons/macos/trash.png" alt="" draggable="false" /></span>
           <span class="desktop-label">Trash</span>
         </button>
         <button class="desktop-item" data-id="terminal" data-app="terminal" style="--x: 52.6%; --y: 57.1%;">
-          <span class="icon-frame"><img src="assets/icons/macos/terminal.png" alt="" /></span>
+          <span class="icon-frame"><img src="assets/icons/macos/terminal.png" alt="" draggable="false" /></span>
           <span class="desktop-label">Terminal</span>
         </button>
         <button class="desktop-item" data-id="spotify" data-app="spotify" style="--x: 60.8%; --y: 57.1%;">
-          <span class="icon-frame"><img src="assets/icons/macos/spotify.png" alt="" /></span>
+          <span class="icon-frame"><img src="assets/icons/macos/spotify.png" alt="" draggable="false" /></span>
           <span class="desktop-label">Spotify</span>
         </button>
       </div>
@@ -163,17 +163,17 @@
 
       <nav class="dock-wrap" aria-label="Dock">
         <div class="dock" id="dock">
-          <button class="dock-item" data-app="work" data-tooltip="Finder"><img src="assets/icons/macos/finder.png" alt="Finder" /><span class="running-dot"></span></button>
-          <button class="dock-item" data-app="work" data-tooltip="Selected Work"><img src="assets/icons/macos/folder.png" alt="Selected Work" /></button>
-          <button class="dock-item" data-app="photos" data-tooltip="Photos"><img src="assets/icons/macos/photos.png" alt="Photos" /></button>
-          <button class="dock-item" data-app="about" data-tooltip="About Riz"><img src="assets/icons/macos/rizvisions.png" alt="About Riz" /></button>
-          <button class="dock-item" data-app="messages" data-tooltip="Messages"><img src="assets/icons/macos/messages.png" alt="Messages" /><span class="notification-badge dock-badge">1</span></button>
+          <button class="dock-item" data-app="work" data-tooltip="Finder"><img src="assets/icons/macos/finder.png" alt="Finder" draggable="false" /><span class="running-dot"></span></button>
+          <button class="dock-item" data-app="work" data-tooltip="Selected Work"><img src="assets/icons/macos/folder.png" alt="Selected Work" draggable="false" /></button>
+          <button class="dock-item" data-app="photos" data-tooltip="Photos"><img src="assets/icons/macos/photos.png" alt="Photos" draggable="false" /></button>
+          <button class="dock-item" data-app="about" data-tooltip="About Riz"><img src="assets/icons/macos/rizvisions.png" alt="About Riz" draggable="false" /></button>
+          <button class="dock-item" data-app="messages" data-tooltip="Messages"><img src="assets/icons/macos/messages.png" alt="Messages" draggable="false" /><span class="notification-badge dock-badge">1</span></button>
           <button class="dock-item dock-calendar" data-app="calendar" data-tooltip="Calendar"><span class="calendar-icon"><span class="calendar-weekday">WED</span><span class="calendar-day">5</span></span></button>
           <span class="dock-separator" aria-hidden="true"></span>
-          <button class="dock-item" data-app="notes" data-tooltip="Notes"><img src="assets/icons/macos/notes.png" alt="Notes" /></button>
-          <button class="dock-item" data-app="terminal" data-tooltip="Terminal"><img src="assets/icons/macos/terminal.png" alt="Terminal" /></button>
-          <button class="dock-item" data-app="spotify" data-tooltip="Spotify"><img src="assets/icons/macos/spotify.png" alt="Spotify" /></button>
-          <button class="dock-item trash-dock" data-app="trash" data-tooltip="Trash"><img src="assets/icons/macos/trash.png" alt="Trash" /></button>
+          <button class="dock-item" data-app="notes" data-tooltip="Notes"><img src="assets/icons/macos/notes.png" alt="Notes" draggable="false" /></button>
+          <button class="dock-item" data-app="terminal" data-tooltip="Terminal"><img src="assets/icons/macos/terminal.png" alt="Terminal" draggable="false" /></button>
+          <button class="dock-item" data-app="spotify" data-tooltip="Spotify"><img src="assets/icons/macos/spotify.png" alt="Spotify" draggable="false" /></button>
+          <button class="dock-item trash-dock" data-app="trash" data-tooltip="Trash"><img src="assets/icons/macos/trash.png" alt="Trash" draggable="false" /></button>
         </div>
       </nav>
 
