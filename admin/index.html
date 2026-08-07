@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title>Rizvisions Admin</title>
-  <link rel="icon" href="../assets/icons/macos/rizvisions.png?v=10">
-  <link rel="stylesheet" href="admin.css?v=10">
+  <link rel="icon" href="../assets/icons/macos/rizvisions.png?v=105">
+  <link rel="stylesheet" href="admin.css?v=105">
 </head>
 <body>
   <main class="admin-shell">
     <header class="admin-header">
       <a class="brand" href="../" aria-label="Back to Rizvisions">
-        <img src="../assets/icons/macos/rizvisions.png?v=10" alt="">
+        <img src="../assets/icons/macos/rizvisions.png?v=105" alt="">
         <span><strong>Rizvisions</strong><small>Media Admin</small></span>
       </a>
       <div class="header-actions" id="headerActions" hidden>
@@ -23,19 +23,16 @@
 
     <section class="auth-view" id="authView">
       <div class="auth-card">
-        <img class="auth-icon" src="../assets/icons/macos/rizvisions.png?v=10" alt="Rizvisions">
+        <img class="auth-icon" src="../assets/icons/macos/rizvisions.png?v=105" alt="Rizvisions">
         <span class="eyebrow">PRIVATE</span>
         <h1>Manage the archive.</h1>
-        <p>Upload photos and videos, decide what appears on the desktop, and publish without touching GitHub.</p>
-
+        <p>Upload once, then place the same photo or video in Photos, on the desktop, or inside a Selected Work project.</p>
         <div class="auth-status" id="authStatus" role="status"></div>
-
         <form id="signInForm" class="auth-form">
           <label>Email<input id="emailInput" type="email" autocomplete="username" required></label>
           <label>Password<input id="passwordInput" type="password" autocomplete="current-password" minlength="8" required></label>
           <button class="primary-button" type="submit">Sign in</button>
         </form>
-
         <div class="auth-secondary">
           <button id="createAccountButton" type="button">First time? Create account</button>
           <button id="forgotPasswordButton" type="button">Forgot password</button>
@@ -58,15 +55,19 @@
 
     <section class="manager-view" id="managerView" hidden>
       <div class="manager-hero">
-        <div><span class="eyebrow">RIZVISIONS ARCHIVE</span><h1>Photos & videos</h1><p>Drag in a batch. Everything publishes directly to the site.</p></div>
+        <div>
+          <span class="eyebrow">RIZVISIONS ARCHIVE</span>
+          <h1>Photos & videos</h1>
+          <p>Every upload is one reusable asset. Decide where it appears after it uploads.</p>
+        </div>
         <div class="usage-note"><strong>Free plan</strong><span>50 MB maximum per file</span></div>
       </div>
 
       <section class="upload-panel" id="uploadPanel">
-        <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/heic,image/heif,.heic,.heif,video/mp4,video/webm,video/quicktime,video/x-m4v" multiple hidden>
+        <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/heic,image/heif,.heic,.heif,video/mp4,video/webm,video/quicktime,video/x-m4v,.mov,.m4v" multiple hidden>
         <div class="upload-illustration">＋</div>
         <h2>Drop photos and videos here</h2>
-        <p>Or choose files. Photos are resized for the web before upload; videos must be under 50 MB.</p>
+        <p>Photos are resized for the web. iPhone MOV files are normalized to web-friendly MP4 delivery when possible.</p>
         <button class="primary-button" id="chooseFilesButton" type="button">Choose files</button>
       </section>
 
@@ -82,11 +83,12 @@
             <input id="searchInput" type="search" placeholder="Search media">
             <select id="filterSelect" aria-label="Filter media">
               <option value="all">All media</option>
+              <option value="photos">In Photos</option>
               <option value="desktop">On desktop</option>
-              <option value="published">Published</option>
-              <option value="hidden">Hidden</option>
-              <option value="image">Photos</option>
-              <option value="video">Videos</option>
+              <option value="selected_work">In Selected Work</option>
+              <option value="hidden">Hidden / unassigned</option>
+              <option value="image">Photos only</option>
+              <option value="video">Videos only</option>
             </select>
           </div>
         </div>
@@ -98,21 +100,102 @@
 
   <dialog id="editDialog" class="edit-dialog">
     <form method="dialog" id="editForm">
-      <header><div><span class="eyebrow">MEDIA DETAILS</span><h2 id="editTitle">Edit media</h2></div><button class="icon-button" value="cancel" aria-label="Close">×</button></header>
-      <div id="editPreview" class="edit-preview"></div>
-      <div class="edit-fields">
-        <label>Caption<textarea id="captionInput" rows="3"></textarea></label>
-        <label>Alt text<input id="altInput" type="text"></label>
-        <label>Album<input id="albumInput" type="text" placeholder="Library"></label>
-        <div class="toggle-row"><label><input id="publishedInput" type="checkbox"> Published</label><label><input id="desktopInput" type="checkbox"> Show on desktop</label><label><input id="featuredInput" type="checkbox"> Featured</label></div><fieldset class="desktop-fields"><legend>Default desktop placement</legend><label>X position<input id="desktopXInput" type="number" min="5" max="95" step="0.1" placeholder="Auto"></label><label>Y position<input id="desktopYInput" type="number" min="8" max="88" step="0.1" placeholder="Auto"></label><label>Rotation<input id="desktopRotationInput" type="number" min="-20" max="20" step="1" value="0"></label></fieldset>
+      <header>
+        <div><span class="eyebrow">MEDIA DETAILS</span><h2 id="editTitle">Edit media</h2></div>
+        <button class="icon-button" value="cancel" aria-label="Close">×</button>
+      </header>
+      <div class="edit-layout">
+        <div id="editPreview" class="edit-preview" role="button" tabindex="0" aria-label="Open full preview"></div>
+        <div class="edit-fields">
+          <label>Display name<input id="displayNameInput" type="text" placeholder="Rizvisions in Times Square"></label>
+          <label>Description / caption
+            <textarea id="captionInput" rows="3" placeholder="Optional context shown in Photos and project galleries"></textarea>
+          </label>
+          <label>Alt text<input id="altInput" type="text" placeholder="Describe the visual for accessibility"></label>
+
+          <section class="visibility-section">
+            <label class="switch-row"><input id="publishedInput" type="checkbox"><span><strong>Visible on the public site</strong><small>Turn this off to keep the asset private even if destinations are selected.</small></span></label>
+          </section>
+
+          <section class="placement-section">
+            <div class="placement-heading"><span class="eyebrow">PLACE IN</span><small>The same file can appear in more than one place.</small></div>
+
+            <article class="placement-card" data-placement-card="photos">
+              <label class="switch-row"><input id="photosInput" type="checkbox"><span><strong>Photos</strong><small>Appears in the Photos library and opens in the gallery viewer.</small></span></label>
+              <div class="placement-options" id="photosOptions">
+                <label>Collection<input id="collectionInput" type="text" list="collectionSuggestions" placeholder="Library"></label>
+                <label class="inline-check"><input id="featuredInput" type="checkbox"> Featured in Photos</label>
+              </div>
+            </article>
+
+            <article class="placement-card" data-placement-card="desktop">
+              <label class="switch-row"><input id="desktopInput" type="checkbox"><span><strong>Desktop</strong><small>Appears as a draggable individual file and opens in its own window.</small></span></label>
+              <fieldset class="desktop-fields" id="desktopOptions">
+                <legend>Default placement</legend>
+                <label>X position<input id="desktopXInput" type="number" min="5" max="95" step="0.1" placeholder="Auto"></label>
+                <label>Y position<input id="desktopYInput" type="number" min="8" max="88" step="0.1" placeholder="Auto"></label>
+                <label>Rotation<input id="desktopRotationInput" type="number" min="-20" max="20" step="1" value="0"></label>
+              </fieldset>
+            </article>
+
+            <article class="placement-card" data-placement-card="selected-work">
+              <label class="switch-row"><input id="workInput" type="checkbox"><span><strong>Selected Work</strong><small>Add it to a project folder. It opens as an individual file from Finder.</small></span></label>
+              <div class="placement-options" id="workOptions">
+                <label>Project
+                  <select id="projectInput">
+                    <option value="parker">Parker</option>
+                    <option value="bluespecs">Blue Specs</option>
+                    <option value="whop">Whop / WAP</option>
+                    <option value="windsurf">Windsurf</option>
+                    <option value="creator">Rizvisions / Creator Work</option>
+                  </select>
+                </label>
+              </div>
+            </article>
+
+            <article class="placement-card placement-card-disabled">
+              <div class="switch-row"><span class="fake-checkbox"></span><span><strong>Messages</strong><small>The placement system is ready for this, but the iMessage experience comes in a later update.</small></span></div>
+            </article>
+          </section>
+
+          <details class="advanced-details">
+            <summary>Advanced details</summary>
+            <dl>
+              <div><dt>Original file</dt><dd id="originalFilename"></dd></div>
+              <div><dt>Dimensions</dt><dd id="mediaDimensions"></dd></div>
+              <div><dt>Storage path</dt><dd id="storagePath"></dd></div>
+            </dl>
+          </details>
+        </div>
       </div>
-      <footer><button id="deleteButton" class="danger-button" type="button">Delete</button><span></span><button value="cancel">Cancel</button><button id="saveButton" class="primary-button" type="button">Save changes</button></footer>
+      <footer>
+        <button id="deleteButton" class="danger-button" type="button">Delete</button>
+        <span></span>
+        <button value="cancel">Cancel</button>
+        <button id="saveButton" class="primary-button" type="button">Save changes</button>
+      </footer>
     </form>
   </dialog>
 
+  <dialog id="fullPreviewDialog" class="full-preview-dialog">
+    <button id="fullPreviewClose" class="full-preview-close" type="button" aria-label="Close preview">×</button>
+    <div id="fullPreviewStage" class="full-preview-stage"></div>
+    <div id="fullPreviewMeta" class="full-preview-meta"></div>
+  </dialog>
+
+  <datalist id="collectionSuggestions">
+    <option value="Library"></option>
+    <option value="Rizvisions Archive"></option>
+    <option value="Chicago"></option>
+    <option value="Film"></option>
+    <option value="People"></option>
+    <option value="Travel"></option>
+    <option value="Personal"></option>
+  </datalist>
+
   <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="../supabase-config.js?v=10"></script>
-  <script src="admin.js?v=10"></script>
+  <script src="../supabase-config.js?v=105"></script>
+  <script src="admin.js?v=105"></script>
 </body>
 </html>

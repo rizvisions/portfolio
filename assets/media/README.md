@@ -1,10 +1,3 @@
-# Media folder
+# Deprecated local media folder
 
-This is the one folder you should use for photos and videos.
-
-- Everything in `assets/media/` appears in the Photos app.
-- Files beginning with `desktop-` also appear on the desktop.
-
-Example:
-
-`desktop-01-chicago.jpg`
+V10.5 loads the public media archive from Supabase. This folder is intentionally empty.

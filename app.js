@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "rizvisions-os-v10";
+  const STORAGE_KEY = "rizvisions-os-v10.5";
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -31,7 +31,8 @@
   const volumeSlider = $("#volumeSlider");
   const ccFocus = $("#ccFocus");
 
-  const CONTENT = window.RIZVISIONS_CONTENT || { desktopPhotos: [], photoLibrary: [], currentCards: [] };
+  const CONTENT = window.RIZVISIONS_CONTENT || { mediaLoading: true, allMedia: [], desktopPhotos: [], photoLibrary: [], projectMedia: {}, currentCards: [] };
+  CONTENT.projectMedia ||= {};
   const iconNodes = $$(".desktop-item");
   const defaultIcons = Object.fromEntries(iconNodes.map((node) => [node.dataset.id, {
     x: parseFloat(node.style.getPropertyValue("--x")),
@@ -239,9 +240,9 @@
       file.style.left = "var(--photo-x)"; file.style.top = "var(--photo-y)";
       file.style.zIndex = String(saved.z || index + 1);
       const preview = (photo.type || mediaTypeFromSrc(photo.src)) === "video"
-        ? `<video src="${escapeHtml(photo.src)}" muted preload="metadata" playsinline></video><span class="desktop-video-badge">▶</span>`
+        ? (photo.poster ? `<img src="${escapeHtml(photo.poster)}" alt="${escapeHtml(photo.alt || "Rizvisions video")}" draggable="false"><span class="desktop-video-badge">▶</span>` : `${renderVideoTag(photo, { muted: true })}<span class="desktop-video-badge">▶</span>`)
         : `<img src="${escapeHtml(photo.src)}" alt="${escapeHtml(photo.alt || "Rizvisions photo")}" draggable="false">`;
-      file.innerHTML = `<span class="photo-paper ${photo.monochrome ? "monochrome" : ""}">${preview}</span><span class="photo-label">${escapeHtml(photo.filename || photo.src.split("/").pop())}</span>`;
+      file.innerHTML = `<span class="photo-paper ${photo.monochrome ? "monochrome" : ""}">${preview}</span><span class="photo-label">${escapeHtml(photo.displayName || photo.filename || photo.src.split("/").pop())}</span>`;
       file.addEventListener("pointerdown", (event) => beginDesktopObjectDrag(event, file));
       file.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -469,37 +470,63 @@
     closeMenus();
     let win = windowsRoot.querySelector(`[data-app-window="${CSS.escape(appId)}"]`);
     if (!win) win = createWindow(appId);
-    if (!win) return;
+    if (!win) return null;
     win.hidden = false; win.classList.remove("minimizing"); focusWindow(win); playSound("open"); renderDock(); bounceDock(appId);
+    return win;
   }
 
   function openProject(projectId) {
-    const project = projectDefinitions[projectId]; if (!project) return;
+    const project = projectDefinitions[projectId]; if (!project) return null;
     const appId = `project-${projectId}`;
     let win = windowsRoot.querySelector(`[data-app-window="${CSS.escape(appId)}"]`);
-    if (!win) win = createWindow(appId, { name:"Preview", title:project.title, size:[760,590], min:[600,450], render:() => renderProject(project) });
+    if (!win) win = createWindow(appId, { name:"Finder", title:project.title, size:[980,650], min:[660,440], render:() => renderProject(project, projectId) });
     win.hidden = false; focusWindow(win); playSound("open");
+    return win;
+  }
+
+  function mediaAspectRatio(media, type = media?.type || "image") {
+    const width = Number(media?.width), height = Number(media?.height);
+    if (width > 0 && height > 0) return width / height;
+    if (Number(media?.aspectRatio) > 0) return Number(media.aspectRatio);
+    return type === "video" ? 16 / 9 : 4 / 3;
+  }
+
+  function mediaWindowSize(media, type) {
+    const ratio = Math.max(.28, Math.min(4, mediaAspectRatio(media, type)));
+    const availableWidth = Math.max(420, desktop.clientWidth - 100);
+    const availableHeight = Math.max(420, desktop.clientHeight - 145);
+    let bodyWidth, bodyHeight;
+    if (ratio < 1) {
+      bodyHeight = Math.min(790, availableHeight);
+      bodyWidth = bodyHeight * ratio;
+      if (bodyWidth < 330) { bodyWidth = 330; bodyHeight = bodyWidth / ratio; }
+    } else {
+      bodyWidth = Math.min(1080, availableWidth);
+      bodyHeight = bodyWidth / ratio;
+      if (bodyHeight > availableHeight) { bodyHeight = availableHeight; bodyWidth = bodyHeight * ratio; }
+    }
+    return [Math.round(Math.min(availableWidth, bodyWidth)), Math.round(Math.min(availableHeight + 56, bodyHeight + 56))];
   }
 
   function openMediaFile(media) {
-    if (!media?.src) return;
+    if (!media?.src) return null;
     const idBase = media.id || media.filename || media.src;
     const appId = `media-${safeId(idBase)}`;
     let win = windowsRoot.querySelector(`[data-app-window="${CSS.escape(appId)}"]`);
     if (!win) {
       const type = media.type || mediaTypeFromSrc(media.src);
-      const ratio = Number(media.aspectRatio) || (type === "video" ? 16/9 : 4/3);
-      const width = Math.min(1080, Math.max(720, desktop.clientWidth * .7));
-      const height = Math.min(760, Math.max(500, width / ratio + 56));
+      const [width, height] = mediaWindowSize(media, type);
       win = createWindow(appId, {
         name: type === "video" ? "Video" : "Preview",
-        title: media.filename || media.src.split("/").pop() || "Media",
-        size:[width,height], min:[560,380],
+        title: media.displayName || media.filename || media.src.split("/").pop() || "Media",
+        size:[width,height], min:type === "video" && mediaAspectRatio(media,type) < 1 ? [320,430] : [460,340],
         render:() => renderMediaViewer(media, type)
       });
-      win.classList.add("media-window");
+      win.classList.add("media-window", `media-window-${type}`);
+      wireMediaPlayback(win, media);
     }
     win.hidden = false; focusWindow(win); playSound("open");
+    return win;
   }
 
   function focusWindow(win) {
@@ -751,32 +778,180 @@
 
   function wireAppSpecific(win, appId) {
     if (appId === "terminal") wireTerminal(win);
-    if (appId === "notes") { const textarea=$("textarea",win);textarea.value=state.notes;textarea.addEventListener("input",()=>{state.notes=textarea.value;saveState();}); }
-    if (appId === "photos") {
-      $$('[data-media-index]',win).forEach((button)=>button.addEventListener("dblclick",()=>openMediaFile((CONTENT.photoLibrary||[])[Number(button.dataset.mediaIndex)])));
-      $$('[data-photo-filter]',win).forEach((button)=>button.addEventListener("click",()=>{$$('[data-photo-filter]',win).forEach((node)=>node.classList.toggle("active",node===button));}));
+    if (appId === "notes") {
+      const textarea = $("textarea", win);
+      textarea.value = state.notes;
+      textarea.addEventListener("input", () => { state.notes = textarea.value; saveState(); });
+    }
+    if (appId === "photos") wirePhotosApp(win);
+    if (appId.startsWith("project-")) {
+      const projectId = appId.replace("project-", "");
+      $$('[data-project-media-index]', win).forEach((button) => button.addEventListener("dblclick", () => {
+        const media = (CONTENT.projectMedia?.[projectId] || [])[Number(button.dataset.projectMediaIndex)];
+        if (media) openMediaFile(media);
+      }));
     }
     if (appId === "settings") {
-      $$('[data-settings-wallpaper]',win).forEach((button)=>button.addEventListener("click",()=>setWallpaper(button.dataset.settingsWallpaper)));
-      $("[data-settings-reset]",win)?.addEventListener("click",resetLayout);
+      $$('[data-settings-wallpaper]', win).forEach((button) => button.addEventListener("click", () => setWallpaper(button.dataset.settingsWallpaper)));
+      $("[data-settings-reset]", win)?.addEventListener("click", resetLayout);
     }
+  }
+
+  function wirePhotosApp(win) {
+    const collection = win.dataset.photosCollection || "all";
+    const items = photosForCollection(collection);
+    win._photosItems = items;
+    $$('[data-photo-collection]', win).forEach((button) => button.addEventListener("click", () => {
+      win.dataset.photosCollection = button.dataset.photoCollection;
+      $(".window-body", win).innerHTML = renderPhotos(button.dataset.photoCollection);
+      wirePhotosApp(win);
+    }));
+    $$('[data-media-index]', win).forEach((button) => button.addEventListener("click", () => openPhotosGallery(win, Number(button.dataset.mediaIndex))));
+    $$('[data-featured-index]', win).forEach((button) => button.addEventListener("click", () => openPhotosGallery(win, Number(button.dataset.featuredIndex))));
+    $("[data-featured-prev]", win)?.addEventListener("click", () => scrollFeatured(win, -1));
+    $("[data-featured-next]", win)?.addEventListener("click", () => scrollFeatured(win, 1));
+    $("[data-gallery-close]", win)?.addEventListener("click", () => closePhotosGallery(win));
+    $("[data-gallery-prev]", win)?.addEventListener("click", () => stepPhotosGallery(win, -1));
+    $("[data-gallery-next]", win)?.addEventListener("click", () => stepPhotosGallery(win, 1));
+    $(".photos-gallery", win)?.addEventListener("click", (event) => {
+      const thumb = event.target.closest("[data-gallery-thumb]");
+      if (thumb) showPhotosGalleryItem(win, Number(thumb.dataset.galleryThumb));
+    });
+    if (!win._photosKeyHandler) {
+      win._photosKeyHandler = (event) => {
+        if ($(".photos-gallery", win)?.hidden) return;
+        if (event.key === "ArrowLeft") { event.preventDefault(); stepPhotosGallery(win, -1); }
+        if (event.key === "ArrowRight") { event.preventDefault(); stepPhotosGallery(win, 1); }
+        if (event.key === "Escape") closePhotosGallery(win);
+      };
+      win.addEventListener("keydown", win._photosKeyHandler);
+    }
+    wireMediaPlayback(win);
+  }
+
+  function photosForCollection(collection = "all") {
+    const photos = CONTENT.photoLibrary || [];
+    return collection === "all" ? photos : photos.filter((item) => (item.collection || "Library") === collection);
+  }
+
+  function scrollFeatured(win, direction) {
+    const track = $(".photos-featured-track", win);
+    if (track) track.scrollBy({ left: track.clientWidth * .86 * direction, behavior: "smooth" });
+  }
+
+  function openPhotosAtMedia(media) {
+    const index = (CONTENT.photoLibrary || []).findIndex((item) => item.id === media?.id);
+    if (index < 0) { showToast("This file is not placed in Photos"); return; }
+    const win = openApp("photos");
+    if (!win) return;
+    win.dataset.photosCollection = "all";
+    $(".window-body", win).innerHTML = renderPhotos("all");
+    wirePhotosApp(win);
+    openPhotosGallery(win, index);
+  }
+
+  function openPhotosGallery(win, index) {
+    const items = win._photosItems || [];
+    if (!items.length) return;
+    win._galleryIndex = Math.max(0, Math.min(items.length - 1, index));
+    const gallery = $(".photos-gallery", win);
+    if (!gallery) return;
+    gallery.hidden = false;
+    showPhotosGalleryItem(win, win._galleryIndex);
+    gallery.focus({ preventScroll: true });
+  }
+
+  function closePhotosGallery(win) {
+    const gallery = $(".photos-gallery", win);
+    if (gallery) gallery.hidden = true;
+  }
+
+  function stepPhotosGallery(win, delta) {
+    const items = win._photosItems || [];
+    if (!items.length) return;
+    const next = ((Number(win._galleryIndex) || 0) + delta + items.length) % items.length;
+    showPhotosGalleryItem(win, next);
+  }
+
+  function showPhotosGalleryItem(win, index) {
+    const items = win._photosItems || [];
+    const media = items[index];
+    if (!media) return;
+    win._galleryIndex = index;
+    const stage = $(".photos-gallery-stage", win);
+    const title = $(".photos-gallery-title", win);
+    const caption = $(".photos-gallery-caption", win);
+    const counter = $(".photos-gallery-counter", win);
+    const filmstrip = $(".photos-gallery-filmstrip", win);
+    stage.innerHTML = renderGalleryMedia(media);
+    $$(".photos-gallery-title", win).forEach((node) => { node.textContent = media.displayName || media.filename || "Untitled"; });
+    caption.textContent = media.caption || media.collection || "Rizvisions";
+    counter.textContent = `${index + 1} of ${items.length}`;
+    filmstrip.innerHTML = items.map((item, itemIndex) => `<button class="${itemIndex === index ? "active" : ""}" data-gallery-thumb="${itemIndex}" aria-label="Open ${escapeHtml(item.displayName || item.filename || `item ${itemIndex + 1}`)}">${renderMediaThumbnail(item)}</button>`).join("");
+    filmstrip.querySelector(".active")?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+    wireMediaPlayback(stage, media);
   }
 
   function renderFinder(){return `<div class="finder-shell"><aside class="finder-sidebar"><div class="sidebar-section"><div class="sidebar-title">Favorites</div><div class="sidebar-row active"><span class="sidebar-glyph">◫</span>Selected Work</div><div class="sidebar-row"><span class="sidebar-glyph">◉</span>Recents</div><div class="sidebar-row" data-app="photos"><span class="sidebar-glyph">⌁</span>Photos</div></div><div class="sidebar-section"><div class="sidebar-title">Locations</div><div class="sidebar-row"><span class="sidebar-glyph">▣</span>Rizvisions</div><div class="sidebar-row"><span class="sidebar-glyph">☁</span>iCloud Drive</div></div></aside><main class="finder-main"><div class="finder-toolbar"><button class="toolbar-button">‹</button><button class="toolbar-button">›</button><strong>Selected Work</strong><span class="toolbar-spacer"></span><button class="toolbar-button">▦</button><input class="search-field" placeholder="Search"></div><div class="finder-content"><div class="finder-grid">${[["parker","Parker","#8b7fd1"],["bluespecs","Blue Specs","#2686e8"],["whop","Whop + WAP","#ff453a"],["windsurf","Windsurf","#30b0c7"],["creator","Creator Work","#8e8e93"]].map(([id,label,color])=>`<button class="file-item" data-project="${id}"><span class="finder-folder"><img src="assets/icons/macos/folder.png?v=96b" alt=""><i style="--tag:${color}"></i></span><span class="file-name">${label}</span></button>`).join("")}<button class="file-item" data-app="photos"><img src="assets/icons/macos/photos.png?v=96b" alt=""><span class="file-name">Photography</span></button><button class="file-item" data-app="notes"><img src="assets/icons/macos/notes.png?v=96b" alt=""><span class="file-name">Random Notes</span></button></div></div><div class="finder-statusbar">7 items · Rizvisions</div></main></div>`;}
 
   function renderAbout(){return `<div class="about-app"><aside class="about-rail"><img class="about-eye" src="assets/icons/macos/rizvisions.png?v=96b" alt=""><span>RIZVISIONS</span><nav><button class="active">Overview</button><button data-app="work">Work</button><button data-app="photos">Photos</button></nav></aside><main class="about-content"><header><span class="eyebrow">RIZ ZAHEER</span><h1>I build things on the internet and document the rest.</h1><p>Creator and operator in Chicago. I work at Parker, make photos and videos, and have used Rizvisions as a creative identity since middle school.</p></header><section class="about-stats"><div><small>Currently</small><strong>Parker</strong><button data-app="parker">Open app</button></div><div><small>Based</small><strong>Chicago</strong><span>Gold Coast / Oak Brook orbit</span></div><div><small>Internet</small><strong>30M+</strong><span>lifetime short-form views</span></div></section><section class="about-links"><button data-external="https://www.linkedin.com/in/riz-zaheer/">LinkedIn ↗</button><button data-app="instagram">Instagram</button><button data-external="https://x.com/rizvisions">X ↗</button><button data-app="spotify">Spotify</button></section><section class="about-now"><div><small>What this site is</small><p>A catch-all for work, personal stuff, photography, old businesses, current obsessions, and whatever else becomes part of my life.</p></div><div class="about-quote">“Permanent internet home” &gt; polished corporate portfolio.</div></section></main></div>`;}
 
-  function renderSettings(){return `<div class="settings-shell"><aside class="settings-sidebar"><input class="settings-search" placeholder="Search"><div class="settings-profile-mini"><img src="assets/icons/macos/rizvisions.png?v=96b" alt=""><span><strong>Rizvisions</strong><small>Desktop preferences</small></span></div><div class="settings-list"><div class="settings-row active"><span class="settings-row-icon">◐</span>Appearance</div><div class="settings-row"><span class="settings-row-icon">⌘</span>Desktop & Dock</div><div class="settings-row"><span class="settings-row-icon">♪</span>Sound</div><div class="settings-row"><span class="settings-row-icon">◉</span>About</div></div></aside><main class="settings-main"><h1>Appearance</h1><section class="settings-card"><h2>Wallpaper</h2><p>Choose the grid appearance used across the desktop and interface.</p><div class="settings-theme-grid">${[["grid","Light"],["dark","Dark"],["maroon","Maroon"],["forest","Forest"]].map(([id,label])=>`<button data-settings-wallpaper="${id}" class="theme-choice ${id}"><span></span><strong>${label}</strong></button>`).join("")}</div></section><section class="settings-card"><h2>Desktop & Dock</h2><div class="settings-info-row"><span><strong>Customize the Dock naturally</strong><small>Drag an app from the desktop onto the Dock. Drag Dock apps left or right to reorder, or drag one away to remove it.</small></span></div><button class="mac-button" data-settings-reset>Restore Desktop Layout</button></section><section class="settings-card"><h2>About this build</h2><div class="settings-info-row"><img src="assets/icons/macos/rizvisions.png?v=96b" alt=""><span><strong>Rizvisions OS 10</strong><small>A personal website pretending to be a Mac.</small></span></div></section></main></div>`;}
+  function renderSettings(){return `<div class="settings-shell"><aside class="settings-sidebar"><input class="settings-search" placeholder="Search"><div class="settings-profile-mini"><img src="assets/icons/macos/rizvisions.png?v=96b" alt=""><span><strong>Rizvisions</strong><small>Desktop preferences</small></span></div><div class="settings-list"><div class="settings-row active"><span class="settings-row-icon">◐</span>Appearance</div><div class="settings-row"><span class="settings-row-icon">⌘</span>Desktop & Dock</div><div class="settings-row"><span class="settings-row-icon">♪</span>Sound</div><div class="settings-row"><span class="settings-row-icon">◉</span>About</div></div></aside><main class="settings-main"><h1>Appearance</h1><section class="settings-card"><h2>Wallpaper</h2><p>Choose the grid appearance used across the desktop and interface.</p><div class="settings-theme-grid">${[["grid","Light"],["dark","Dark"],["maroon","Maroon"],["forest","Forest"]].map(([id,label])=>`<button data-settings-wallpaper="${id}" class="theme-choice ${id}"><span></span><strong>${label}</strong></button>`).join("")}</div></section><section class="settings-card"><h2>Desktop & Dock</h2><div class="settings-info-row"><span><strong>Customize the Dock naturally</strong><small>Drag an app from the desktop onto the Dock. Drag Dock apps left or right to reorder, or drag one away to remove it.</small></span></div><button class="mac-button" data-settings-reset>Restore Desktop Layout</button></section><section class="settings-card"><h2>About this build</h2><div class="settings-info-row"><img src="assets/icons/macos/rizvisions.png?v=96b" alt=""><span><strong>Rizvisions OS 10.5</strong><small>A personal website pretending to be a Mac.</small></span></div></section></main></div>`;}
 
-  function renderPhotos(){
-    const photos=CONTENT.photoLibrary||[];
-    const featured=photos.find((item)=>item.isFeatured)||photos[0]||{};
-    const mediaPreview=(media,classes="")=>{
-      const type=media.type||mediaTypeFromSrc(media.src);
-      if(type==="video") return `<video class="${classes}" src="${escapeHtml(media.src)}" muted playsinline preload="metadata" poster="${escapeHtml(media.poster||"")}"></video>`;
-      return `<img class="${classes}" src="${escapeHtml(media.src||"")}" alt="${escapeHtml(media.alt||"")}" draggable="false">`;
-    };
-    return `<div class="photos-app"><aside class="photos-nav"><div class="photos-nav-title"><img src="assets/icons/macos/photos.png?v=96b" alt=""><strong>Photos</strong></div><div class="sidebar-title">Library</div><button class="active"><span>▦</span>Library</button><button><span>◷</span>Recents</button><button><span>♡</span>Favorites</button><div class="sidebar-title">Albums</div><button><span>▣</span>Chicago</button><button><span>▣</span>Film</button><button><span>▣</span>Rizvisions</button><div class="photos-source-note">Manage the archive at <code>rizvisions.com/admin</code>.</div></aside><main class="photos-library"><div class="photos-topbar"><div><h1>Library</h1><small>${photos.length} items · Rizvisions archive</small></div><div class="photos-segmented"><button>Years</button><button>Months</button><button class="active">All Photos</button></div><div class="photos-toolbar-actions"><button title="Media upload guide" data-action="media-help">?</button></div></div>${photos.length?`<section class="photos-feature">${mediaPreview(featured)}<div><span>FEATURED</span><strong>Rizvisions Archive</strong><p>Photography, video, Chicago, people, travel, and years of visual experiments.</p></div></section><div class="photos-date-heading"><div><strong>${escapeHtml(featured.date||"Latest")}</strong><small>${escapeHtml(featured.location||"Rizvisions")}</small></div></div><div class="photos-masonry">${photos.map((media,index)=>`<button class="photo-tile tile-${index%7}" data-media-index="${index}">${mediaPreview(media)}<span>${escapeHtml(media.filename||media.alt||`IMG_${index+1}`)}</span>${(media.type||mediaTypeFromSrc(media.src))==="video"?'<i class="video-duration">▶ video</i>':''}</button>`).join("")}</div>`:`<div class="photos-empty"><img src="assets/icons/macos/photos.png?v=96b" alt=""><h2>Your library is ready</h2><p>Upload photos or videos at <code>rizvisions.com/admin</code>. They will appear here automatically.</p><button class="mac-button primary" data-action="media-help">See the 3-step guide</button></div>`}</main></div>`;
+  function mediaSourceType(media) {
+    if (media?.mimeType === "video/quicktime" || /\.mov(?:$|\?)/i.test(media?.src || "")) return "video/mp4";
+    return media?.mimeType || "video/mp4";
+  }
+
+  function renderVideoTag(media, { controls = false, muted = false, autoplay = false, className = "" } = {}) {
+    const poster = media.poster ? ` poster="${escapeHtml(media.poster)}"` : "";
+    return `<video class="${escapeHtml(className)}" ${controls ? "controls" : ""} ${muted ? "muted" : ""} ${autoplay ? "autoplay" : ""} playsinline preload="metadata"${poster}><source src="${escapeHtml(media.src)}" type="${escapeHtml(mediaSourceType(media))}"></video>`;
+  }
+
+  function renderMediaThumbnail(media) {
+    if ((media.type || mediaTypeFromSrc(media.src)) === "video") {
+      return media.poster
+        ? `<span class="media-thumb-shell"><img src="${escapeHtml(media.poster)}" alt=""><i>▶</i></span>`
+        : `<span class="media-thumb-shell">${renderVideoTag(media, { muted: true })}<i>▶</i></span>`;
+    }
+    return `<img src="${escapeHtml(media.src || "")}" alt="${escapeHtml(media.alt || "")}" draggable="false">`;
+  }
+
+  function renderGalleryMedia(media) {
+    const type = media.type || mediaTypeFromSrc(media.src);
+    return type === "video"
+      ? renderVideoTag(media, { controls: true, className: "gallery-video" })
+      : `<img src="${escapeHtml(media.src)}" alt="${escapeHtml(media.alt || "")}">`;
+  }
+
+  function renderPhotos(activeCollection = "all") {
+    const allPhotos = CONTENT.photoLibrary || [];
+    const collections = [...new Set(allPhotos.map((item) => item.collection || "Library"))];
+    const photos = photosForCollection(activeCollection);
+    const featured = photos.filter((item) => item.isFeatured);
+    const loading = Boolean(CONTENT.mediaLoading);
+    const sidebarCollections = collections.map((collection) => `<button data-photo-collection="${escapeHtml(collection)}" class="${activeCollection === collection ? "active" : ""}"><span>▣</span>${escapeHtml(collection)}</button>`).join("");
+
+    let body = "";
+    if (loading) {
+      body = `<div class="photos-loading"><i></i><i></i><i></i><i></i><span>Loading the Rizvisions archive…</span></div>`;
+    } else if (!photos.length) {
+      body = `<div class="photos-empty"><img src="assets/icons/macos/photos.png?v=105" alt=""><h2>${allPhotos.length ? "No items in this collection" : "Your library is empty"}</h2><p>${allPhotos.length ? "Choose another collection from the sidebar." : "Upload photos or videos at rizvisions.com/admin. No stock photos will appear here."}</p></div>`;
+    } else {
+      const featuredBlock = featured.length ? `<section class="photos-featured-carousel"><header><div><span>FEATURED</span><strong>${featured.length} selected ${featured.length === 1 ? "item" : "items"}</strong></div><div><button data-featured-prev aria-label="Previous featured item">‹</button><button data-featured-next aria-label="Next featured item">›</button></div></header><div class="photos-featured-track">${featured.map((media) => {
+        const index = photos.findIndex((item) => item.id === media.id);
+        return `<button class="photos-featured-card" data-featured-index="${index}" style="--media-ratio:${mediaAspectRatio(media, media.type)}">${renderMediaThumbnail(media)}<span><small>${escapeHtml(media.collection || "Featured")}</small><strong>${escapeHtml(media.displayName || media.filename || "Untitled")}</strong>${media.caption ? `<em>${escapeHtml(media.caption)}</em>` : ""}</span></button>`;
+      }).join("")}</div></section>` : "";
+      body = `${featuredBlock}<div class="photos-date-heading"><div><strong>${activeCollection === "all" ? "All Photos" : escapeHtml(activeCollection)}</strong><small>${photos.length} ${photos.length === 1 ? "item" : "items"}</small></div></div><div class="photos-natural-grid">${photos.map((media, index) => `<button class="photo-natural-tile" data-media-index="${index}" style="--media-ratio:${mediaAspectRatio(media, media.type)}">${renderMediaThumbnail(media)}<span>${escapeHtml(media.displayName || media.filename || `IMG_${index + 1}`)}</span>${media.type === "video" ? `<i class="video-duration">▶ ${media.duration ? formatMediaDuration(media.duration) : "video"}</i>` : ""}</button>`).join("")}</div>`;
+    }
+
+    return `<div class="photos-app"><aside class="photos-nav"><div class="photos-nav-title"><img src="assets/icons/macos/photos.png?v=105" alt=""><strong>Photos</strong></div><div class="sidebar-title">Library</div><button data-photo-collection="all" class="${activeCollection === "all" ? "active" : ""}"><span>▦</span>All Photos</button><div class="sidebar-title">Collections</div>${sidebarCollections || `<p class="photos-sidebar-empty">Collections appear as you assign them in Admin.</p>`}<div class="photos-source-note">Manage the archive at <code>rizvisions.com/admin</code>.</div></aside><main class="photos-library"><div class="photos-topbar"><div><h1>${activeCollection === "all" ? "Library" : escapeHtml(activeCollection)}</h1><small>${allPhotos.length} total items · Rizvisions archive</small></div><div class="photos-segmented"><button>Years</button><button>Months</button><button class="active">All Photos</button></div></div>${body}<section class="photos-gallery" tabindex="-1" hidden><header><button data-gallery-close aria-label="Close gallery">×</button><div><strong class="photos-gallery-title"></strong><small class="photos-gallery-counter"></small></div></header><button class="gallery-arrow gallery-prev" data-gallery-prev aria-label="Previous item">‹</button><div class="photos-gallery-stage"></div><button class="gallery-arrow gallery-next" data-gallery-next aria-label="Next item">›</button><footer><div><strong class="photos-gallery-title"></strong><span class="photos-gallery-caption"></span></div><div class="photos-gallery-filmstrip"></div></footer></section></main></div>`;
+  }
+
+  function formatMediaDuration(seconds) {
+    if (!Number.isFinite(Number(seconds))) return "";
+    const total = Math.round(Number(seconds));
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
   }
 
   function renderMessages(){return `<div class="messages-shell"><aside class="conversation-list"><input class="message-search" placeholder="Search"><div class="conversation active"><span class="avatar">R</span><span><strong>Riz</strong><small>Welcome to my corner of the internet.</small></span><time>now</time></div><div class="conversation"><span class="avatar">P</span><span><strong>Parker</strong><small>Back to work?</small></span><time>1:04 AM</time></div></aside><main class="chat-pane"><div class="chat-header">Riz</div><div class="chat-body"><div class="bubble in">You made it this far. What do you want to know?</div><div class="bubble out">This site is cool. How do I reach you?</div><div class="bubble in">LinkedIn is best for work. Instagram works for everything else.</div><div class="chat-actions"><button class="mac-button primary" data-external="https://www.linkedin.com/in/riz-zaheer/">Open LinkedIn</button><button class="mac-button" data-app="instagram">Open Instagram</button></div></div><div class="chat-input">iMessage</div></main></div>`;}
@@ -800,71 +975,159 @@
   function renderTerminal(){return `<div class="terminal-shell"><div class="terminal-output">Last login: ${new Date().toLocaleDateString()} on ttys001\n\nRizvisions OS 10.5\nType <span class="terminal-link">help</span> to see available commands.\n</div><div class="terminal-input-row"><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" spellcheck="false"></div></div>`;}
   function renderTrash(){return `<div class="empty-state"><div><img src="assets/icons/macos/trash.png?v=96b" alt="Trash"><h2>Trash is Empty</h2><p>Old domains, failed ideas, embarrassing drafts, and abandoned businesses will eventually live here.</p></div></div>`;}
 
-  function renderProject(project){return `<div class="project-preview"><div class="project-hero" style="--project:${project.color}"><span>${project.eyebrow}</span><h1>${project.title}</h1></div><div class="project-copy"><p>${project.description}</p><div class="project-facts">${project.facts.map((fact)=>`<div>${fact}</div>`).join("")}</div></div></div>`;}
-  function renderMediaViewer(media,type){const body=type==="video"?`<video src="${escapeHtml(media.src)}" controls playsinline preload="metadata" poster="${escapeHtml(media.poster||"")}"></video>`:`<img src="${escapeHtml(media.src)}" alt="${escapeHtml(media.alt||"")}">`;return `<div class="media-viewer ${type}">${body}<div class="media-caption"><strong>${escapeHtml(media.filename||media.src.split('/').pop())}</strong>${media.alt?`<span>${escapeHtml(media.alt)}</span>`:""}</div></div>`;}
+  function renderProject(project, projectId) {
+    const media = CONTENT.projectMedia?.[projectId] || [];
+    return `<div class="project-environment"><header class="project-folder-header" style="--project:${project.color}"><div><span>${project.eyebrow}</span><h1>${project.title}</h1><p>${project.description}</p></div><div class="project-facts">${project.facts.map((fact) => `<div>${fact}</div>`).join("")}</div></header><section class="project-assets"><div class="project-assets-heading"><strong>Project Files</strong><small>${media.length} ${media.length === 1 ? "item" : "items"}</small></div>${media.length ? `<div class="project-file-grid">${media.map((item, index) => `<button class="project-media-file" data-project-media-index="${index}" style="--media-ratio:${mediaAspectRatio(item, item.type)}">${renderMediaThumbnail(item)}<span>${escapeHtml(item.displayName || item.filename || "Untitled")}</span></button>`).join("")}</div>` : `<div class="project-empty"><img src="assets/icons/macos/folder.png?v=105" alt=""><strong>This folder is ready for artifacts.</strong><p>Place photos and videos here from Rizvisions Admin.</p></div>`}</section></div>`;
+  }
+
+  function renderMediaViewer(media, type) {
+    const body = type === "video"
+      ? renderVideoTag(media, { controls: true, className: "individual-video" })
+      : `<img src="${escapeHtml(media.src)}" alt="${escapeHtml(media.alt || "")}">`;
+    return `<div class="media-viewer ${type}">${body}<div class="media-playback-error" hidden><strong>This video could not play in the browser.</strong><span>Re-upload it through Admin to normalize the file for web playback.</span></div><div class="media-caption"><strong>${escapeHtml(media.displayName || media.filename || media.src.split("/").pop())}</strong>${media.caption ? `<span>${escapeHtml(media.caption)}</span>` : ""}</div></div>`;
+  }
+
+  function wireMediaPlayback(root, media = null) {
+    $$('video', root).forEach((video) => {
+      video.addEventListener("error", async () => {
+        if (video.dataset.compatibilityRetry) {
+          const errorPanel = video.closest(".media-viewer")?.querySelector(".media-playback-error");
+          if (errorPanel) errorPanel.hidden = false;
+          return;
+        }
+        const source = video.querySelector("source")?.src || video.currentSrc || "";
+        if (video.controls && /\.mov(?:$|\?)/i.test(source)) {
+          video.dataset.compatibilityRetry = "1";
+          try {
+            const response = await fetch(source);
+            if (!response.ok) throw new Error("Video download failed");
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob.slice(0, blob.size, "video/mp4"));
+            video.src = objectUrl;
+            video.load();
+            return;
+          } catch {}
+        }
+        const errorPanel = video.closest(".media-viewer")?.querySelector(".media-playback-error");
+        if (errorPanel) errorPanel.hidden = false;
+      });
+      video.addEventListener("click", (event) => event.stopPropagation());
+    });
+  }
 
   function wireTerminal(win){const input=$(".terminal-input",win),output=$(".terminal-output",win);input.focus();input.addEventListener("keydown",(event)=>{if(event.key!=="Enter")return;const command=input.value.trim();output.textContent+=`\nriz@rizvisions ~ % ${command}\n`;input.value="";const lower=command.toLowerCase();if(lower==="help")output.textContent+="about  work  photos  parker  social  spotify  safari  clear\n";else if(["about","work","photos","parker","spotify","safari"].includes(lower)){output.textContent+=`Opening ${lower}…\n`;openApp(lower);}else if(lower==="social"){openApp("instagram");}else if(lower==="clear")output.textContent="";else if(lower==="sudo")output.textContent+="Riz is not in the sudoers file. This incident will be reported.\n";else if(lower)output.textContent+=`zsh: command not found: ${command}\n`;output.scrollTop=output.scrollHeight;});}
 
   async function discoverMediaLibrary() {
     const config = window.RIZVISIONS_SUPABASE;
-    if (!config || !window.supabase?.createClient) return;
+    if (!config || !window.supabase?.createClient) {
+      CONTENT.mediaLoading = false;
+      refreshMediaSurfaces();
+      return;
+    }
     try {
       const publicClient = window.supabase.createClient(config.url, config.publishableKey, {
         auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
       });
       const { data, error } = await publicClient
         .from("media_items")
-        .select("id,storage_path,filename,media_type,caption,alt_text,album,is_featured,show_on_desktop,sort_order,desktop_x,desktop_y,desktop_rotation,created_at")
+        .select("id,storage_path,poster_path,filename,display_name,media_type,mime_type,size_bytes,width,height,duration_seconds,caption,alt_text,sort_order,created_at,media_placements(id,surface,container,sort_order,is_featured,desktop_x,desktop_y,desktop_rotation,metadata)")
         .eq("is_published", true)
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: false });
       if (error) throw error;
-      if (!Array.isArray(data) || !data.length) return;
-      const getUrl = (path) => publicClient.storage.from(config.bucket).getPublicUrl(path).data.publicUrl;
-      const media = data.map((row, index) => ({
-        id: row.id,
-        type: row.media_type,
-        src: getUrl(row.storage_path),
-        alt: row.alt_text || row.caption || row.filename,
-        filename: row.filename,
-        caption: row.caption || "",
-        album: row.album || "Library",
-        date: new Date(row.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" }),
-        location: row.album || "Rizvisions",
-        isFeatured: !!row.is_featured,
-        showOnDesktop: !!row.show_on_desktop,
-        sortOrder: Number(row.sort_order) || index,
-        desktopX: row.desktop_x == null ? null : Number(row.desktop_x),
-        desktopY: row.desktop_y == null ? null : Number(row.desktop_y),
-        desktopRotation: Number(row.desktop_rotation) || 0
-      }));
-      CONTENT.photoLibrary = media;
+
+      const getUrl = (path) => path ? publicClient.storage.from(config.bucket).getPublicUrl(path).data.publicUrl : "";
+      const allMedia = (Array.isArray(data) ? data : []).map((row, index) => {
+        const placements = Array.isArray(row.media_placements) ? row.media_placements : [];
+        return {
+          id: row.id,
+          type: row.media_type,
+          mimeType: row.mime_type,
+          src: getUrl(row.storage_path),
+          poster: getUrl(row.poster_path),
+          storagePath: row.storage_path,
+          displayName: row.display_name || row.filename,
+          filename: row.filename,
+          alt: row.alt_text || row.display_name || row.caption || row.filename,
+          caption: row.caption || "",
+          width: Number(row.width) || null,
+          height: Number(row.height) || null,
+          duration: Number(row.duration_seconds) || null,
+          aspectRatio: Number(row.width) > 0 && Number(row.height) > 0 ? Number(row.width) / Number(row.height) : null,
+          sortOrder: Number(row.sort_order) || index,
+          date: new Date(row.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+          placements
+        };
+      });
+
+      CONTENT.allMedia = allMedia;
+      CONTENT.photoLibrary = allMedia.flatMap((item) => item.placements.filter((entry) => entry.surface === "photos").map((entry) => ({
+        ...item,
+        collection: entry.container || "Library",
+        isFeatured: Boolean(entry.is_featured),
+        placementSortOrder: Number(entry.sort_order) || item.sortOrder
+      }))).sort((a, b) => a.placementSortOrder - b.placementSortOrder || a.sortOrder - b.sortOrder);
+
+      CONTENT.projectMedia = {};
+      allMedia.forEach((item) => {
+        item.placements.filter((entry) => entry.surface === "selected_work").forEach((entry) => {
+          const projectId = entry.container || "creator";
+          (CONTENT.projectMedia[projectId] ||= []).push({ ...item, placementSortOrder: Number(entry.sort_order) || item.sortOrder });
+        });
+      });
+      Object.values(CONTENT.projectMedia).forEach((items) => items.sort((a, b) => a.placementSortOrder - b.placementSortOrder || a.sortOrder - b.sortOrder));
+
       const defaults = [
         {x:78.2,y:28.0,rotation:-8},{x:85.0,y:25.8,rotation:8},{x:79.5,y:48.0,rotation:7},
         {x:86.3,y:49.0,rotation:-6},{x:80.8,y:67.0,rotation:-4},{x:88.0,y:67.5,rotation:6},
         {x:73.5,y:65.0,rotation:5},{x:91.0,y:33.0,rotation:-5}
       ];
-      CONTENT.desktopPhotos = media.filter(item => item.showOnDesktop).slice(0,8).map((item,index) => ({
+      CONTENT.desktopPhotos = allMedia.flatMap((item) => item.placements.filter((entry) => entry.surface === "desktop").map((entry) => ({
         ...item,
-        x: item.desktopX ?? defaults[index % defaults.length].x,
-        y: item.desktopY ?? defaults[index % defaults.length].y,
-        rotation: item.desktopRotation || defaults[index % defaults.length].rotation,
+        x: entry.desktop_x == null ? null : Number(entry.desktop_x),
+        y: entry.desktop_y == null ? null : Number(entry.desktop_y),
+        rotation: Number(entry.desktop_rotation) || 0,
+        placementSortOrder: Number(entry.sort_order) || item.sortOrder
+      }))).sort((a, b) => a.placementSortOrder - b.placementSortOrder || a.sortOrder - b.sortOrder).slice(0, 10).map((item, index) => ({
+        ...item,
+        x: item.x ?? defaults[index % defaults.length].x,
+        y: item.y ?? defaults[index % defaults.length].y,
+        rotation: item.rotation || defaults[index % defaults.length].rotation,
         width: 132,
         monochrome: false
       }));
-      CONTENT.desktopPhotos.forEach((item,index)=>{
-        defaultPhotos[item.id] ||= { x:item.x, y:item.y, rotation:item.rotation||0, z:index+1 };
+
+      CONTENT.desktopPhotos.forEach((item, index) => {
+        defaultPhotos[item.id] ||= { x:item.x, y:item.y, rotation:item.rotation || 0, z:index + 1 };
         state.photos[item.id] ||= clone(defaultPhotos[item.id]);
       });
-      renderDesktopPhotos();
-      const photosWindow = windowsRoot.querySelector('[data-app-window="photos"]');
-      if (photosWindow) {
-        $(".window-body", photosWindow).innerHTML = renderPhotos();
-        wireAppSpecific(photosWindow, "photos");
-      }
     } catch (error) {
-      console.info("Rizvisions used its bundled fallback media because Supabase is not ready yet.", error);
+      CONTENT.allMedia = [];
+      CONTENT.photoLibrary = [];
+      CONTENT.desktopPhotos = [];
+      CONTENT.projectMedia = {};
+      console.info("Rizvisions media could not load. Run the V10.5 migration if this is the first deploy.", error);
+    } finally {
+      CONTENT.mediaLoading = false;
+      refreshMediaSurfaces();
     }
+  }
+
+  function refreshMediaSurfaces() {
+    renderDesktopPhotos();
+    const photosWindow = windowsRoot.querySelector('[data-app-window="photos"]');
+    if (photosWindow) {
+      const collection = photosWindow.dataset.photosCollection || "all";
+      $(".window-body", photosWindow).innerHTML = renderPhotos(collection);
+      wirePhotosApp(photosWindow);
+    }
+    $$('[data-app-window^="project-"]', windowsRoot).forEach((projectWindow) => {
+      const projectId = projectWindow.dataset.appWindow.replace("project-", "");
+      const project = projectDefinitions[projectId];
+      if (!project) return;
+      $(".window-body", projectWindow).innerHTML = renderProject(project, projectId);
+      wireAppSpecific(projectWindow, `project-${projectId}`);
+    });
   }
 
   function mediaTypeFromSrc(src=""){return /\.(mp4|mov|m4v|webm|ogg)$/i.test(src)?"video":"image";}
@@ -883,10 +1146,11 @@
     if(action==="open-spotlight")openSpotlight();
     if(action==="cycle-wallpaper")cycleWallpaper();
     if(action==="sort-icons")sortIcons();
-    if(action==="desktop-info")showToast("Rizvisions Desktop · Version 10");
+    if(action==="desktop-info")showToast("Rizvisions Desktop · Version 10.5");
     if(action==="quick-look-photo"){const photo=(CONTENT.desktopPhotos||[]).find((item)=>item.id===(contextPhotoId||selectedPhotoId));if(photo)openMediaFile(photo);}
+    if(action==="view-photo-library"){const photo=(CONTENT.desktopPhotos||[]).find((item)=>item.id===(contextPhotoId||selectedPhotoId));if(photo)openPhotosAtMedia(photo);}
     if(action==="bring-photo-front"){const file=desktopPhotosRoot.querySelector(`[data-photo-id="${CSS.escape(contextPhotoId||"")}"]`);if(file){file.style.zIndex=String(++photoZCounter);persistObjectPosition(file);saveState();}}
-    if(action==="reset-photo-position"){if(contextPhotoId&&defaultPhotos[contextPhotoId]){state.photos[contextPhotoId]=clone(defaultPhotos[contextPhotoId]);applyPhotoLayout();saveState();showToast("Photo put back");}}
+    if(action==="reset-photo-position"){if(contextPhotoId&&defaultPhotos[contextPhotoId]){state.photos[contextPhotoId]=clone(defaultPhotos[contextPhotoId]);applyPhotoLayout();saveState();showToast("Desktop position reset");}}
     if(action==="show-current-card")showCurrentCard();
     if(action==="dock-reset")resetDock();
     if(action==="dock-magnification"){state.dockMagnification=!state.dockMagnification;dock.classList.toggle("no-magnify",!state.dockMagnification);saveState();showToast(state.dockMagnification?"Dock magnification on":"Dock magnification off");}

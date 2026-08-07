@@ -1,11 +1,23 @@
-# Media management moved to Rizvisions Admin
+# Media workflow
 
-Do not upload new media to GitHub.
+Do not add media to GitHub.
 
-After V10 is configured, open:
+Open:
 
-`https://rizvisions.com/admin`
+`https://rizvisions.com/admin/`
 
-Sign in and drag in your photos and videos. The admin page controls the Photos app, desktop media, captions, order, albums, and visibility.
+Upload once, then edit the asset and choose its destinations:
 
-See `V10_SETUP.md` for the one-time installation steps.
+- **Photos**: appears in the Photos app and opens in the gallery viewer.
+- **Desktop**: appears as a draggable file and opens in its own individual window.
+- **Selected Work**: appears inside a project folder and opens in its own individual window.
+
+A file can be Desktop-only, Photos-only, Work-only, or any combination.
+
+## Fields
+
+- **Display name**: the clean public title. Change it whenever you want; the stored filename stays untouched.
+- **Description / caption**: optional context shown in the Photos gallery and project views.
+- **Alt text**: accessibility description.
+- **Collection**: a Photos grouping such as Chicago, Film, People, or Rizvisions Archive.
+- **Featured in Photos**: adds the asset to the large Featured carousel. Multiple assets can be featured.
