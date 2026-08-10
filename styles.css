@@ -1644,3 +1644,619 @@ body.window-resizing, body.window-resizing * { user-select:none!important; }
   .photos-gallery > footer > div:first-child { display: none; }
   .project-folder-header { grid-template-columns: 1fr; }
 }
+
+/* ========================================================================== */
+/* V10.6 — centered desktop, Apple-like apps, fluid motion, boot hello         */
+/* ========================================================================== */
+
+/* First-load handwriting intro. The desktop exists behind it and resolves in. */
+.boot-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #f5f5f3;
+  color: #111113;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .82s cubic-bezier(.22,.61,.36,1), visibility .82s;
+}
+.boot-intro::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(255,255,255,.96), rgba(255,255,255,.28) 38%, transparent 70%),
+    linear-gradient(180deg, rgba(255,255,255,.7), transparent 55%);
+  pointer-events: none;
+}
+.boot-intro-inner {
+  position: relative;
+  width: min(690px, 76vw);
+  display: grid;
+  justify-items: center;
+  gap: 26px;
+  transform: translateY(-2vh);
+}
+.boot-hello { width: min(638px, 100%); height: auto; overflow: visible; filter: drop-shadow(0 2px 8px rgba(0,0,0,.035)); }
+.boot-hello-path { vector-effect: non-scaling-stroke; }
+.boot-greeting {
+  min-height: 24px;
+  font-size: clamp(16px, 1.35vw, 22px);
+  font-weight: 510;
+  letter-spacing: -.02em;
+  color: rgba(30,30,32,.68);
+  opacity: 0;
+  transform: translateY(7px);
+  transition: opacity .65s ease, transform .8s cubic-bezier(.22,.61,.36,1);
+}
+.boot-intro.greeting-visible .boot-greeting { opacity: 1; transform: none; }
+.boot-skip {
+  position: fixed;
+  right: 24px;
+  bottom: 20px;
+  border: 0;
+  padding: 8px 10px;
+  background: transparent;
+  color: rgba(40,40,44,.34);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .3s;
+}
+.boot-active .boot-skip { opacity: 1; }
+.boot-intro.leaving { opacity: 0; visibility: hidden; pointer-events: none; }
+body.boot-pending #os { opacity: 0; transform: scale(1.012); filter: blur(5px); }
+#os { transition: opacity .9s ease, transform 1.1s cubic-bezier(.22,.61,.36,1), filter 1s ease; }
+body.desktop-ready #os { opacity: 1; transform: none; filter: none; }
+body.boot-active .desktop-item,
+body.boot-active .now-widget,
+body.boot-active .photo-file,
+body.boot-active .dock-wrap { opacity: 0; transform: translateY(8px); }
+body.desktop-ready .desktop-item,
+body.desktop-ready .now-widget,
+body.desktop-ready .photo-file,
+body.desktop-ready .dock-wrap {
+  opacity: 1;
+  transition: opacity .7s ease, transform .85s cubic-bezier(.22,.61,.36,1);
+}
+body.desktop-ready .desktop-item:nth-child(1) { transition-delay: .05s; }
+body.desktop-ready .desktop-item:nth-child(2) { transition-delay: .08s; }
+body.desktop-ready .desktop-item:nth-child(3) { transition-delay: .11s; }
+body.desktop-ready .desktop-item:nth-child(4) { transition-delay: .14s; }
+body.desktop-ready .desktop-item:nth-child(5) { transition-delay: .17s; }
+body.desktop-ready .desktop-item:nth-child(6) { transition-delay: .20s; }
+body.desktop-ready .desktop-item:nth-child(7) { transition-delay: .23s; }
+body.desktop-ready .desktop-item:nth-child(8) { transition-delay: .26s; }
+body.desktop-ready .desktop-item:nth-child(9) { transition-delay: .29s; }
+body.desktop-ready .desktop-item:nth-child(10) { transition-delay: .32s; }
+body.desktop-ready .desktop-item:nth-child(11) { transition-delay: .35s; }
+body.desktop-ready .desktop-item:nth-child(12) { transition-delay: .38s; }
+body.desktop-ready .dock-wrap { transition-delay: .2s; }
+
+/* Desktop defaults now form a centered 4 × 3 field rather than leaning left. */
+.desktop-item { will-change: left, top, transform, opacity; }
+
+/* Smooth reset/sort, inspired by Finder desktop objects gliding back home. */
+.os.layout-resetting .desktop-item,
+.os.layout-resetting .photo-file,
+.os.layout-resetting .now-widget {
+  transition:
+    left .68s cubic-bezier(.2,.8,.2,1),
+    top .68s cubic-bezier(.2,.8,.2,1),
+    transform .68s cubic-bezier(.2,.8,.2,1),
+    opacity .34s ease,
+    box-shadow .3s ease !important;
+}
+.os.layout-resetting .desktop-item:nth-child(2n) { transition-duration: .73s; }
+.os.layout-resetting .desktop-item:nth-child(3n) { transition-duration: .77s; }
+.os.layout-resetting .photo-file:nth-child(2n) { transition-duration: .76s; }
+.desktop-item.dragging,
+.photo-file.dragging,
+.now-widget.dragging { transition: none !important; }
+
+/* Finder / Selected Work — reduce navigation to the two real concepts. */
+.finder-shell {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 204px minmax(0,1fr);
+  background: var(--window-bg);
+  color: var(--window-text);
+}
+.finder-sidebar {
+  padding: 16px 10px;
+  background: color-mix(in srgb, var(--sidebar-surface) 88%, transparent);
+  border-right: 1px solid var(--hairline);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+}
+.finder-sidebar .sidebar-section { display: grid; gap: 3px; }
+.finder-sidebar .sidebar-row {
+  width: 100%;
+  min-height: 34px;
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--window-text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: default;
+}
+.finder-sidebar .sidebar-row.active { background: var(--accent); color: #fff; }
+.sidebar-glyph { width: 20px; display: grid; place-items: center; color: var(--accent); font-size: 14px; font-weight: 680; }
+.sidebar-row.active .sidebar-glyph { color: #fff; }
+.finder-main { min-width: 0; min-height: 0; display: grid; grid-template-rows: 56px minmax(0,1fr) 24px; }
+.finder-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--hairline);
+  background: color-mix(in srgb,var(--surface-1) 85%,transparent);
+}
+.finder-toolbar .toolbar-button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--window-text);
+  font-size: 22px;
+  cursor: default;
+}
+.finder-toolbar .toolbar-button:hover { background: var(--hover-surface); }
+.finder-title-inline { font-size: 18px; letter-spacing: -.025em; }
+.toolbar-spacer { flex: 1; }
+.finder-toolbar .search-field {
+  width: 172px;
+  height: 32px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: var(--field-surface);
+  color: var(--window-text);
+  font: inherit;
+  font-size: 12px;
+}
+.finder-content { min-height: 0; overflow: auto; padding: 28px 32px; }
+.finder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px,1fr));
+  gap: 28px 24px;
+  align-items: start;
+}
+.finder-grid .file-item {
+  min-width: 0;
+  min-height: 118px;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 8px;
+  padding: 2px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--window-text);
+  font: inherit;
+  cursor: default;
+}
+.finder-grid .file-item > img,
+.finder-grid .file-item > .media-thumb-shell {
+  width: 76px;
+  height: 76px;
+  object-fit: contain;
+  border-radius: 12px;
+}
+.finder-grid .application-item > img { width: 74px; height: 74px; object-fit: contain; filter: drop-shadow(0 5px 8px rgba(0,0,0,.17)); }
+.finder-grid .finder-media-item > img,
+.finder-grid .finder-media-item > .media-thumb-shell {
+  width: 84px;
+  height: 78px;
+  border-radius: 7px;
+  background: #171719;
+  box-shadow: 0 5px 15px rgba(0,0,0,.16);
+}
+.finder-folder { position: relative; width: 88px; height: 70px; display: grid; place-items: center; }
+.finder-folder img { width: 88px; height: 70px; object-fit: contain; }
+.finder-folder i { position: absolute; right: 1px; bottom: 1px; width: 11px; height: 11px; border-radius: 50%; background: var(--tag,#8e8e93); border: 2px solid var(--window-bg); }
+.finder-calendar { width: 72px !important; height: 72px !important; }
+.finder-grid .file-name {
+  max-width: 116px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.finder-grid .file-item:focus .file-name,
+.finder-grid .file-item.selected .file-name { background: var(--accent); color: #fff; outline: none; }
+.finder-statusbar { display: grid; place-items: center; border-top: 1px solid var(--hairline); color: var(--window-muted); font-size: 10px; }
+
+/* Notes — closer to the real three-column Notes hierarchy. */
+.notes-app {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 238px 286px minmax(360px,1fr);
+  background: #fffefb;
+  color: #242426;
+}
+.notes-folders {
+  min-width: 0;
+  padding: 14px 10px;
+  border-right: 1px solid rgba(0,0,0,.09);
+  background: rgba(244,241,233,.83);
+  backdrop-filter: blur(24px) saturate(130%);
+  -webkit-backdrop-filter: blur(24px) saturate(130%);
+}
+.notes-sidebar-top { height: 28px; }
+.notes-sidebar-label { margin: 16px 10px 5px; color: #737376; font-size: 11px; font-weight: 720; }
+.notes-group { display: grid; gap: 3px; }
+.notes-group button {
+  width: 100%;
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #29292b;
+  font: inherit;
+  text-align: left;
+}
+.notes-group button.active { background: rgba(121,121,128,.12); }
+.notes-group button strong { font-size: 13px; font-weight: 590; }
+.notes-group button em { color: #9a9a9e; font-size: 12px; font-style: normal; }
+.notes-quick-icon { width: 21px; height: 21px; border: 1.7px solid currentColor; border-radius: 4px; display: grid; place-items: center; font-size: 10px; }
+.notes-folder-icon { color: #ff9f0a; font-size: 20px; line-height: 1; }
+.notes-browser { min-width: 0; min-height: 0; display: grid; grid-template-rows: 62px minmax(0,1fr); border-right: 1px solid rgba(0,0,0,.1); background: #fff; }
+.notes-browser-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 14px 8px 18px;
+  border-bottom: 1px solid rgba(0,0,0,.09);
+}
+.notes-browser-toolbar > div:first-child { display: grid; }
+.notes-browser-toolbar strong { font-size: 18px; letter-spacing: -.025em; }
+.notes-browser-toolbar small { color: #79797d; font-size: 11px; }
+.notes-toolbar-actions { display: flex; gap: 8px; }
+.notes-toolbar-actions button,
+.notes-editor-toolbar button {
+  min-width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 16px;
+  background: rgba(118,118,128,.08);
+  color: #4d4d50;
+  font: inherit;
+  cursor: default;
+}
+.notes-compose { color: #ff9f0a !important; }
+.notes-note-list { min-height: 0; overflow: auto; padding: 10px 14px 26px; }
+.notes-note-list h3 { margin: 13px 5px 7px; padding-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,.08); font-size: 13px; }
+.notes-note-list button {
+  width: 100%;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: 7px;
+  row-gap: 2px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #29292b;
+  font: inherit;
+  text-align: left;
+}
+.notes-note-list button.active { background: rgba(118,118,128,.16); }
+.notes-note-list button strong { grid-column: 1/-1; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notes-note-list button span { font-size: 11px; }
+.notes-note-list button small { min-width: 0; color: #77777a; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.note-editor.apple-note-editor { min-width: 0; min-height: 0; display: grid; grid-template-rows: 54px 30px minmax(0,1fr); background: #fffefb; }
+.notes-editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-bottom: 1px solid rgba(0,0,0,.07);
+}
+.notes-editor-toolbar > span { flex: 1; }
+.note-meta { display: grid; place-items: center; color: #9a9a9e; font-size: 11px; }
+.note-editor-textarea {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  resize: none;
+  border: 0;
+  outline: 0;
+  padding: 10px 30px 34px;
+  background: transparent;
+  color: #202022;
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  caret-color: #ff9f0a;
+}
+.os:not([data-wallpaper="grid"]) .notes-app { color: var(--window-text); }
+.os:not([data-wallpaper="grid"]) .notes-folders,
+.os:not([data-wallpaper="grid"]) .notes-browser,
+.os:not([data-wallpaper="grid"]) .note-editor.apple-note-editor { background: var(--window-bg); color: var(--window-text); border-color: var(--hairline); }
+.os:not([data-wallpaper="grid"]) .notes-group button,
+.os:not([data-wallpaper="grid"]) .notes-note-list button,
+.os:not([data-wallpaper="grid"]) .note-editor-textarea { color: var(--window-text); }
+.os:not([data-wallpaper="grid"]) .notes-note-list button small,
+.os:not([data-wallpaper="grid"]) .notes-browser-toolbar small,
+.os:not([data-wallpaper="grid"]) .note-meta { color: var(--window-muted); }
+
+/* Calendar — restrained native month view. */
+.calendar-app { height: 100%; min-height: 0; display: grid; grid-template-columns: 210px minmax(0,1fr); background: var(--window-bg); color: var(--window-text); }
+.calendar-sidebar { padding: 18px 12px; border-right: 1px solid var(--hairline); background: color-mix(in srgb,var(--sidebar-surface) 88%,transparent); }
+.calendar-mini-title { padding: 0 8px 17px; font-size: 13px; }
+.calendar-list-title { margin: 8px; color: var(--window-muted); font-size: 10px; font-weight: 720; text-transform: uppercase; letter-spacing: .07em; }
+.calendar-list-row { min-height: 31px; display: flex; align-items: center; gap: 9px; padding: 0 9px; border-radius: 7px; font-size: 12px; }
+.calendar-list-row:hover { background: var(--hover-surface); }
+.calendar-dot { width: 10px; height: 10px; border-radius: 50%; }
+.calendar-dot.personal { background: #ff453a; }
+.calendar-dot.work { background: #0a84ff; }
+.calendar-dot.rizvisions { background: #bf5af2; }
+.calendar-main { min-width: 0; min-height: 0; display: grid; grid-template-rows: 54px 30px minmax(0,1fr); }
+.calendar-toolbar { display: flex; align-items: center; gap: 7px; padding: 0 14px; border-bottom: 1px solid var(--hairline); }
+.calendar-toolbar button { height: 30px; min-width: 30px; border: 1px solid var(--hairline); border-radius: 7px; padding: 0 10px; background: var(--field-surface); color: var(--window-text); font: inherit; font-size: 11px; }
+.calendar-toolbar button.active { background: var(--accent); color: #fff; border-color: transparent; }
+.calendar-toolbar strong { font-size: 15px; }
+.calendar-toolbar-spacer { flex: 1; }
+.calendar-weekdays, .calendar-month-grid { display: grid; grid-template-columns: repeat(7,1fr); }
+.calendar-weekdays { padding: 0 8px; border-bottom: 1px solid var(--hairline); }
+.calendar-weekdays b { align-self: center; padding-right: 6px; color: var(--window-muted); font-size: 9px; font-weight: 700; text-align: right; }
+.calendar-month-grid { min-height: 0; grid-template-rows: repeat(6,1fr); border-left: 1px solid var(--hairline); }
+.calendar-cell { position: relative; display: flex; justify-content: flex-end; padding: 8px; border-right: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); font-size: 11px; }
+.calendar-cell.outside { color: color-mix(in srgb,var(--window-muted) 55%,transparent); }
+.calendar-cell.today { color: #fff; font-weight: 700; }
+.calendar-cell.today::before { content: ""; position: absolute; right: 3px; top: 3px; width: 25px; height: 25px; border-radius: 50%; background: #ff453a; z-index: 0; }
+.calendar-cell.today { z-index: 1; }
+.calendar-cell.today::after { content: attr(data-day); }
+.calendar-cell.today { isolation: isolate; }
+.calendar-cell.today::before { z-index: -1; }
+
+/* Photos 10.6 — chronology first, compact featured strip, no cropping. */
+.photos-app { grid-template-columns: 190px minmax(0,1fr); background: var(--window-bg); }
+.photos-sidebar { background: color-mix(in srgb,var(--sidebar-surface) 90%,transparent); border-right: 1px solid var(--hairline); }
+.photos-library { overflow: auto; }
+.photos-library-toolbar { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb,var(--window-bg) 88%,transparent); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%); }
+.photos-featured-carousel { margin: 12px 22px 18px; }
+.photos-featured-track { grid-auto-columns: minmax(240px, 38%); gap: 10px; }
+.photos-featured-card { min-height: 150px; max-height: 210px; border-radius: 15px; }
+.photos-featured-card > img,
+.photos-featured-card > .media-thumb-shell { width: 100%; height: 100%; min-height: 150px; max-height: 210px; object-fit: contain; background: #151517; }
+.photos-featured-card > span:last-child { padding: 42px 13px 11px; }
+.photos-featured-card strong { font-size: 14px; }
+.photos-featured-card em { font-size: 10px; }
+.photos-chronology { padding: 4px 20px 34px; }
+.photos-date-group { margin: 0 0 28px; }
+.photos-date-group > header { display: flex; align-items: baseline; justify-content: space-between; margin: 0 2px 10px; }
+.photos-date-group > header strong { font-size: 20px; letter-spacing: -.035em; }
+.photos-date-group > header small { color: var(--window-muted); font-size: 10px; }
+.photos-natural-grid { padding: 0; grid-template-columns: repeat(auto-fill,minmax(145px,1fr)); gap: 6px; }
+.photo-natural-tile { min-height: 104px; max-height: 240px; border-radius: 7px; background: #151517; }
+.photo-natural-tile > img,
+.photo-natural-tile > .media-thumb-shell,
+.media-thumb-shell img,
+.media-thumb-shell video { object-fit: contain !important; }
+.photo-natural-tile[data-media-type="video"]::after { content: "VIDEO"; position: absolute; left: 7px; top: 7px; padding: 3px 5px; border-radius: 5px; background: rgba(0,0,0,.5); color: #fff; font-size: 7px; font-weight: 750; letter-spacing: .08em; }
+
+/* In-Photos gallery is a self-contained native viewer, never laid over giant hero content. */
+.photos-gallery {
+  grid-template-columns: 52px minmax(0,1fr) 52px 0;
+  grid-template-rows: 48px minmax(0,1fr) 92px;
+  background: #111113;
+}
+.photos-gallery.info-open { grid-template-columns: 52px minmax(0,1fr) 52px 250px; }
+.photos-gallery > header { padding: 0 13px; background: #1d1d1f; }
+.photos-gallery > header button { width: 20px; height: 20px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.13); }
+.photos-gallery-stage { position: relative; grid-column: 2; background: #111113; overflow: hidden; padding: 12px; }
+.photos-gallery-stage img,
+.photos-gallery-stage video,
+.photos-gallery-stage .apple-video-player,
+.photos-gallery-stage .apple-video-element {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+}
+.photos-gallery-stage .apple-video-player { display: grid; place-items: center; background: #111113; }
+.photos-gallery-stage .apple-video-element { position: absolute; inset: 0; }
+.photos-gallery-info { grid-column: 4; grid-row: 2 / 4; min-width: 0; overflow: auto; padding: 18px 16px; border-left: 1px solid rgba(255,255,255,.08); background: #1c1c1e; color: #fff; }
+.photos-gallery-info:empty { display: none; }
+.photos-gallery > footer { grid-column: 1 / 4; grid-template-columns: minmax(140px,.3fr) minmax(0,1fr); min-height: 0; padding: 9px 14px; }
+.photos-gallery-filmstrip button { flex-basis: 56px; width: 56px; height: 66px; border-radius: 7px; }
+.gallery-arrow { width: 34px; height: 34px; font-size: 23px; background: rgba(255,255,255,.1); }
+.gallery-arrow:hover { background: rgba(255,255,255,.18); }
+.media-info-list { display: grid; gap: 12px; }
+.media-info-list > div { padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.media-info-list small { display: block; color: rgba(255,255,255,.45); font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
+.media-info-list strong { display: block; margin-top: 3px; font-size: 12px; font-weight: 560; }
+
+/* QuickTime-like individual video window: full frame, hover-only controls. */
+.media-window-video .window-body { background: #111113; }
+.media-viewer.video { position: relative; width: 100%; height: 100%; min-height: 0; display: grid; place-items: center; overflow: hidden; background: #111113; }
+.apple-video-player { position: relative; width: 100%; height: 100%; min-width: 0; min-height: 0; display: grid; place-items: center; overflow: hidden; background: #111113; }
+.apple-video-element { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain !important; background: #111113; }
+.apple-video-controls {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  width: min(680px, calc(100% - 34px));
+  padding: 13px 16px 11px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 18px;
+  background: rgba(34,34,38,.75);
+  box-shadow: 0 12px 36px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.09);
+  backdrop-filter: blur(24px) saturate(155%);
+  -webkit-backdrop-filter: blur(24px) saturate(155%);
+  transform: translate(-50%, 8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .22s ease, transform .25s cubic-bezier(.22,.61,.36,1);
+}
+.apple-video-player:hover .apple-video-controls,
+.apple-video-player.controls-visible .apple-video-controls {
+  opacity: 1;
+  transform: translate(-50%,0);
+  pointer-events: auto;
+}
+.video-control-primary { display: flex; align-items: center; gap: 10px; }
+.video-control-primary button {
+  min-width: 31px;
+  height: 31px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+.video-control-primary button:hover { background: rgba(255,255,255,.09); }
+.video-control-primary .video-play { font-size: 24px; min-width: 42px; }
+.video-control-spacer { flex: 1; }
+.video-volume { width: 92px; accent-color: #fff; }
+.video-control-timeline { display: grid; grid-template-columns: 42px minmax(0,1fr) 42px; gap: 8px; align-items: center; margin-top: 7px; }
+.video-control-timeline time { color: rgba(255,255,255,.68); font-size: 10px; text-align: center; }
+.video-control-timeline input { width: 100%; accent-color: #fff; }
+.apple-video-player.compact .apple-video-controls { bottom: 12px; width: min(560px,calc(100% - 24px)); padding: 9px 12px 8px; border-radius: 15px; }
+.apple-video-player.compact .video-volume { display: none; }
+.apple-video-player.compact .video-control-primary button { height: 27px; }
+.apple-video-player.compact .video-control-timeline { margin-top: 4px; }
+
+/* Keep portrait/landscape media completely visible in any viewer. */
+.media-viewer.image img,
+.media-viewer.video video,
+.project-media-file > img,
+.project-media-file > .media-thumb-shell { object-fit: contain !important; }
+
+/* A little more system-level polish everywhere. */
+.mac-window { box-shadow: 0 28px 70px rgba(0,0,0,.25), 0 5px 18px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.12); }
+.mac-window .window-titlebar { backdrop-filter: blur(25px) saturate(160%); -webkit-backdrop-filter: blur(25px) saturate(160%); }
+.mac-button, .toolbar-button, .sidebar-row, .account-row { transition: background .15s ease, color .15s ease, transform .12s ease; }
+
+@media (max-width: 1050px) {
+  .notes-app { grid-template-columns: 196px 240px minmax(300px,1fr); }
+  .finder-shell { grid-template-columns: 180px minmax(0,1fr); }
+  .photos-featured-track { grid-auto-columns: minmax(220px,58%); }
+}
+@media (max-width: 760px) {
+  .boot-intro-inner { width: 84vw; }
+  .notes-app { grid-template-columns: 1fr; }
+  .notes-folders, .notes-browser { display: none; }
+  .finder-shell, .calendar-app { grid-template-columns: 1fr; }
+  .finder-sidebar, .calendar-sidebar { display: none; }
+  .photos-featured-track { grid-auto-columns: 82%; }
+}
+
+/* V10.6 Photos markup alignment / final overrides. */
+.photos-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 7;
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--hairline);
+  background: color-mix(in srgb,var(--window-bg) 90%,transparent);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+.photos-topbar h1 { margin: 0; font-size: 24px; letter-spacing: -.04em; }
+.photos-topbar small { color: var(--window-muted); font-size: 10px; }
+.photos-segmented { display: flex; padding: 2px; border: 1px solid var(--hairline); border-radius: 9px; background: var(--field-surface); }
+.photos-segmented button { min-width: 56px; height: 27px; border: 0; border-radius: 7px; background: transparent; color: var(--window-text); font: inherit; font-size: 10px; }
+.photos-segmented button.active { background: var(--surface-1); box-shadow: 0 1px 3px rgba(0,0,0,.11); }
+.photos-scroll-content { min-height: calc(100% - 68px); padding-top: 4px; }
+.photos-featured-strip { margin: 7px 20px 18px; }
+.photos-featured-strip > header { display: flex; align-items: baseline; gap: 7px; margin: 0 2px 8px; }
+.photos-featured-strip > header strong { font-size: 12px; }
+.photos-featured-strip > header small { color: var(--window-muted); font-size: 9px; }
+.photos-featured-strip .photos-featured-track { margin: 0; }
+.photos-library-feed { padding: 0 20px 30px; }
+.photos-library-feed > .photos-natural-grid { padding: 0; }
+.photos-library-feed > .photos-date-group .photos-natural-grid { padding: 0; }
+
+.photos-gallery {
+  grid-template-columns: minmax(0,1fr) 0;
+  grid-template-rows: 48px minmax(0,1fr) 88px;
+}
+.photos-gallery.info-open { grid-template-columns: minmax(0,1fr) 250px; }
+.photos-gallery > header { grid-column: 1 / -1; grid-row: 1; }
+.photos-viewer-toolbar { display: grid !important; grid-template-columns: 34px minmax(0,1fr) 1fr 34px; align-items: center; }
+.photos-viewer-toolbar > span { min-width: 0; }
+.photos-viewer-toolbar [data-gallery-info] { width: 30px; height: 30px; border: 0; border-radius: 50%; background: rgba(255,255,255,.08); color: #fff; cursor: pointer; }
+.photos-gallery-stage {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 50px minmax(0,1fr) 50px;
+  padding: 10px 0;
+  align-items: center;
+  background: #111113;
+}
+.photos-gallery-stage .gallery-prev { grid-column: 1; }
+.photos-gallery-stage .photos-gallery-media { grid-column: 2; width: 100%; height: 100%; min-width: 0; min-height: 0; display: grid; place-items: center; overflow: hidden; }
+.photos-gallery-stage .gallery-next { grid-column: 3; }
+.photos-gallery-stage img,
+.photos-gallery-stage video,
+.photos-gallery-stage .apple-video-player,
+.photos-gallery-stage .apple-video-element { object-fit: contain !important; }
+.photos-gallery > footer { grid-column: 1; grid-row: 3; min-width: 0; display: block; padding: 9px 14px; }
+.photos-gallery-filmstrip { height: 100%; display: flex; align-items: center; justify-content: center; }
+.photos-gallery-info { grid-column: 2; grid-row: 2 / 4; }
+.photos-gallery-info[hidden] { display: none !important; }
+.photos-info-card > strong { display: block; font-size: 14px; }
+.photos-info-card > p { margin: 6px 0 14px; color: rgba(255,255,255,.65); font-size: 11px; line-height: 1.4; }
+.photos-info-card dl { margin: 0; display: grid; gap: 10px; }
+.photos-info-card dl div { padding-bottom: 9px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.photos-info-card dt { color: rgba(255,255,255,.42); font-size: 9px; text-transform: uppercase; letter-spacing: .07em; }
+.photos-info-card dd { margin: 3px 0 0; font-size: 11px; }
+
+/* Desktop Calendar icon optical size matches the PNG app icons. */
+.desktop-item[data-id="calendar"] .calendar-icon { width: 72px; height: 72px; border-radius: 16px; }
+.desktop-item[data-id="calendar"] .calendar-weekday { margin-top: 7px; font-size: 10px; }
+.desktop-item[data-id="calendar"] .calendar-day { font-size: 37px; }
+
+/* Boot object transforms preserve each desktop object's own positioning math. */
+body.boot-active .desktop-item { transform: translate(-50%,-50%) scale(.965); }
+body.desktop-ready .desktop-item { transform: translate(-50%,-50%) scale(1); }
+body.boot-active .now-widget { transform: translateX(-50%) translateY(7px) scale(.985); }
+body.desktop-ready .now-widget { transform: translateX(-50%) translateY(0) scale(1); }
+body.boot-active .photo-file { opacity: 0; }
+body.desktop-ready .photo-file { opacity: 1; }
+body.boot-active .dock-wrap { transform: translateX(-50%) translateY(9px); }
+body.desktop-ready .dock-wrap { transform: translateX(-50%) translateY(0); }
+.video-control-primary button svg { width: 21px; height: 21px; display: block; margin: auto; }
+.video-play svg { width: 28px !important; height: 28px !important; }
+.video-icon-pause { display: none; }
+.video-play[data-state="pause"] .video-icon-play { display: none; }
+.video-play[data-state="pause"] .video-icon-pause { display: inline; }
+.video-control-primary [data-video-mute][data-muted="true"] .sound-wave { display: none; }

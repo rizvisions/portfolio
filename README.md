@@ -1,32 +1,33 @@
-# Rizvisions macOS V10.5
+# Rizvisions macOS V10.6
 
-V10.5 turns media into reusable assets with placements instead of one overloaded set of checkboxes.
+V10.6 is the desktop-polish and media-metadata release.
 
 ## What changed
 
-- Removed every bundled stock-media fallback and the refresh flash it caused.
-- Added a proper Photos gallery viewer with arrows, keyboard navigation, filmstrip thumbnails, captions, and natural aspect ratios.
-- Added a multi-item Featured carousel in Photos.
-- Made desktop media open as individual aspect-aware Preview/video windows.
-- Added editable display names without renaming the stored file.
-- Replaced Album with Photos Collections.
-- Added reusable placements for Photos, Desktop, and Selected Work project folders.
-- Added project-file environments for Parker, Blue Specs, Whop/WAP, Windsurf, and Creator Work.
-- Added full-size photo/video preview inside Admin.
-- Added video poster generation and web-friendly handling for iPhone MOV uploads.
-- Made Desktop-only media possible.
-- Renamed confusing desktop commands to Move to Front, Reset Desktop Position, and View in Photos Library.
+- Centered the 12-app desktop grid and added Calendar, Notes, and Terminal to the third row.
+- Simplified Finder / Selected Work navigation to Recents and Applications.
+- Recents now surfaces the media and project files that actually exist; Applications shows every desktop app.
+- Rebuilt Notes around the native three-column macOS Notes hierarchy.
+- Added a native-style Calendar month app.
+- Added smooth Gilly-like restore/sort animations instead of teleporting desktop objects.
+- Added the handwritten Apple-style `hello` first-load experience, followed by a local-time greeting.
+- Rebuilt Photos around newest-first chronology, Photos / Videos filters, Years / Months / All Photos views, a smaller Featured strip, and a contained gallery viewer.
+- Added image capture metadata ingestion in Admin when metadata is available: capture date, camera, lens, dimensions, and selected EXIF fields.
+- Individual videos autoplay muted, preserve the entire frame, and use a hover-only QuickTime-style control overlay.
+- Removed browser-native reset confirmation from the main desktop.
 
-## Existing V10 installation
+## Existing V10.5 installation
 
-Run `supabase/migrate-v10.5.sql` once in Supabase, then deploy this folder to GitHub Pages.
+1. Run `supabase/migrate-v10.6.sql` once in Supabase SQL Editor.
+2. Upload everything inside this folder to the root of `rizvisions/portfolio`, replacing the current site files.
+3. Wait for GitHub Pages to finish, then hard-refresh the site.
 
-The migration preserves existing uploads and converts the old Photos/Desktop flags into placements.
+The migration preserves all existing uploads and placements.
 
-## New installation
+## First-load intro testing
 
-Run `supabase/setup.sql`, then deploy the site.
+The intro shows once per browser tab session. Add `?hello=1` to the site URL to force it to replay while testing.
 
-## Security
+## Media metadata
 
-The website contains only the Supabase project URL and publishable key. Upload, edit, and delete permissions remain protected by Row Level Security and restricted to the configured admin email.
+New image uploads attempt to read embedded capture metadata in the browser before upload. When original capture metadata is not available, the file's last-modified timestamp is used as a fallback. Video uploads store dimensions, duration, and a timestamp fallback from the source file.

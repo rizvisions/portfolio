@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title>Rizvisions Admin</title>
-  <link rel="icon" href="../assets/icons/macos/rizvisions.png?v=105">
-  <link rel="stylesheet" href="admin.css?v=105">
+  <link rel="icon" href="../assets/icons/macos/rizvisions.png?v=106">
+  <link rel="stylesheet" href="admin.css?v=106">
 </head>
 <body>
   <main class="admin-shell">
     <header class="admin-header">
       <a class="brand" href="../" aria-label="Back to Rizvisions">
-        <img src="../assets/icons/macos/rizvisions.png?v=105" alt="">
+        <img src="../assets/icons/macos/rizvisions.png?v=106" alt="">
         <span><strong>Rizvisions</strong><small>Media Admin</small></span>
       </a>
       <div class="header-actions" id="headerActions" hidden>
@@ -23,7 +23,7 @@
 
     <section class="auth-view" id="authView">
       <div class="auth-card">
-        <img class="auth-icon" src="../assets/icons/macos/rizvisions.png?v=105" alt="Rizvisions">
+        <img class="auth-icon" src="../assets/icons/macos/rizvisions.png?v=106" alt="Rizvisions">
         <span class="eyebrow">PRIVATE</span>
         <h1>Manage the archive.</h1>
         <p>Upload once, then place the same photo or video in Photos, on the desktop, or inside a Selected Work project.</p>
@@ -162,7 +162,10 @@
             <summary>Advanced details</summary>
             <dl>
               <div><dt>Original file</dt><dd id="originalFilename"></dd></div>
+              <div><dt>Captured</dt><dd id="mediaCapturedAt"></dd></div>
               <div><dt>Dimensions</dt><dd id="mediaDimensions"></dd></div>
+              <div><dt>Camera</dt><dd id="mediaCamera"></dd></div>
+              <div><dt>Lens</dt><dd id="mediaLens"></dd></div>
               <div><dt>Storage path</dt><dd id="storagePath"></dd></div>
             </dl>
           </details>
@@ -193,9 +196,10 @@
     <option value="Personal"></option>
   </datalist>
 
+  <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="../supabase-config.js?v=105"></script>
-  <script src="admin.js?v=105"></script>
+  <script src="../supabase-config.js?v=106"></script>
+  <script src="admin.js?v=106"></script>
 </body>
 </html>

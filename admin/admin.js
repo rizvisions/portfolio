@@ -201,13 +201,14 @@
 
     if (error) {
       const migrationHint = /media_placements|relationship|schema cache/i.test(error.message)
-        ? " Run supabase/migrate-v10.5.sql once in the SQL Editor."
+        ? " Run supabase/migrate-v10.6.sql once in the SQL Editor."
         : "";
       setStatus(libraryStatus, `${error.message}${migrationHint}`, true);
       return;
     }
 
     mediaItems = Array.isArray(data) ? data : [];
+    mediaItems.sort((a,b) => new Date(b.captured_at || b.created_at || 0) - new Date(a.captured_at || a.created_at || 0));
     setStatus(libraryStatus, "");
     renderLibrary();
   }
@@ -216,7 +217,7 @@
     const query = searchInput.value.trim().toLowerCase();
     const filter = filterSelect.value;
     return mediaItems.filter((item) => {
-      const searchable = `${itemTitle(item)} ${item.filename} ${item.caption || ""} ${item.alt_text || ""} ${(item.media_placements || []).map((p) => `${p.surface} ${p.container}`).join(" ")}`.toLowerCase();
+      const searchable = `${itemTitle(item)} ${item.filename} ${item.caption || ""} ${item.alt_text || ""} ${item.camera_make || ""} ${item.camera_model || ""} ${item.lens_model || ""} ${(item.media_placements || []).map((p) => `${p.surface} ${p.container}`).join(" ")}`.toLowerCase();
       if (query && !searchable.includes(query)) return false;
       if (filter === "photos" && !hasPlacement(item, "photos")) return false;
       if (filter === "desktop" && !hasPlacement(item, "desktop")) return false;
@@ -301,7 +302,10 @@
     $("#workInput").checked = Boolean(work);
     $("#projectInput").value = work?.container || "parker";
     $("#originalFilename").textContent = editingItem.filename || "";
+    $("#mediaCapturedAt").textContent = editingItem.captured_at ? new Date(editingItem.captured_at).toLocaleString() : "Unknown";
     $("#mediaDimensions").textContent = `${editingItem.width || "?"} × ${editingItem.height || "?"}${editingItem.duration_seconds ? ` · ${formatDuration(editingItem.duration_seconds)}` : ""}`;
+    $("#mediaCamera").textContent = [editingItem.camera_make, editingItem.camera_model].filter(Boolean).join(" ") || "—";
+    $("#mediaLens").textContent = editingItem.lens_model || "—";
     $("#storagePath").textContent = editingItem.storage_path || "";
     updatePlacementOptions();
     editDialog.showModal();
@@ -476,6 +480,11 @@
       width: prepared.width,
       height: prepared.height,
       duration_seconds: prepared.duration,
+      captured_at: prepared.capturedAt || new Date(original.lastModified || Date.now()).toISOString(),
+      camera_make: prepared.cameraMake || null,
+      camera_model: prepared.cameraModel || null,
+      lens_model: prepared.lensModel || null,
+      metadata: prepared.metadata || {},
       caption: "",
       alt_text: titleFromName(original.name),
       album: "Library",
@@ -503,7 +512,32 @@
     mediaItems.push(inserted);
   }
 
+  async function readImageMetadata(file) {
+    const fallbackDate = new Date(file.lastModified || Date.now());
+    const result = { capturedAt: fallbackDate.toISOString(), cameraMake:null, cameraModel:null, lensModel:null, metadata:{ originalLastModified:fallbackDate.toISOString() } };
+    if (!window.exifr?.parse) return result;
+    try {
+      const data = await window.exifr.parse(file, { pick:["DateTimeOriginal","CreateDate","ModifyDate","Make","Model","LensModel","FNumber","ExposureTime","ISO","FocalLength","latitude","longitude"] });
+      const date = data?.DateTimeOriginal || data?.CreateDate || data?.ModifyDate;
+      if (date instanceof Date && !Number.isNaN(date.getTime())) result.capturedAt = date.toISOString();
+      result.cameraMake = data?.Make || null;
+      result.cameraModel = data?.Model || null;
+      result.lensModel = data?.LensModel || null;
+      result.metadata = {
+        ...result.metadata,
+        fNumber:data?.FNumber ?? null,
+        exposureTime:data?.ExposureTime ?? null,
+        iso:data?.ISO ?? null,
+        focalLength:data?.FocalLength ?? null,
+        latitude:data?.latitude ?? null,
+        longitude:data?.longitude ?? null
+      };
+    } catch {}
+    return result;
+  }
+
   async function optimizeImage(file) {
+    const imageMetadata = await readImageMetadata(file);
     let source = file;
     if (/(heic|heif)/i.test(file.type) || /\.(heic|heif)$/i.test(file.name)) {
       if (typeof window.heic2any !== "function") throw new Error("HEIC converter did not load");
@@ -523,16 +557,20 @@
     bitmap.close();
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", .88));
     if (!blob) throw new Error("Could not optimize image");
-    return { file: new File([blob], file.name.replace(/\.[^.]+$/, "") + ".webp", { type: "image/webp", lastModified: Date.now() }), width, height, duration: null, posterBlob: null };
+    return { file: new File([blob], file.name.replace(/\.[^.]+$/, "") + ".webp", { type: "image/webp", lastModified: file.lastModified || Date.now() }), width, height, duration: null, posterBlob: null, ...imageMetadata };
   }
 
   async function prepareVideo(original) {
-    const isQuickTime = original.type === "video/quicktime" || /\.mov$/i.test(original.name);
-    const file = isQuickTime
-      ? new File([original], original.name.replace(/\.mov$/i, ".mp4"), { type: "video/mp4", lastModified: original.lastModified })
-      : original;
-    const details = await getVideoDetails(file);
-    return { file, ...details };
+    const details = await getVideoDetails(original);
+    return {
+      file: original,
+      ...details,
+      capturedAt: new Date(original.lastModified || Date.now()).toISOString(),
+      cameraMake: null,
+      cameraModel: null,
+      lensModel: null,
+      metadata: { originalLastModified:new Date(original.lastModified || Date.now()).toISOString() }
+    };
   }
 
   async function getVideoDetails(file) {

@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "rizvisions-os-v10.5";
+  const STORAGE_KEY = "rizvisions-os-v10.6";
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -30,6 +30,9 @@
   const spotlightResults = $("#spotlightResults");
   const volumeSlider = $("#volumeSlider");
   const ccFocus = $("#ccFocus");
+  const bootIntro = $("#bootIntro");
+  const bootGreeting = $("#bootGreeting");
+  const bootSkip = $("#bootSkip");
 
   const CONTENT = window.RIZVISIONS_CONTENT || { mediaLoading: true, allMedia: [], desktopPhotos: [], photoLibrary: [], projectMedia: {}, currentCards: [] };
   CONTENT.projectMedia ||= {};
@@ -44,19 +47,20 @@
   const defaultWidget = { x: 55, y: 5.8, z: 40 };
 
   const DOCK_CATALOG = {
-    finder: { label: "Finder", app: "work", icon: "assets/icons/macos/finder.png?v=96b", fixed: true, running: true },
-    work: { label: "Selected Work", app: "work", icon: "assets/icons/macos/folder.png?v=96b" },
-    photos: { label: "Photos", app: "photos", icon: "assets/icons/macos/photos.png?v=96b" },
-    about: { label: "About Riz", app: "about", icon: "assets/icons/macos/rizvisions.png?v=96b" },
-    settings: { label: "System Settings", app: "settings", icon: "assets/icons/macos/settings.png?v=96b" },
-    messages: { label: "Messages", app: "messages", icon: "assets/icons/macos/messages.png?v=96b", badge: "1" },
-    instagram: { label: "Instagram", app: "instagram", icon: "assets/icons/macos/instagram.png?v=96b" },
-    safari: { label: "Safari", app: "safari", icon: "assets/icons/macos/safari.png?v=96b" },
-    parker: { label: "Parker", app: "parker", icon: "assets/icons/macos/parker.png?v=96b" },
-    notes: { label: "Notes", app: "notes", icon: "assets/icons/macos/notes.png?v=96b" },
-    terminal: { label: "Terminal", app: "terminal", icon: "assets/icons/macos/terminal.png?v=96b" },
-    spotify: { label: "Spotify", app: "spotify", icon: "assets/icons/macos/spotify.png?v=96b" },
-    trash: { label: "Trash", app: "trash", icon: "assets/icons/macos/trash.png?v=96b", kind: "trash", fixed: true }
+    finder: { label: "Finder", app: "work", icon: "assets/icons/macos/finder.png?v=106", fixed: true, running: true },
+    work: { label: "Selected Work", app: "work", icon: "assets/icons/macos/folder.png?v=106" },
+    photos: { label: "Photos", app: "photos", icon: "assets/icons/macos/photos.png?v=106" },
+    about: { label: "About Riz", app: "about", icon: "assets/icons/macos/rizvisions.png?v=106" },
+    settings: { label: "System Settings", app: "settings", icon: "assets/icons/macos/settings.png?v=106" },
+    messages: { label: "Messages", app: "messages", icon: "assets/icons/macos/messages.png?v=106", badge: "1" },
+    instagram: { label: "Instagram", app: "instagram", icon: "assets/icons/macos/instagram.png?v=106" },
+    safari: { label: "Safari", app: "safari", icon: "assets/icons/macos/safari.png?v=106" },
+    parker: { label: "Parker", app: "parker", icon: "assets/icons/macos/parker.png?v=106" },
+    calendar: { label: "Calendar", app: "calendar", icon: "", calendar: true },
+    notes: { label: "Notes", app: "notes", icon: "assets/icons/macos/notes.png?v=106" },
+    terminal: { label: "Terminal", app: "terminal", icon: "assets/icons/macos/terminal.png?v=106" },
+    spotify: { label: "Spotify", app: "spotify", icon: "assets/icons/macos/spotify.png?v=106" },
+    trash: { label: "Trash", app: "trash", icon: "assets/icons/macos/trash.png?v=106", kind: "trash", fixed: true }
   };
   const DEFAULT_DOCK = ["finder", "photos", "about", "messages", "safari", "parker", "notes", "spotify", "trash"];
 
@@ -112,13 +116,14 @@
     safari: { name: "Safari", title: "Rizvisions — Safari", size: [1050, 680], min: [720, 500], render: renderSafari },
     parker: { name: "Parker", title: "Parker", size: [1040, 680], min: [720, 500], render: renderParker },
     spotify: { name: "Spotify", title: "Spotify", size: [800, 650], min: [620, 470], render: renderSpotify },
+    calendar: { name: "Calendar", title: "Calendar", size: [980, 680], min: [700, 500], render: renderCalendar },
     notes: { name: "Notes", title: "Notes", size: [820, 590], min: [620, 440], render: renderNotes },
     terminal: { name: "Terminal", title: "riz — zsh", size: [780, 520], min: [580, 400], render: renderTerminal },
     trash: { name: "Finder", title: "Trash", size: [720, 500], min: [560, 400], render: renderTrash }
   };
 
-  const appIconMap = Object.fromEntries(Object.entries(DOCK_CATALOG).map(([key, item]) => [item.app, item.icon || "assets/icons/macos/document.png?v=96b"]));
-  Object.assign(appIconMap, { work: "assets/icons/macos/finder.png?v=96b", media: "assets/icons/macos/photos.png?v=96b" });
+  const appIconMap = Object.fromEntries(Object.entries(DOCK_CATALOG).map(([key, item]) => [item.app, item.icon || "assets/icons/macos/document.png?v=106"]));
+  Object.assign(appIconMap, { work: "assets/icons/macos/finder.png?v=106", media: "assets/icons/macos/photos.png?v=106", calendar: "assets/icons/macos/document.png?v=106" });
 
   const spotlightItems = [
     ["About Riz", "Riz Zaheer · Chicago · internet home", "about bio riz zaheer", "about"],
@@ -128,6 +133,9 @@
     ["Safari", "Browse Rizvisions links", "web browser links", "safari"],
     ["Instagram", "Choose a profile", "social instagram", "instagram"],
     ["Spotify", "Rizvisions playlist", "music playlist", "spotify"],
+    ["Calendar", "Today and the month at a glance", "calendar dates", "calendar"],
+    ["Notes", "Rizvisions notes and scratchpad", "notes writing", "notes"],
+    ["Terminal", "A tiny command line", "terminal zsh command", "terminal"],
     ["System Settings", "Appearance and desktop preferences", "settings appearance wallpaper", "settings"]
   ].map(([title, subtitle, keywords, app]) => ({ title, subtitle, keywords, icon: appIconMap[app], run: () => openApp(app) }));
 
@@ -638,7 +646,13 @@
         const id=win.dataset.appWindow; return id===item.app || (item.app==="work" && id.startsWith("project-"));
       });
       button.classList.toggle("running", running);
-      button.innerHTML = `<img src="${item.icon}" alt="">${item.badge ? `<span class="notification-badge dock-badge">${item.badge}</span>` : ""}<span class="running-dot"></span>`;
+      if (item.calendar) {
+        const now = new Date();
+        button.classList.add("dock-calendar");
+        button.innerHTML = `<span class="calendar-icon"><span class="calendar-weekday">${now.toLocaleDateString("en-US", { weekday:"short" }).toUpperCase()}</span><span class="calendar-day">${now.getDate()}</span></span><span class="running-dot"></span>`;
+      } else {
+        button.innerHTML = `<img src="${item.icon}" alt="">${item.badge ? `<span class="notification-badge dock-badge">${item.badge}</span>` : ""}<span class="running-dot"></span>`;
+      }
       button.addEventListener("click", () => {
         if (button._suppressClick) return;
         const existing = windowsRoot.querySelector(`[data-app-window="${CSS.escape(item.app)}"]`);
@@ -715,20 +729,36 @@
   function resetDock() { state.dock=[...DEFAULT_DOCK]; state.dockMagnification=true; saveState(); renderDock(); showToast("Dock restored"); }
 
   function resetLayout() {
-    state.icons=clone(defaultIcons);state.photos=clone(defaultPhotos);state.widget=clone(defaultWidget);state.windows={};state.widgetIndex=0;
-    $$(".mac-window",windowsRoot).forEach((win)=>win.remove());activeWindow=null;activeAppName.textContent="Rizvisions";
-    applyIconLayout();applyPhotoLayout();applyWidgetLayout();updateCurrentWidget();saveState();renderDock();showToast("Desktop layout restored");
+    os.classList.add("layout-resetting");
+    state.icons = clone(defaultIcons);
+    state.photos = clone(defaultPhotos);
+    state.widget = clone(defaultWidget);
+    state.windows = {};
+    state.widgetIndex = 0;
+    $$(".mac-window",windowsRoot).forEach((win)=>win.remove());
+    activeWindow = null;
+    activeAppName.textContent = "Rizvisions";
+    requestAnimationFrame(() => {
+      applyIconLayout(); applyPhotoLayout(); applyWidgetLayout(); updateCurrentWidget(); saveState(); renderDock();
+      setTimeout(() => os.classList.remove("layout-resetting"), 760);
+    });
+    showToast("Desktop layout restored");
   }
 
   function fullReset() {
-    if (!window.confirm("Reset Rizvisions on this browser? This clears appearance, Dock, icon positions, windows, and Notes.")) return;
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
-    state=clone(DEFAULT_STATE);setWallpaper(state.wallpaper,false);renderDesktopPhotos();applyIconLayout();applyWidgetLayout();applyDisplayState();resetLayout();renderDock();saveState();showToast("Rizvisions reset");
+    state = clone(DEFAULT_STATE);
+    setWallpaper(state.wallpaper,false);
+    renderDesktopPhotos(); applyIconLayout(); applyWidgetLayout(); applyDisplayState(); resetLayout(); renderDock(); saveState();
+    showToast("Rizvisions reset");
   }
 
   function sortIcons() {
-    const cols=[34,42.2,50.4,58.6]; const rows=[24.8,41,57.2];
-    iconNodes.forEach((node,index)=>{state.icons[node.dataset.id]={x:cols[index%4],y:rows[Math.floor(index/4)]||57.2};});applyIconLayout();saveState();showToast("Icons sorted");
+    const cols=[38,46,54,62]; const rows=[23.5,40.5,57.5];
+    os.classList.add("layout-resetting");
+    iconNodes.forEach((node,index)=>{state.icons[node.dataset.id]={x:cols[index%4],y:rows[Math.floor(index/4)]||57.5};});
+    requestAnimationFrame(()=>{applyIconLayout();saveState();setTimeout(()=>os.classList.remove("layout-resetting"),700);});
+    showToast("Icons sorted");
   }
 
   function updateCurrentWidget(animate=false) {
@@ -771,6 +801,8 @@
     if($("#ncDay")) $("#ncDay").textContent=day;
     if($("#ncMonth")) $("#ncMonth").textContent=`${month} ${year}`;
     if($("#ncLargeTime")) $("#ncLargeTime").textContent=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",hour:"numeric",minute:"2-digit"}).format(now);
+    $$(".calendar-icon .calendar-weekday").forEach((node)=>node.textContent=now.toLocaleDateString("en-US",{weekday:"short"}).toUpperCase());
+    $$(".calendar-icon .calendar-day").forEach((node)=>node.textContent=String(now.getDate()));
   }
 
   function weatherLabel(code){if(code===0)return{label:"Clear"};if([1,2].includes(code))return{label:"Mostly clear"};if(code===3)return{label:"Cloudy"};if([51,53,55,61,63,65,80,81,82].includes(code))return{label:"Rain"};if([71,73,75,85,86].includes(code))return{label:"Snow"};if([95,96,99].includes(code))return{label:"Storms"};return{label:"Chicago"};}
@@ -778,6 +810,7 @@
 
   function wireAppSpecific(win, appId) {
     if (appId === "terminal") wireTerminal(win);
+    if (appId === "work") wireFinderApp(win);
     if (appId === "notes") {
       const textarea = $("textarea", win);
       textarea.value = state.notes;
@@ -797,23 +830,55 @@
     }
   }
 
+  function wireFinderApp(win) {
+    $$('[data-finder-view]', win).forEach((button) => button.addEventListener("click", () => {
+      const view = button.dataset.finderView || "recents";
+      win.dataset.finderView = view;
+      $(".window-body", win).innerHTML = renderFinder(view);
+      wireAppSpecific(win, "work");
+    }));
+    $$('[data-finder-media-id]', win).forEach((button) => button.addEventListener("dblclick", () => {
+      const media = (CONTENT.allMedia || []).find((item) => item.id === button.dataset.finderMediaId);
+      if (media) openMediaFile(media);
+    }));
+  }
+
   function wirePhotosApp(win) {
     const collection = win.dataset.photosCollection || "all";
+    const viewMode = win.dataset.photosView || "all";
     const items = photosForCollection(collection);
     win._photosItems = items;
     $$('[data-photo-collection]', win).forEach((button) => button.addEventListener("click", () => {
       win.dataset.photosCollection = button.dataset.photoCollection;
-      $(".window-body", win).innerHTML = renderPhotos(button.dataset.photoCollection);
+      win.dataset.photosView = win.dataset.photosView || "all";
+      $(".window-body", win).innerHTML = renderPhotos(win.dataset.photosCollection, win.dataset.photosView);
       wirePhotosApp(win);
     }));
-    $$('[data-media-index]', win).forEach((button) => button.addEventListener("click", () => openPhotosGallery(win, Number(button.dataset.mediaIndex))));
-    $$('[data-featured-index]', win).forEach((button) => button.addEventListener("click", () => openPhotosGallery(win, Number(button.dataset.featuredIndex))));
-    $("[data-featured-prev]", win)?.addEventListener("click", () => scrollFeatured(win, -1));
-    $("[data-featured-next]", win)?.addEventListener("click", () => scrollFeatured(win, 1));
-    $("[data-gallery-close]", win)?.addEventListener("click", () => closePhotosGallery(win));
-    $("[data-gallery-prev]", win)?.addEventListener("click", () => stepPhotosGallery(win, -1));
-    $("[data-gallery-next]", win)?.addEventListener("click", () => stepPhotosGallery(win, 1));
-    $(".photos-gallery", win)?.addEventListener("click", (event) => {
+    $$('[data-photo-view]', win).forEach((button) => button.addEventListener("click", () => {
+      win.dataset.photosView = button.dataset.photoView || "all";
+      $(".window-body", win).innerHTML = renderPhotos(win.dataset.photosCollection || "all", win.dataset.photosView);
+      wirePhotosApp(win);
+    }));
+    $$('[data-media-id]', win).forEach((button) => button.addEventListener("click", () => {
+      const index = items.findIndex((item) => item.id === button.dataset.mediaId);
+      if (index >= 0) openPhotosGallery(win, index);
+    }));
+    $$('[data-featured-id]', win).forEach((button) => button.addEventListener("click", () => {
+      const index = items.findIndex((item) => item.id === button.dataset.featuredId);
+      if (index >= 0) openPhotosGallery(win, index);
+    }));
+    $(`[data-gallery-close]`, win)?.addEventListener("click", () => closePhotosGallery(win));
+    $(`[data-gallery-prev]`, win)?.addEventListener("click", () => stepPhotosGallery(win, -1));
+    $(`[data-gallery-next]`, win)?.addEventListener("click", () => stepPhotosGallery(win, 1));
+    $(`[data-gallery-info]`, win)?.addEventListener("click", () => {
+      const panel = $(".photos-gallery-info", win);
+      const gallery = $(".photos-gallery", win);
+      if (panel) {
+        panel.hidden = !panel.hidden;
+        gallery?.classList.toggle("info-open", !panel.hidden);
+      }
+    });
+    $(".photos-gallery-filmstrip", win)?.addEventListener("click", (event) => {
       const thumb = event.target.closest("[data-gallery-thumb]");
       if (thumb) showPhotosGalleryItem(win, Number(thumb.dataset.galleryThumb));
     });
@@ -829,24 +894,15 @@
     wireMediaPlayback(win);
   }
 
-  function photosForCollection(collection = "all") {
-    const photos = CONTENT.photoLibrary || [];
-    return collection === "all" ? photos : photos.filter((item) => (item.collection || "Library") === collection);
-  }
-
-  function scrollFeatured(win, direction) {
-    const track = $(".photos-featured-track", win);
-    if (track) track.scrollBy({ left: track.clientWidth * .86 * direction, behavior: "smooth" });
-  }
-
   function openPhotosAtMedia(media) {
-    const index = (CONTENT.photoLibrary || []).findIndex((item) => item.id === media?.id);
-    if (index < 0) { showToast("This file is not placed in Photos"); return; }
     const win = openApp("photos");
     if (!win) return;
     win.dataset.photosCollection = "all";
-    $(".window-body", win).innerHTML = renderPhotos("all");
+    win.dataset.photosView = "all";
+    $(".window-body", win).innerHTML = renderPhotos("all", "all");
     wirePhotosApp(win);
+    const index = (win._photosItems || []).findIndex((item) => item.id === media?.id);
+    if (index < 0) { showToast("This file is not placed in Photos"); return; }
     openPhotosGallery(win, index);
   }
 
@@ -863,7 +919,12 @@
 
   function closePhotosGallery(win) {
     const gallery = $(".photos-gallery", win);
-    if (gallery) gallery.hidden = true;
+    if (!gallery) return;
+    gallery.hidden = true;
+    gallery.classList.remove("info-open");
+    const info = $(".photos-gallery-info", win); if (info) info.hidden = true;
+    const video = gallery.querySelector("video");
+    if (video) video.pause();
   }
 
   function stepPhotosGallery(win, delta) {
@@ -873,46 +934,87 @@
     showPhotosGalleryItem(win, next);
   }
 
+  function mediaInfoMarkup(media) {
+    const capture = new Date(media.capturedAt || media.createdAt || Date.now());
+    const details = [
+      ["Date", capture.toLocaleString("en-US", { month:"long", day:"numeric", year:"numeric", hour:"numeric", minute:"2-digit" })],
+      ["Dimensions", media.width && media.height ? `${media.width} × ${media.height}` : "—"],
+      [media.type === "video" ? "Duration" : "Camera", media.type === "video" ? (media.duration ? formatMediaDuration(media.duration) : "—") : ([media.cameraMake, media.cameraModel].filter(Boolean).join(" ") || "—")],
+      ["Lens", media.lensModel || "—"]
+    ];
+    return `<div class="photos-info-card"><strong>${escapeHtml(media.displayName || media.filename || "Untitled")}</strong>${media.caption ? `<p>${escapeHtml(media.caption)}</p>` : ""}<dl>${details.map(([key,value])=>`<div><dt>${key}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl></div>`;
+  }
+
   function showPhotosGalleryItem(win, index) {
     const items = win._photosItems || [];
     const media = items[index];
     if (!media) return;
     win._galleryIndex = index;
-    const stage = $(".photos-gallery-stage", win);
-    const title = $(".photos-gallery-title", win);
-    const caption = $(".photos-gallery-caption", win);
+    const stage = $(".photos-gallery-media", win);
     const counter = $(".photos-gallery-counter", win);
     const filmstrip = $(".photos-gallery-filmstrip", win);
+    const info = $(".photos-gallery-info", win);
     stage.innerHTML = renderGalleryMedia(media);
     $$(".photos-gallery-title", win).forEach((node) => { node.textContent = media.displayName || media.filename || "Untitled"; });
-    caption.textContent = media.caption || media.collection || "Rizvisions";
-    counter.textContent = `${index + 1} of ${items.length}`;
-    filmstrip.innerHTML = items.map((item, itemIndex) => `<button class="${itemIndex === index ? "active" : ""}" data-gallery-thumb="${itemIndex}" aria-label="Open ${escapeHtml(item.displayName || item.filename || `item ${itemIndex + 1}`)}">${renderMediaThumbnail(item)}</button>`).join("");
-    filmstrip.querySelector(".active")?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+    if (counter) counter.textContent = `${index + 1} of ${items.length}`;
+    if (filmstrip) {
+      filmstrip.innerHTML = items.map((item, itemIndex) => `<button class="${itemIndex === index ? "active" : ""}" data-gallery-thumb="${itemIndex}" aria-label="Open ${escapeHtml(item.displayName || item.filename || `item ${itemIndex + 1}`)}">${renderMediaThumbnail(item)}</button>`).join("");
+      filmstrip.querySelector(".active")?.scrollIntoView({ inline:"center", block:"nearest", behavior:"smooth" });
+    }
+    if (info) info.innerHTML = mediaInfoMarkup(media);
     wireMediaPlayback(stage, media);
   }
 
-  function renderFinder(){return `<div class="finder-shell"><aside class="finder-sidebar"><div class="sidebar-section"><div class="sidebar-title">Favorites</div><div class="sidebar-row active"><span class="sidebar-glyph">◫</span>Selected Work</div><div class="sidebar-row"><span class="sidebar-glyph">◉</span>Recents</div><div class="sidebar-row" data-app="photos"><span class="sidebar-glyph">⌁</span>Photos</div></div><div class="sidebar-section"><div class="sidebar-title">Locations</div><div class="sidebar-row"><span class="sidebar-glyph">▣</span>Rizvisions</div><div class="sidebar-row"><span class="sidebar-glyph">☁</span>iCloud Drive</div></div></aside><main class="finder-main"><div class="finder-toolbar"><button class="toolbar-button">‹</button><button class="toolbar-button">›</button><strong>Selected Work</strong><span class="toolbar-spacer"></span><button class="toolbar-button">▦</button><input class="search-field" placeholder="Search"></div><div class="finder-content"><div class="finder-grid">${[["parker","Parker","#8b7fd1"],["bluespecs","Blue Specs","#2686e8"],["whop","Whop + WAP","#ff453a"],["windsurf","Windsurf","#30b0c7"],["creator","Creator Work","#8e8e93"]].map(([id,label,color])=>`<button class="file-item" data-project="${id}"><span class="finder-folder"><img src="assets/icons/macos/folder.png?v=96b" alt=""><i style="--tag:${color}"></i></span><span class="file-name">${label}</span></button>`).join("")}<button class="file-item" data-app="photos"><img src="assets/icons/macos/photos.png?v=96b" alt=""><span class="file-name">Photography</span></button><button class="file-item" data-app="notes"><img src="assets/icons/macos/notes.png?v=96b" alt=""><span class="file-name">Random Notes</span></button></div></div><div class="finder-statusbar">7 items · Rizvisions</div></main></div>`;}
-
-  function renderAbout(){return `<div class="about-app"><aside class="about-rail"><img class="about-eye" src="assets/icons/macos/rizvisions.png?v=96b" alt=""><span>RIZVISIONS</span><nav><button class="active">Overview</button><button data-app="work">Work</button><button data-app="photos">Photos</button></nav></aside><main class="about-content"><header><span class="eyebrow">RIZ ZAHEER</span><h1>I build things on the internet and document the rest.</h1><p>Creator and operator in Chicago. I work at Parker, make photos and videos, and have used Rizvisions as a creative identity since middle school.</p></header><section class="about-stats"><div><small>Currently</small><strong>Parker</strong><button data-app="parker">Open app</button></div><div><small>Based</small><strong>Chicago</strong><span>Gold Coast / Oak Brook orbit</span></div><div><small>Internet</small><strong>30M+</strong><span>lifetime short-form views</span></div></section><section class="about-links"><button data-external="https://www.linkedin.com/in/riz-zaheer/">LinkedIn ↗</button><button data-app="instagram">Instagram</button><button data-external="https://x.com/rizvisions">X ↗</button><button data-app="spotify">Spotify</button></section><section class="about-now"><div><small>What this site is</small><p>A catch-all for work, personal stuff, photography, old businesses, current obsessions, and whatever else becomes part of my life.</p></div><div class="about-quote">“Permanent internet home” &gt; polished corporate portfolio.</div></section></main></div>`;}
-
-  function renderSettings(){return `<div class="settings-shell"><aside class="settings-sidebar"><input class="settings-search" placeholder="Search"><div class="settings-profile-mini"><img src="assets/icons/macos/rizvisions.png?v=96b" alt=""><span><strong>Rizvisions</strong><small>Desktop preferences</small></span></div><div class="settings-list"><div class="settings-row active"><span class="settings-row-icon">◐</span>Appearance</div><div class="settings-row"><span class="settings-row-icon">⌘</span>Desktop & Dock</div><div class="settings-row"><span class="settings-row-icon">♪</span>Sound</div><div class="settings-row"><span class="settings-row-icon">◉</span>About</div></div></aside><main class="settings-main"><h1>Appearance</h1><section class="settings-card"><h2>Wallpaper</h2><p>Choose the grid appearance used across the desktop and interface.</p><div class="settings-theme-grid">${[["grid","Light"],["dark","Dark"],["maroon","Maroon"],["forest","Forest"]].map(([id,label])=>`<button data-settings-wallpaper="${id}" class="theme-choice ${id}"><span></span><strong>${label}</strong></button>`).join("")}</div></section><section class="settings-card"><h2>Desktop & Dock</h2><div class="settings-info-row"><span><strong>Customize the Dock naturally</strong><small>Drag an app from the desktop onto the Dock. Drag Dock apps left or right to reorder, or drag one away to remove it.</small></span></div><button class="mac-button" data-settings-reset>Restore Desktop Layout</button></section><section class="settings-card"><h2>About this build</h2><div class="settings-info-row"><img src="assets/icons/macos/rizvisions.png?v=96b" alt=""><span><strong>Rizvisions OS 10.5</strong><small>A personal website pretending to be a Mac.</small></span></div></section></main></div>`;}
-
-  function mediaSourceType(media) {
-    if (media?.mimeType === "video/quicktime" || /\.mov(?:$|\?)/i.test(media?.src || "")) return "video/mp4";
-    return media?.mimeType || "video/mp4";
+  function renderFinder(view = "recents") {
+    const isApps = view === "applications";
+    const recents = finderRecentItems();
+    const applications = [
+      ["about","About Riz","assets/icons/macos/rizvisions.png?v=106"],
+      ["work","Selected Work","assets/icons/macos/folder.png?v=106"],
+      ["settings","System Settings","assets/icons/macos/settings.png?v=106"],
+      ["messages","Messages","assets/icons/macos/messages.png?v=106"],
+      ["photos","Photos","assets/icons/macos/photos.png?v=106"],
+      ["instagram","Instagram","assets/icons/macos/instagram.png?v=106"],
+      ["safari","Safari","assets/icons/macos/safari.png?v=106"],
+      ["parker","Parker","assets/icons/macos/parker.png?v=106"],
+      ["calendar","Calendar",null],
+      ["notes","Notes","assets/icons/macos/notes.png?v=106"],
+      ["terminal","Terminal","assets/icons/macos/terminal.png?v=106"],
+      ["spotify","Spotify","assets/icons/macos/spotify.png?v=106"]
+    ];
+    const recentGrid = recents.map((entry, index) => {
+      if (entry.kind === "project") return `<button class="file-item" data-project="${entry.id}"><span class="finder-folder"><img src="assets/icons/macos/folder.png?v=106" alt=""><i style="--tag:${entry.color}"></i></span><span class="file-name">${escapeHtml(entry.label)}</span></button>`;
+      const media = entry.media;
+      return `<button class="file-item finder-media-item" data-finder-media-id="${escapeHtml(media.id)}">${renderMediaThumbnail(media)}<span class="file-name">${escapeHtml(entry.label)}</span></button>`;
+    }).join("");
+    const appsGrid = applications.map(([app,label,icon]) => `<button class="file-item application-item" data-app="${app}">${app === "calendar" ? `<span class="calendar-icon finder-calendar"><span class="calendar-weekday">${new Date().toLocaleDateString("en-US",{weekday:"short"}).toUpperCase()}</span><span class="calendar-day">${new Date().getDate()}</span></span>` : `<img src="${icon}" alt="">`}<span class="file-name">${label}</span></button>`).join("");
+    const itemCount = isApps ? applications.length : recents.length;
+    return `<div class="finder-shell"><aside class="finder-sidebar"><div class="sidebar-section"><button class="sidebar-row ${!isApps ? "active" : ""}" data-finder-view="recents"><span class="sidebar-glyph finder-clock-glyph">◷</span>Recents</button><button class="sidebar-row ${isApps ? "active" : ""}" data-finder-view="applications"><span class="sidebar-glyph">A</span>Applications</button></div></aside><main class="finder-main"><div class="finder-toolbar"><button class="toolbar-button" aria-label="Back">‹</button><button class="toolbar-button" aria-label="Forward">›</button><strong class="finder-title-inline">${isApps ? "Applications" : "Recents"}</strong><span class="toolbar-spacer"></span><button class="toolbar-button" aria-label="Icon view">▦</button><input class="search-field" placeholder="Search"></div><div class="finder-content"><div class="finder-grid ${isApps ? "finder-applications-grid" : ""}">${isApps ? appsGrid : recentGrid}</div></div><div class="finder-statusbar">${itemCount} ${itemCount === 1 ? "item" : "items"} · Rizvisions</div></main></div>`;
   }
 
-  function renderVideoTag(media, { controls = false, muted = false, autoplay = false, className = "" } = {}) {
+  function renderAbout(){return `<div class="about-app"><aside class="about-rail"><img class="about-eye" src="assets/icons/macos/rizvisions.png?v=106" alt=""><span>RIZVISIONS</span><nav><button class="active">Overview</button><button data-app="work">Work</button><button data-app="photos">Photos</button></nav></aside><main class="about-content"><header><span class="eyebrow">RIZ ZAHEER</span><h1>I build things on the internet and document the rest.</h1><p>Creator and operator in Chicago. I work at Parker, make photos and videos, and have used Rizvisions as a creative identity since middle school.</p></header><section class="about-stats"><div><small>Currently</small><strong>Parker</strong><button data-app="parker">Open app</button></div><div><small>Based</small><strong>Chicago</strong><span>Gold Coast / Oak Brook orbit</span></div><div><small>Internet</small><strong>30M+</strong><span>lifetime short-form views</span></div></section><section class="about-links"><button data-external="https://www.linkedin.com/in/riz-zaheer/">LinkedIn ↗</button><button data-app="instagram">Instagram</button><button data-external="https://x.com/rizvisions">X ↗</button><button data-app="spotify">Spotify</button></section><section class="about-now"><div><small>What this site is</small><p>A catch-all for work, personal stuff, photography, old businesses, current obsessions, and whatever else becomes part of my life.</p></div><div class="about-quote">“Permanent internet home” &gt; polished corporate portfolio.</div></section></main></div>`;}
+
+  function renderSettings(){return `<div class="settings-shell"><aside class="settings-sidebar"><input class="settings-search" placeholder="Search"><div class="settings-profile-mini"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions</strong><small>Desktop preferences</small></span></div><div class="settings-list"><div class="settings-row active"><span class="settings-row-icon">◐</span>Appearance</div><div class="settings-row"><span class="settings-row-icon">⌘</span>Desktop & Dock</div><div class="settings-row"><span class="settings-row-icon">♪</span>Sound</div><div class="settings-row"><span class="settings-row-icon">◉</span>About</div></div></aside><main class="settings-main"><h1>Appearance</h1><section class="settings-card"><h2>Wallpaper</h2><p>Choose the grid appearance used across the desktop and interface.</p><div class="settings-theme-grid">${[["grid","Light"],["dark","Dark"],["maroon","Maroon"],["forest","Forest"]].map(([id,label])=>`<button data-settings-wallpaper="${id}" class="theme-choice ${id}"><span></span><strong>${label}</strong></button>`).join("")}</div></section><section class="settings-card"><h2>Desktop & Dock</h2><div class="settings-info-row"><span><strong>Customize the Dock naturally</strong><small>Drag an app from the desktop onto the Dock. Drag Dock apps left or right to reorder, or drag one away to remove it.</small></span></div><button class="mac-button" data-settings-reset>Restore Desktop Layout</button></section><section class="settings-card"><h2>About this build</h2><div class="settings-info-row"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions OS 10.6</strong><small>A personal website pretending to be a Mac.</small></span></div></section></main></div>`;}
+
+  function renderVideoElement(media, { className = "", autoplay = false, muted = true } = {}) {
     const poster = media.poster ? ` poster="${escapeHtml(media.poster)}"` : "";
-    return `<video class="${escapeHtml(className)}" ${controls ? "controls" : ""} ${muted ? "muted" : ""} ${autoplay ? "autoplay" : ""} playsinline preload="metadata"${poster}><source src="${escapeHtml(media.src)}" type="${escapeHtml(mediaSourceType(media))}"></video>`;
+    return `<video class="${escapeHtml(className)}" ${autoplay ? "autoplay" : ""} ${muted ? "muted" : ""} playsinline preload="auto"${poster} src="${escapeHtml(media.src)}"></video>`;
+  }
+
+  function renderAppleVideoPlayer(media, { autoplay = true, compact = false } = {}) {
+    const speaker = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4Z" fill="currentColor"/><path class="sound-wave" d="M16 9.2c1.1 1.5 1.1 4.1 0 5.6M18.7 7c2.3 2.8 2.3 7.2 0 10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`;
+    const back = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 6 4.8 12 11 18V6Zm8 0-6.2 6L19 18V6Z" fill="currentColor"/></svg>`;
+    const forward = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 6 6.2 6L5 18V6Zm8 0 6.2 6L13 18V6Z" fill="currentColor"/></svg>`;
+    const playPause = `<span class="video-icon-play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7V5Z" fill="currentColor"/></svg></span><span class="video-icon-pause"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7V5Zm6 0h4v14h-4V5Z" fill="currentColor"/></svg></span>`;
+    const full = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M9 20h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`;
+    return `<div class="apple-video-player ${compact ? "compact" : ""}">${renderVideoElement(media,{className:"apple-video-element",autoplay,muted:true})}<div class="apple-video-controls"><div class="video-control-primary"><button type="button" data-video-mute data-muted="true" aria-label="Mute or unmute">${speaker}</button><input class="video-volume" data-video-volume type="range" min="0" max="1" step="0.01" value="0.55" aria-label="Volume"><span class="video-control-spacer"></span><button type="button" data-video-skip="-10" aria-label="Back 10 seconds">${back}</button><button type="button" class="video-play" data-video-play data-state="play" aria-label="Play or pause">${playPause}</button><button type="button" data-video-skip="10" aria-label="Forward 10 seconds">${forward}</button><span class="video-control-spacer"></span><button type="button" data-video-fullscreen aria-label="Full screen">${full}</button></div><div class="video-control-timeline"><time data-video-time>0:00</time><input data-video-progress type="range" min="0" max="1000" value="0" aria-label="Video progress"><time data-video-duration>0:00</time></div></div></div>`;
   }
 
   function renderMediaThumbnail(media) {
     if ((media.type || mediaTypeFromSrc(media.src)) === "video") {
       return media.poster
         ? `<span class="media-thumb-shell"><img src="${escapeHtml(media.poster)}" alt=""><i>▶</i></span>`
-        : `<span class="media-thumb-shell">${renderVideoTag(media, { muted: true })}<i>▶</i></span>`;
+        : `<span class="media-thumb-shell">${renderVideoElement(media, { muted: true })}<i>▶</i></span>`;
     }
     return `<img src="${escapeHtml(media.src || "")}" alt="${escapeHtml(media.alt || "")}" draggable="false">`;
   }
@@ -920,32 +1022,76 @@
   function renderGalleryMedia(media) {
     const type = media.type || mediaTypeFromSrc(media.src);
     return type === "video"
-      ? renderVideoTag(media, { controls: true, className: "gallery-video" })
+      ? renderAppleVideoPlayer(media, { autoplay:true, compact:true })
       : `<img src="${escapeHtml(media.src)}" alt="${escapeHtml(media.alt || "")}">`;
   }
 
-  function renderPhotos(activeCollection = "all") {
-    const allPhotos = CONTENT.photoLibrary || [];
-    const collections = [...new Set(allPhotos.map((item) => item.collection || "Library"))];
+  function photosForCollection(collection = "all") {
+    const photos = [...(CONTENT.photoLibrary || [])].sort((a,b) => mediaTimestamp(b) - mediaTimestamp(a));
+    if (collection === "all") return photos;
+    if (collection === "photos") return photos.filter((item) => item.type !== "video");
+    if (collection === "videos") return photos.filter((item) => item.type === "video");
+    const name = collection.startsWith("collection:") ? collection.slice(11) : collection;
+    return photos.filter((item) => (item.collection || "Library") === name);
+  }
+
+  function photoDateParts(media) {
+    const date = new Date(media?.capturedAt || media?.createdAt || Date.now());
+    return {
+      year: String(date.getFullYear()),
+      month: date.toLocaleDateString("en-US", { month:"long", year:"numeric" }),
+      day: date.toLocaleDateString("en-US", { month:"long", day:"numeric", year:"numeric" })
+    };
+  }
+
+  function renderPhotoTiles(items, indexOffset = 0) {
+    return `<div class="photos-natural-grid">${items.map((media, index) => `<button class="photo-natural-tile" data-media-id="${escapeHtml(media.id)}" data-media-index="${index + indexOffset}" data-media-type="${escapeHtml(media.type || mediaTypeFromSrc(media.src))}" style="--media-ratio:${mediaAspectRatio(media, media.type)}">${renderMediaThumbnail(media)}${media.type === "video" ? `<i class="video-duration">▶ ${media.duration ? formatMediaDuration(media.duration) : "video"}</i>` : ""}</button>`).join("")}</div>`;
+  }
+
+  function renderChronology(items, viewMode) {
+    if (viewMode === "all") return renderPhotoTiles(items);
+    const keyFor = (item) => viewMode === "years" ? photoDateParts(item).year : photoDateParts(item).month;
+    const groups = [];
+    items.forEach((item) => {
+      const key = keyFor(item);
+      let group = groups.find((entry) => entry.key === key);
+      if (!group) { group = { key, items: [] }; groups.push(group); }
+      group.items.push(item);
+    });
+    let offset = 0;
+    return groups.map((group) => {
+      const html = `<section class="photos-date-group"><header><strong>${escapeHtml(group.key)}</strong><small>${group.items.length} ${group.items.length === 1 ? "item" : "items"}</small></header>${renderPhotoTiles(group.items, offset)}</section>`;
+      offset += group.items.length;
+      return html;
+    }).join("");
+  }
+
+  function renderPhotos(activeCollection = "all", viewMode = "all") {
+    const allPhotos = [...(CONTENT.photoLibrary || [])].sort((a,b) => mediaTimestamp(b) - mediaTimestamp(a));
+    const rawCollections = [...new Set(allPhotos.map((item) => item.collection).filter((name) => name && name.toLowerCase() !== "library"))];
     const photos = photosForCollection(activeCollection);
-    const featured = photos.filter((item) => item.isFeatured);
+    const featured = activeCollection === "all" ? photos.filter((item) => item.isFeatured) : [];
     const loading = Boolean(CONTENT.mediaLoading);
-    const sidebarCollections = collections.map((collection) => `<button data-photo-collection="${escapeHtml(collection)}" class="${activeCollection === collection ? "active" : ""}"><span>▣</span>${escapeHtml(collection)}</button>`).join("");
+    const collectionButtons = rawCollections.map((collection) => `<button data-photo-collection="collection:${escapeHtml(collection)}" class="${activeCollection === `collection:${collection}` ? "active" : ""}"><span>▣</span>${escapeHtml(collection)}</button>`).join("");
+    const title = activeCollection === "all" ? "All Photos" : activeCollection === "photos" ? "Photos" : activeCollection === "videos" ? "Videos" : activeCollection.replace(/^collection:/, "");
 
     let body = "";
     if (loading) {
-      body = `<div class="photos-loading"><i></i><i></i><i></i><i></i><span>Loading the Rizvisions archive…</span></div>`;
+      body = `<div class="photos-loading"><i></i><i></i><i></i><i></i><span>Loading your library…</span></div>`;
     } else if (!photos.length) {
-      body = `<div class="photos-empty"><img src="assets/icons/macos/photos.png?v=105" alt=""><h2>${allPhotos.length ? "No items in this collection" : "Your library is empty"}</h2><p>${allPhotos.length ? "Choose another collection from the sidebar." : "Upload photos or videos at rizvisions.com/admin. No stock photos will appear here."}</p></div>`;
+      body = `<div class="photos-empty"><img src="assets/icons/macos/photos.png?v=106" alt=""><h2>${allPhotos.length ? "No items here yet" : "Your library is empty"}</h2><p>${allPhotos.length ? "Choose another view from the sidebar." : "Upload photos or videos at rizvisions.com/admin."}</p></div>`;
     } else {
-      const featuredBlock = featured.length ? `<section class="photos-featured-carousel"><header><div><span>FEATURED</span><strong>${featured.length} selected ${featured.length === 1 ? "item" : "items"}</strong></div><div><button data-featured-prev aria-label="Previous featured item">‹</button><button data-featured-next aria-label="Next featured item">›</button></div></header><div class="photos-featured-track">${featured.map((media) => {
-        const index = photos.findIndex((item) => item.id === media.id);
-        return `<button class="photos-featured-card" data-featured-index="${index}" style="--media-ratio:${mediaAspectRatio(media, media.type)}">${renderMediaThumbnail(media)}<span><small>${escapeHtml(media.collection || "Featured")}</small><strong>${escapeHtml(media.displayName || media.filename || "Untitled")}</strong>${media.caption ? `<em>${escapeHtml(media.caption)}</em>` : ""}</span></button>`;
-      }).join("")}</div></section>` : "";
-      body = `${featuredBlock}<div class="photos-date-heading"><div><strong>${activeCollection === "all" ? "All Photos" : escapeHtml(activeCollection)}</strong><small>${photos.length} ${photos.length === 1 ? "item" : "items"}</small></div></div><div class="photos-natural-grid">${photos.map((media, index) => `<button class="photo-natural-tile" data-media-index="${index}" style="--media-ratio:${mediaAspectRatio(media, media.type)}">${renderMediaThumbnail(media)}<span>${escapeHtml(media.displayName || media.filename || `IMG_${index + 1}`)}</span>${media.type === "video" ? `<i class="video-duration">▶ ${media.duration ? formatMediaDuration(media.duration) : "video"}</i>` : ""}</button>`).join("")}</div>`;
+      const featuredBlock = featured.length ? `<section class="photos-featured-strip"><header><strong>Featured</strong><small>${featured.length}</small></header><div class="photos-featured-track">${featured.map((media) => `<button class="photos-featured-card" data-featured-id="${escapeHtml(media.id)}" style="--media-ratio:${mediaAspectRatio(media, media.type)}">${renderMediaThumbnail(media)}<span>${escapeHtml(media.displayName || media.filename || "Untitled")}</span></button>`).join("")}</div></section>` : "";
+      body = `${featuredBlock}<section class="photos-library-feed">${renderChronology(photos, viewMode)}</section>`;
     }
 
-    return `<div class="photos-app"><aside class="photos-nav"><div class="photos-nav-title"><img src="assets/icons/macos/photos.png?v=105" alt=""><strong>Photos</strong></div><div class="sidebar-title">Library</div><button data-photo-collection="all" class="${activeCollection === "all" ? "active" : ""}"><span>▦</span>All Photos</button><div class="sidebar-title">Collections</div>${sidebarCollections || `<p class="photos-sidebar-empty">Collections appear as you assign them in Admin.</p>`}<div class="photos-source-note">Manage the archive at <code>rizvisions.com/admin</code>.</div></aside><main class="photos-library"><div class="photos-topbar"><div><h1>${activeCollection === "all" ? "Library" : escapeHtml(activeCollection)}</h1><small>${allPhotos.length} total items · Rizvisions archive</small></div><div class="photos-segmented"><button>Years</button><button>Months</button><button class="active">All Photos</button></div></div>${body}<section class="photos-gallery" tabindex="-1" hidden><header><button data-gallery-close aria-label="Close gallery">×</button><div><strong class="photos-gallery-title"></strong><small class="photos-gallery-counter"></small></div></header><button class="gallery-arrow gallery-prev" data-gallery-prev aria-label="Previous item">‹</button><div class="photos-gallery-stage"></div><button class="gallery-arrow gallery-next" data-gallery-next aria-label="Next item">›</button><footer><div><strong class="photos-gallery-title"></strong><span class="photos-gallery-caption"></span></div><div class="photos-gallery-filmstrip"></div></footer></section></main></div>`;
+    return `<div class="photos-app"><aside class="photos-nav"><div class="photos-nav-title"><img src="assets/icons/macos/photos.png?v=106" alt=""><strong>Photos</strong></div><div class="sidebar-title">Library</div><button data-photo-collection="all" class="${activeCollection === "all" ? "active" : ""}"><span>▦</span>All Photos</button><button data-photo-collection="photos" class="${activeCollection === "photos" ? "active" : ""}"><span>▧</span>Photos</button><button data-photo-collection="videos" class="${activeCollection === "videos" ? "active" : ""}"><span>▶</span>Videos</button>${collectionButtons ? `<div class="sidebar-title collections-label">Collections</div>${collectionButtons}` : ""}</aside><main class="photos-library"><div class="photos-topbar"><div><h1>${escapeHtml(title)}</h1><small>${photos.length} ${photos.length === 1 ? "item" : "items"}${photos.length ? ` · newest first` : ""}</small></div><div class="photos-segmented"><button data-photo-view="years" class="${viewMode === "years" ? "active" : ""}">Years</button><button data-photo-view="months" class="${viewMode === "months" ? "active" : ""}">Months</button><button data-photo-view="all" class="${viewMode === "all" ? "active" : ""}">All Photos</button></div></div><div class="photos-scroll-content">${body}</div><section class="photos-gallery" tabindex="-1" hidden><header class="photos-viewer-toolbar"><button data-gallery-close class="photos-viewer-back" aria-label="Back">‹</button><div><strong class="photos-gallery-title"></strong><small class="photos-gallery-counter"></small></div><span></span><button data-gallery-info aria-label="Info">ⓘ</button></header><div class="photos-gallery-stage"><button class="gallery-arrow gallery-prev" data-gallery-prev aria-label="Previous item">‹</button><div class="photos-gallery-media"></div><button class="gallery-arrow gallery-next" data-gallery-next aria-label="Next item">›</button></div><footer><div class="photos-gallery-filmstrip"></div></footer><aside class="photos-gallery-info" hidden></aside></section></main></div>`;
+  }
+
+  function mediaTimestamp(media) {
+    const value = media?.capturedAt || media?.createdAt || media?.created_at || media?.date;
+    const time = value ? new Date(value).getTime() : 0;
+    return Number.isFinite(time) ? time : 0;
   }
 
   function formatMediaDuration(seconds) {
@@ -962,52 +1108,95 @@
       {handle:"@rizgoestomarket",description:"AI, GTM, Parker, and work-brain content",initials:"GT",url:"https://www.instagram.com/rizgoestomarket/"},
       {handle:"@rizzaheer",description:"Personal — friends and family",initials:"RZ",url:"https://www.instagram.com/rizzaheer/"}
     ];
-    return `<div class="instagram-shell"><div class="instagram-heading"><img src="assets/icons/macos/instagram.png?v=96b" alt="Instagram"><h2>Choose an Instagram</h2><p>Different accounts for different parts of my life.</p></div><div class="account-list">${accounts.map((account)=>`<button type="button" class="account-row" data-external="${account.url}"><span class="account-avatar">${account.initials}</span><span><strong>${account.handle}</strong><small>${account.description}</small></span><span class="chevron">›</span></button>`).join("")}</div></div>`;
+    return `<div class="instagram-shell"><div class="instagram-heading"><img src="assets/icons/macos/instagram.png?v=106" alt="Instagram"><h2>Choose an Instagram</h2><p>Different accounts for different parts of my life.</p></div><div class="account-list">${accounts.map((account)=>`<button type="button" class="account-row" data-external="${account.url}"><span class="account-avatar">${account.initials}</span><span><strong>${account.handle}</strong><small>${account.description}</small></span><span class="chevron">›</span></button>`).join("")}</div></div>`;
   }
 
-  function renderSafari(){return `<div class="safari-shell"><div class="safari-toolbar"><button>‹</button><button>›</button><button>▣</button><div class="safari-address"><span>🔒</span> rizvisions.com</div><button>↗</button><button>＋</button></div><div class="safari-page"><div class="safari-start"><img src="assets/icons/macos/rizvisions.png?v=96b" alt=""><h1>Start Page</h1><div class="safari-favorites">${[["Parker","assets/icons/macos/parker.png?v=96b","https://heyparker.ai/"],["LinkedIn","assets/icons/macos/mail.png?v=96b","https://www.linkedin.com/in/riz-zaheer/"],["Instagram","assets/icons/macos/instagram.png?v=96b","https://www.instagram.com/rizvisions/"],["Spotify","assets/icons/macos/spotify.png?v=96b","https://open.spotify.com/user/riz002"],["X","assets/icons/macos/rizvisions.png?v=96b","https://x.com/rizvisions"]].map(([label,icon,href])=>`<button data-external="${href}"><span><img src="${icon}" alt=""></span><strong>${label}</strong></button>`).join("")}</div><section class="safari-reading"><div><span>READING LIST</span><strong>The internet home of Riz Zaheer</strong><p>Work, photos, projects, notes, music, and the weird archive still to come.</p></div><button data-app="about">Open About Riz</button></section></div></div></div>`;}
+  function renderSafari(){return `<div class="safari-shell"><div class="safari-toolbar"><button>‹</button><button>›</button><button>▣</button><div class="safari-address"><span>🔒</span> rizvisions.com</div><button>↗</button><button>＋</button></div><div class="safari-page"><div class="safari-start"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><h1>Start Page</h1><div class="safari-favorites">${[["Parker","assets/icons/macos/parker.png?v=106","https://heyparker.ai/"],["LinkedIn","assets/icons/macos/mail.png?v=106","https://www.linkedin.com/in/riz-zaheer/"],["Instagram","assets/icons/macos/instagram.png?v=106","https://www.instagram.com/rizvisions/"],["Spotify","assets/icons/macos/spotify.png?v=106","https://open.spotify.com/user/riz002"],["X","assets/icons/macos/rizvisions.png?v=106","https://x.com/rizvisions"]].map(([label,icon,href])=>`<button data-external="${href}"><span><img src="${icon}" alt=""></span><strong>${label}</strong></button>`).join("")}</div><section class="safari-reading"><div><span>READING LIST</span><strong>The internet home of Riz Zaheer</strong><p>Work, photos, projects, notes, music, and the weird archive still to come.</p></div><button data-app="about">Open About Riz</button></section></div></div></div>`;}
 
-  function renderParker(){return `<div class="parker-app"><header class="parker-hero"><img src="assets/icons/macos/parker.png?v=96b" alt="Parker"><div><span>CURRENTLY</span><h1>Parker</h1><p>AI creative strategy for ecommerce teams — and the place where most of my work brain lives right now.</p><button class="mac-button primary" data-external="https://heyparker.ai/">Visit heyparker.ai ↗</button></div></header><section class="parker-command"><span>Ask Parker</span><strong>“Cross-reference our reviews with our ad account and find creative angles we haven't tested.”</strong><button data-external="https://heyparker.ai/">→</button></section><section class="parker-grid"><article><span>01</span><h3>Creative intelligence</h3><p>Connect ad performance, customer language, competitors, content, and brand context.</p></article><article><span>02</span><h3>What I do</h3><p>Sales, demos, onboarding, support, customer research, GTM experiments, pricing, and product feedback.</p></article><article><span>03</span><h3>Parker Brain</h3><p>A context layer designed to make AI useful for marketers instead of generic.</p></article></section><footer><button data-project="parker">View my Parker story</button><button data-external="https://heyparker.ai/">Open website ↗</button></footer></div>`;}
+  function renderParker(){return `<div class="parker-app"><header class="parker-hero"><img src="assets/icons/macos/parker.png?v=106" alt="Parker"><div><span>CURRENTLY</span><h1>Parker</h1><p>AI creative strategy for ecommerce teams — and the place where most of my work brain lives right now.</p><button class="mac-button primary" data-external="https://heyparker.ai/">Visit heyparker.ai ↗</button></div></header><section class="parker-command"><span>Ask Parker</span><strong>“Cross-reference our reviews with our ad account and find creative angles we haven't tested.”</strong><button data-external="https://heyparker.ai/">→</button></section><section class="parker-grid"><article><span>01</span><h3>Creative intelligence</h3><p>Connect ad performance, customer language, competitors, content, and brand context.</p></article><article><span>02</span><h3>What I do</h3><p>Sales, demos, onboarding, support, customer research, GTM experiments, pricing, and product feedback.</p></article><article><span>03</span><h3>Parker Brain</h3><p>A context layer designed to make AI useful for marketers instead of generic.</p></article></section><footer><button data-project="parker">View my Parker story</button><button data-external="https://heyparker.ai/">Open website ↗</button></footer></div>`;}
 
 
   function renderSpotify(){return `<div class="spotify-only"><iframe data-testid="embed-iframe" src="https://open.spotify.com/embed/playlist/76WzEHradeFZfSUMLsxH7I?utm_source=generator&si=565dc6edf9be49a1" width="100%" height="100%" frameborder="0" allowfullscreen allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" title="Rizvisions Spotify playlist"></iframe></div>`;}
-  function renderNotes(){return `<div class="notes-shell"><aside class="notes-list"><div class="note-row active"><strong>Rizvisions roadmap</strong><small>Today · ${escapeHtml(state.notes.slice(0,45))}…</small></div><div class="note-row"><strong>Things I should build</strong><small>Yesterday · Guestbook, archive…</small></div></aside><main class="note-editor"><div class="note-meta">Today at ${new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</div><textarea aria-label="Note"></textarea></main></div>`;}
-  function renderTerminal(){return `<div class="terminal-shell"><div class="terminal-output">Last login: ${new Date().toLocaleDateString()} on ttys001\n\nRizvisions OS 10.5\nType <span class="terminal-link">help</span> to see available commands.\n</div><div class="terminal-input-row"><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" spellcheck="false"></div></div>`;}
-  function renderTrash(){return `<div class="empty-state"><div><img src="assets/icons/macos/trash.png?v=96b" alt="Trash"><h2>Trash is Empty</h2><p>Old domains, failed ideas, embarrassing drafts, and abandoned businesses will eventually live here.</p></div></div>`;}
+
+  function renderCalendar(){
+    const now = new Date();
+    const year = now.getFullYear(), month = now.getMonth();
+    const monthName = now.toLocaleDateString("en-US", { month:"long", year:"numeric" });
+    const first = new Date(year, month, 1).getDay();
+    const count = new Date(year, month + 1, 0).getDate();
+    const previousCount = new Date(year, month, 0).getDate();
+    const cells = [];
+    for (let i = first - 1; i >= 0; i -= 1) cells.push(`<span class="calendar-cell outside">${previousCount - i}</span>`);
+    for (let day = 1; day <= count; day += 1) cells.push(`<span class="calendar-cell ${day === now.getDate() ? "today" : ""}">${day}</span>`);
+    let nextDay = 1; while (cells.length < 42) cells.push(`<span class="calendar-cell outside">${nextDay++}</span>`);
+    return `<div class="calendar-app"><aside class="calendar-sidebar"><div class="calendar-mini-title"><strong>${monthName}</strong></div><div class="calendar-list-title">On My Mac</div><label class="calendar-list-row"><i class="calendar-dot personal"></i><span>Personal</span></label><label class="calendar-list-row"><i class="calendar-dot work"></i><span>Work</span></label><label class="calendar-list-row"><i class="calendar-dot rizvisions"></i><span>Rizvisions</span></label></aside><main class="calendar-main"><div class="calendar-toolbar"><button class="calendar-today-button">Today</button><div class="calendar-toolbar-spacer"></div><button>‹</button><button>›</button><strong>${monthName}</strong><div class="calendar-toolbar-spacer"></div><button class="active">Month</button></div><div class="calendar-weekdays">${["SUN","MON","TUE","WED","THU","FRI","SAT"].map(day=>`<b>${day}</b>`).join("")}</div><div class="calendar-month-grid">${cells.join("")}</div></main></div>`;
+  }
+
+  function renderNotes(){
+    const now = new Date();
+    const dateLabel = now.toLocaleDateString("en-US", { month:"long", day:"numeric", year:"numeric" });
+    const timeLabel = now.toLocaleTimeString([], { hour:"numeric", minute:"2-digit" });
+    return `<div class="notes-app"><aside class="notes-folders"><div class="notes-sidebar-top"><span></span></div><div class="notes-group"><button><span class="notes-quick-icon">⌁</span><strong>Quick Notes</strong><em>2</em></button></div><div class="notes-sidebar-label">On My Mac</div><div class="notes-group"><button class="active"><span class="notes-folder-icon">▭</span><strong>Notes</strong><em>4</em></button></div></aside><section class="notes-browser"><header class="notes-browser-toolbar"><div><strong>Notes</strong><small>4 notes</small></div><div class="notes-toolbar-actions"><button>•••</button><button class="notes-compose">□</button></div></header><div class="notes-note-list"><h3>Today</h3><button class="active"><strong>New Note</strong><span>${timeLabel}</span><small>${escapeHtml(state.notes.slice(0,42) || "No additional text")}</small></button><h3>Previous 7 Days</h3><button><strong>Supabase Database Setup</strong><span>Thursday</span><small>Media archive, placements, and upload system…</small></button><h3>Previous 30 Days</h3><button><strong>Alright, we're creating...</strong><span>7/24/26</span><small>Ideas for Rizvisions and the permanent internet home.</small></button><h3>2025</h3><button><strong>Hi, this is Riz from...</strong><span>4/24/25</span><small>I can speak to what I was building then.</small></button></div></section><main class="note-editor apple-note-editor"><div class="notes-editor-toolbar"><button>Aa</button><button>☑</button><button>▦</button><button>⌕</button><button>↯</button><span></span><button>≫</button><button>⌕</button></div><div class="note-meta">${dateLabel} at ${timeLabel}</div><textarea class="note-editor-textarea" aria-label="Note" placeholder="Start typing…"></textarea></main></div>`;
+  }
+  function renderTerminal(){return `<div class="terminal-shell"><div class="terminal-output">Last login: ${new Date().toLocaleDateString()} on ttys001\n\nRizvisions OS 10.6\nType <span class="terminal-link">help</span> to see available commands.\n</div><div class="terminal-input-row"><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" spellcheck="false"></div></div>`;}
+  function renderTrash(){return `<div class="empty-state"><div><img src="assets/icons/macos/trash.png?v=106" alt="Trash"><h2>Trash is Empty</h2><p>Old domains, failed ideas, embarrassing drafts, and abandoned businesses will eventually live here.</p></div></div>`;}
 
   function renderProject(project, projectId) {
     const media = CONTENT.projectMedia?.[projectId] || [];
-    return `<div class="project-environment"><header class="project-folder-header" style="--project:${project.color}"><div><span>${project.eyebrow}</span><h1>${project.title}</h1><p>${project.description}</p></div><div class="project-facts">${project.facts.map((fact) => `<div>${fact}</div>`).join("")}</div></header><section class="project-assets"><div class="project-assets-heading"><strong>Project Files</strong><small>${media.length} ${media.length === 1 ? "item" : "items"}</small></div>${media.length ? `<div class="project-file-grid">${media.map((item, index) => `<button class="project-media-file" data-project-media-index="${index}" style="--media-ratio:${mediaAspectRatio(item, item.type)}">${renderMediaThumbnail(item)}<span>${escapeHtml(item.displayName || item.filename || "Untitled")}</span></button>`).join("")}</div>` : `<div class="project-empty"><img src="assets/icons/macos/folder.png?v=105" alt=""><strong>This folder is ready for artifacts.</strong><p>Place photos and videos here from Rizvisions Admin.</p></div>`}</section></div>`;
+    return `<div class="project-environment"><header class="project-folder-header" style="--project:${project.color}"><div><span>${project.eyebrow}</span><h1>${project.title}</h1><p>${project.description}</p></div><div class="project-facts">${project.facts.map((fact) => `<div>${fact}</div>`).join("")}</div></header><section class="project-assets"><div class="project-assets-heading"><strong>Project Files</strong><small>${media.length} ${media.length === 1 ? "item" : "items"}</small></div>${media.length ? `<div class="project-file-grid">${media.map((item, index) => `<button class="project-media-file" data-project-media-index="${index}" style="--media-ratio:${mediaAspectRatio(item, item.type)}">${renderMediaThumbnail(item)}<span>${escapeHtml(item.displayName || item.filename || "Untitled")}</span></button>`).join("")}</div>` : `<div class="project-empty"><img src="assets/icons/macos/folder.png?v=106" alt=""><strong>This folder is ready for artifacts.</strong><p>Place photos and videos here from Rizvisions Admin.</p></div>`}</section></div>`;
   }
 
   function renderMediaViewer(media, type) {
     const body = type === "video"
-      ? renderVideoTag(media, { controls: true, className: "individual-video" })
+      ? renderAppleVideoPlayer(media, { autoplay:true, compact:false })
       : `<img src="${escapeHtml(media.src)}" alt="${escapeHtml(media.alt || "")}">`;
-    return `<div class="media-viewer ${type}">${body}<div class="media-playback-error" hidden><strong>This video could not play in the browser.</strong><span>Re-upload it through Admin to normalize the file for web playback.</span></div><div class="media-caption"><strong>${escapeHtml(media.displayName || media.filename || media.src.split("/").pop())}</strong>${media.caption ? `<span>${escapeHtml(media.caption)}</span>` : ""}</div></div>`;
+    return `<div class="media-viewer ${type}">${body}<div class="media-playback-error" hidden><strong>This video could not play in this browser.</strong><span>Try an H.264 MP4 export if this file uses an unsupported codec.</span></div></div>`;
+  }
+
+  function wireAppleVideoPlayer(player) {
+    const video = $("video", player); if (!video) return;
+    const play = $("[data-video-play]", player);
+    const mute = $("[data-video-mute]", player);
+    const volume = $("[data-video-volume]", player);
+    const progress = $("[data-video-progress]", player);
+    const current = $("[data-video-time]", player);
+    const duration = $("[data-video-duration]", player);
+    let hideTimer = null;
+    const fmt = (seconds) => formatMediaDuration(Number.isFinite(seconds) ? seconds : 0) || "0:00";
+    const update = () => {
+      if (play) play.dataset.state = video.paused ? "play" : "pause";
+      if (mute) mute.dataset.muted = (video.muted || video.volume === 0) ? "true" : "false";
+      if (current) current.textContent = fmt(video.currentTime);
+      if (duration) duration.textContent = fmt(video.duration);
+      if (progress && Number.isFinite(video.duration) && video.duration > 0) progress.value = String(Math.round((video.currentTime / video.duration) * 1000));
+    };
+    const reveal = () => {
+      player.classList.add("controls-visible");
+      clearTimeout(hideTimer);
+      if (!video.paused) hideTimer = setTimeout(() => player.classList.remove("controls-visible"), 1500);
+    };
+    video.muted = true;
+    video.defaultMuted = true;
+    video.volume = Number(volume?.value || .55);
+    video.play().catch(() => update());
+    ["loadedmetadata","timeupdate","play","pause","volumechange","ended"].forEach((event) => video.addEventListener(event, update));
+    play?.addEventListener("click", (event) => { event.stopPropagation(); if (video.paused) video.play().catch(()=>{}); else video.pause(); reveal(); });
+    mute?.addEventListener("click", (event) => { event.stopPropagation(); video.muted = !video.muted; reveal(); update(); });
+    volume?.addEventListener("input", (event) => { video.volume = Number(event.target.value); video.muted = video.volume === 0; reveal(); });
+    progress?.addEventListener("input", (event) => { if (Number.isFinite(video.duration)) video.currentTime = (Number(event.target.value) / 1000) * video.duration; reveal(); });
+    $$('[data-video-skip]', player).forEach((button) => button.addEventListener("click", (event) => { event.stopPropagation(); video.currentTime = Math.max(0, Math.min(video.duration || Infinity, video.currentTime + Number(button.dataset.videoSkip))); reveal(); }));
+    $("[data-video-fullscreen]", player)?.addEventListener("click", (event) => { event.stopPropagation(); (video.requestFullscreen ? video.requestFullscreen() : player.requestFullscreen?.()); });
+    player.addEventListener("pointermove", reveal);
+    player.addEventListener("pointerenter", reveal);
+    player.addEventListener("pointerleave", () => { if (!video.paused) player.classList.remove("controls-visible"); });
+    player.addEventListener("click", (event) => { if (event.target.closest(".apple-video-controls")) return; if (video.paused) video.play().catch(()=>{}); else video.pause(); reveal(); });
+    reveal(); update();
   }
 
   function wireMediaPlayback(root, media = null) {
+    $$(".apple-video-player", root).forEach(wireAppleVideoPlayer);
     $$('video', root).forEach((video) => {
-      video.addEventListener("error", async () => {
-        if (video.dataset.compatibilityRetry) {
-          const errorPanel = video.closest(".media-viewer")?.querySelector(".media-playback-error");
-          if (errorPanel) errorPanel.hidden = false;
-          return;
-        }
-        const source = video.querySelector("source")?.src || video.currentSrc || "";
-        if (video.controls && /\.mov(?:$|\?)/i.test(source)) {
-          video.dataset.compatibilityRetry = "1";
-          try {
-            const response = await fetch(source);
-            if (!response.ok) throw new Error("Video download failed");
-            const blob = await response.blob();
-            const objectUrl = URL.createObjectURL(blob.slice(0, blob.size, "video/mp4"));
-            video.src = objectUrl;
-            video.load();
-            return;
-          } catch {}
-        }
+      video.addEventListener("error", () => {
         const errorPanel = video.closest(".media-viewer")?.querySelector(".media-playback-error");
         if (errorPanel) errorPanel.hidden = false;
       });
@@ -1030,9 +1219,8 @@
       });
       const { data, error } = await publicClient
         .from("media_items")
-        .select("id,storage_path,poster_path,filename,display_name,media_type,mime_type,size_bytes,width,height,duration_seconds,caption,alt_text,sort_order,created_at,media_placements(id,surface,container,sort_order,is_featured,desktop_x,desktop_y,desktop_rotation,metadata)")
+        .select("id,storage_path,poster_path,filename,display_name,media_type,mime_type,size_bytes,width,height,duration_seconds,caption,alt_text,sort_order,created_at,captured_at,camera_make,camera_model,lens_model,metadata,media_placements(id,surface,container,sort_order,is_featured,desktop_x,desktop_y,desktop_rotation,metadata)")
         .eq("is_published", true)
-        .order("sort_order", { ascending: true })
         .order("created_at", { ascending: false });
       if (error) throw error;
 
@@ -1055,7 +1243,13 @@
           duration: Number(row.duration_seconds) || null,
           aspectRatio: Number(row.width) > 0 && Number(row.height) > 0 ? Number(row.width) / Number(row.height) : null,
           sortOrder: Number(row.sort_order) || index,
-          date: new Date(row.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+          createdAt: row.created_at,
+          capturedAt: row.captured_at || row.created_at,
+          cameraMake: row.camera_make || row.metadata?.cameraMake || "",
+          cameraModel: row.camera_model || row.metadata?.cameraModel || "",
+          lensModel: row.lens_model || row.metadata?.lensModel || "",
+          metadata: row.metadata || {},
+          date: new Date(row.captured_at || row.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" }),
           placements
         };
       });
@@ -1066,7 +1260,7 @@
         collection: entry.container || "Library",
         isFeatured: Boolean(entry.is_featured),
         placementSortOrder: Number(entry.sort_order) || item.sortOrder
-      }))).sort((a, b) => a.placementSortOrder - b.placementSortOrder || a.sortOrder - b.sortOrder);
+      }))).sort((a, b) => mediaTimestamp(b) - mediaTimestamp(a));
 
       CONTENT.projectMedia = {};
       allMedia.forEach((item) => {
@@ -1106,7 +1300,7 @@
       CONTENT.photoLibrary = [];
       CONTENT.desktopPhotos = [];
       CONTENT.projectMedia = {};
-      console.info("Rizvisions media could not load. Run the V10.5 migration if this is the first deploy.", error);
+      console.info("Rizvisions media could not load. Run the V10.6 migration if this is the first deploy.", error);
     } finally {
       CONTENT.mediaLoading = false;
       refreshMediaSurfaces();
@@ -1118,8 +1312,15 @@
     const photosWindow = windowsRoot.querySelector('[data-app-window="photos"]');
     if (photosWindow) {
       const collection = photosWindow.dataset.photosCollection || "all";
-      $(".window-body", photosWindow).innerHTML = renderPhotos(collection);
+      const viewMode = photosWindow.dataset.photosView || "all";
+      $(".window-body", photosWindow).innerHTML = renderPhotos(collection, viewMode);
       wirePhotosApp(photosWindow);
+    }
+    const finderWindow = windowsRoot.querySelector('[data-app-window="work"]');
+    if (finderWindow) {
+      const view = finderWindow.dataset.finderView || "recents";
+      $(".window-body", finderWindow).innerHTML = renderFinder(view);
+      wireFinderApp(finderWindow);
     }
     $$('[data-app-window^="project-"]', windowsRoot).forEach((projectWindow) => {
       const projectId = projectWindow.dataset.appWindow.replace("project-", "");
@@ -1146,7 +1347,7 @@
     if(action==="open-spotlight")openSpotlight();
     if(action==="cycle-wallpaper")cycleWallpaper();
     if(action==="sort-icons")sortIcons();
-    if(action==="desktop-info")showToast("Rizvisions Desktop · Version 10.5");
+    if(action==="desktop-info")showToast("Rizvisions Desktop · Version 10.6");
     if(action==="quick-look-photo"){const photo=(CONTENT.desktopPhotos||[]).find((item)=>item.id===(contextPhotoId||selectedPhotoId));if(photo)openMediaFile(photo);}
     if(action==="view-photo-library"){const photo=(CONTENT.desktopPhotos||[]).find((item)=>item.id===(contextPhotoId||selectedPhotoId));if(photo)openPhotosAtMedia(photo);}
     if(action==="bring-photo-front"){const file=desktopPhotosRoot.querySelector(`[data-photo-id="${CSS.escape(contextPhotoId||"")}"]`);if(file){file.style.zIndex=String(++photoZCounter);persistObjectPosition(file);saveState();}}
@@ -1155,7 +1356,7 @@
     if(action==="dock-reset")resetDock();
     if(action==="dock-magnification"){state.dockMagnification=!state.dockMagnification;dock.classList.toggle("no-magnify",!state.dockMagnification);saveState();showToast(state.dockMagnification?"Dock magnification on":"Dock magnification off");}
     if(action==="media-help")window.open("/admin", "_blank", "noopener");
-    if(action==="show-shortcuts")window.alert("⌘Space Spotlight\nSpace Open selected photo or video\n⌘N New Finder Window\n⌘W Close Window\n⌘M Minimize\nDrag desktop apps to the Dock.");
+    if(action==="show-shortcuts")showToast("⌘Space Spotlight · ⌘N Finder · ⌘M Minimize · ⌘W Close");
   }
 
   function bindEvents(){
@@ -1199,8 +1400,53 @@
     os.addEventListener("dragstart",(event)=>event.preventDefault(),true);
   }
 
+  function greetingForNow() {
+    const hour = new Date().getHours();
+    if (hour < 5) return "go to sleep.";
+    if (hour < 12) return "Good morning.";
+    if (hour < 17) return "Good afternoon.";
+    return "Good evening.";
+  }
+
+  function runBootIntro() {
+    if (!bootIntro) { document.body.classList.add("desktop-ready"); return; }
+    const force = new URLSearchParams(location.search).get("hello") === "1";
+    let seen = false;
+    try { seen = sessionStorage.getItem("rizvisions-intro-v106") === "1"; } catch {}
+    if (seen && !force) {
+      bootIntro.remove();
+      document.body.classList.remove("boot-pending");
+      document.body.classList.add("desktop-ready");
+      return;
+    }
+    if (bootGreeting) bootGreeting.textContent = greetingForNow();
+    document.body.classList.add("boot-active");
+    const paths = $$(".boot-hello-path", bootIntro);
+    const configs = [{ duration:720, delay:120 }, { duration:2350, delay:620 }];
+    paths.forEach((path,index)=>{
+      const length = path.getTotalLength();
+      path.style.strokeDasharray = String(length);
+      path.style.strokeDashoffset = String(length);
+      path.animate([
+        { strokeDashoffset:length, opacity:0 },
+        { strokeDashoffset:length * .985, opacity:1, offset:.06 },
+        { strokeDashoffset:0, opacity:1 }
+      ], { duration:configs[index]?.duration || 1800, delay:configs[index]?.delay || 0, easing:"cubic-bezier(.55,.02,.34,1)", fill:"forwards" });
+    });
+    const finish = () => {
+      if (!bootIntro?.isConnected) return;
+      document.body.classList.add("desktop-ready");
+      bootIntro.classList.add("leaving");
+      try { sessionStorage.setItem("rizvisions-intro-v106","1"); } catch {}
+      setTimeout(()=>{ bootIntro.remove(); document.body.classList.remove("boot-pending","boot-active"); }, 900);
+    };
+    bootSkip?.addEventListener("click", finish, { once:true });
+    setTimeout(()=>bootIntro.classList.add("greeting-visible"), 820);
+    setTimeout(finish, 3450);
+  }
+
   function init(){
-    setWallpaper(state.wallpaper,false);renderDesktopPhotos();applyIconLayout();applyWidgetLayout();applyDisplayState();updateCurrentWidget();renderDock();updateClockAndCalendar();bindEvents();discoverMediaLibrary();
+    setWallpaper(state.wallpaper,false);renderDesktopPhotos();applyIconLayout();applyWidgetLayout();applyDisplayState();updateCurrentWidget();renderDock();updateClockAndCalendar();bindEvents();runBootIntro();discoverMediaLibrary();
     dock.classList.toggle("no-magnify",!state.dockMagnification);
     setInterval(updateClockAndCalendar,30000);
   }
