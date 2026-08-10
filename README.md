@@ -1,6 +1,6 @@
-# Rizvisions macOS V10.6.2
+# Rizvisions macOS V10.6.3
 
-V10.6.2 is the desktop-polish and media-metadata release.
+V10.6.3 is a front-end hotfix on top of the desktop-polish and media-metadata release.
 
 ## What changed
 
@@ -18,7 +18,6 @@ V10.6.2 is the desktop-polish and media-metadata release.
 
 ## Existing V10.5 installation
 
-1. Run `supabase/migrate-v10.6.2.sql` once in Supabase SQL Editor.
 2. Upload everything inside this folder to the root of `rizvisions/portfolio`, replacing the current site files.
 3. Wait for GitHub Pages to finish, then hard-refresh the site.
 
@@ -32,9 +31,9 @@ The intro shows once per browser tab session. Add `?hello=1` to the site URL to 
 
 New image uploads attempt to read embedded capture metadata in the browser before upload. When original capture metadata is not available, the file's last-modified timestamp is used as a fallback. Video uploads store dimensions, duration, and a timestamp fallback from the source file.
 
+## V10.6.3 hotfix
 
-## V10.6.2 hotfix
-
-- Desktop media remains visible on Retina Mac desktop viewports around 1024 CSS px.
-- Terminal input text and caret remain visible in every appearance.
-- No Supabase migration is required.
+- Fixes mixed photo + video Desktop placements disappearing together.
+- Root cause: desktop videos without a poster called a removed JavaScript helper, which aborted the entire desktop-media render.
+- Videos now use a safe passive video thumbnail fallback when no poster exists.
+- No Supabase migration is required for V10.6.3.

@@ -2283,3 +2283,30 @@ body.desktop-ready .dock-wrap { transform: translateX(-50%) translateY(0); }
   background: transparent !important;
 }
 .terminal-shell .terminal-input::selection { background: rgba(10,132,255,.58); color:#fff; }
+
+
+/* ==========================================================================
+   V10.6.3 — mixed desktop photo/video rendering hotfix
+   ========================================================================== */
+
+/* Desktop video placements must never throw or block sibling desktop media.
+   The no-poster fallback is now a real <video> preview instead of calling a
+   removed helper. Keep it passive: it is only a thumbnail on the desktop. */
+.photo-file > .photo-paper video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  background: #111;
+}
+.desktop-video-placeholder {
+  position: absolute !important;
+  inset: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  background: linear-gradient(180deg, #202023, #0d0d0e) !important;
+  color: rgba(255,255,255,.78) !important;
+  font-size: 28px !important;
+  text-shadow: none !important;
+}
