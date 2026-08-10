@@ -1888,7 +1888,7 @@ body.desktop-ready .dock-wrap { transition-delay: .2s; }
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-columns: 238px 286px minmax(360px,1fr);
+  grid-template-columns: minmax(175px,22%) minmax(220px,28%) minmax(0,1fr);
   background: #fffefb;
   color: #242426;
 }
@@ -2158,7 +2158,7 @@ body.desktop-ready .dock-wrap { transition-delay: .2s; }
 .mac-button, .toolbar-button, .sidebar-row, .account-row { transition: background .15s ease, color .15s ease, transform .12s ease; }
 
 @media (max-width: 1050px) {
-  .notes-app { grid-template-columns: 196px 240px minmax(300px,1fr); }
+  .notes-app { grid-template-columns: minmax(170px,22%) minmax(215px,29%) minmax(0,1fr); }
   .finder-shell { grid-template-columns: 180px minmax(0,1fr); }
   .photos-featured-track { grid-auto-columns: minmax(220px,58%); }
 }

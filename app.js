@@ -117,7 +117,7 @@
     parker: { name: "Parker", title: "Parker", size: [1040, 680], min: [720, 500], render: renderParker },
     spotify: { name: "Spotify", title: "Spotify", size: [800, 650], min: [620, 470], render: renderSpotify },
     calendar: { name: "Calendar", title: "Calendar", size: [980, 680], min: [700, 500], render: renderCalendar },
-    notes: { name: "Notes", title: "Notes", size: [820, 590], min: [620, 440], render: renderNotes },
+    notes: { name: "Notes", title: "Notes", size: [1060, 680], min: [760, 500], render: renderNotes },
     terminal: { name: "Terminal", title: "riz — zsh", size: [780, 520], min: [580, 400], render: renderTerminal },
     trash: { name: "Finder", title: "Trash", size: [720, 500], min: [560, 400], render: renderTrash }
   };
@@ -466,7 +466,7 @@
     win.dataset.appName = definition.name || definition.title;
     win.setAttribute("aria-label", definition.title);
     $(".window-title", win).textContent = definition.title;
-    $(".window-body", win).innerHTML = definition.render(appId);
+    $(".window-body", win).innerHTML = definition.render();
     const saved = state.windows[appId];
     const initial = clampWindowRect(saved || defaultWindowRect(appId, ...definition.size), definition);
     Object.assign(win.style, { left:`${initial.left}px`, top:`${initial.top}px`, width:`${initial.width}px`, height:`${initial.height}px`, zIndex:++zCounter });
@@ -965,6 +965,24 @@
     wireMediaPlayback(stage, media);
   }
 
+  function finderRecentItems() {
+    const projectEntries = Object.entries(projectDefinitions).map(([id, project]) => ({
+      kind: "project",
+      id,
+      label: project.title,
+      color: project.color,
+      timestamp: 0
+    }));
+    const mediaEntries = [...(CONTENT.allMedia || [])].map((media) => ({
+      kind: "media",
+      id: media.id,
+      label: media.displayName || media.filename || "Untitled",
+      media,
+      timestamp: mediaTimestamp(media)
+    })).sort((a, b) => b.timestamp - a.timestamp);
+    return [...mediaEntries, ...projectEntries];
+  }
+
   function renderFinder(view = "recents") {
     const isApps = view === "applications";
     const recents = finderRecentItems();
@@ -994,7 +1012,7 @@
 
   function renderAbout(){return `<div class="about-app"><aside class="about-rail"><img class="about-eye" src="assets/icons/macos/rizvisions.png?v=106" alt=""><span>RIZVISIONS</span><nav><button class="active">Overview</button><button data-app="work">Work</button><button data-app="photos">Photos</button></nav></aside><main class="about-content"><header><span class="eyebrow">RIZ ZAHEER</span><h1>I build things on the internet and document the rest.</h1><p>Creator and operator in Chicago. I work at Parker, make photos and videos, and have used Rizvisions as a creative identity since middle school.</p></header><section class="about-stats"><div><small>Currently</small><strong>Parker</strong><button data-app="parker">Open app</button></div><div><small>Based</small><strong>Chicago</strong><span>Gold Coast / Oak Brook orbit</span></div><div><small>Internet</small><strong>30M+</strong><span>lifetime short-form views</span></div></section><section class="about-links"><button data-external="https://www.linkedin.com/in/riz-zaheer/">LinkedIn ↗</button><button data-app="instagram">Instagram</button><button data-external="https://x.com/rizvisions">X ↗</button><button data-app="spotify">Spotify</button></section><section class="about-now"><div><small>What this site is</small><p>A catch-all for work, personal stuff, photography, old businesses, current obsessions, and whatever else becomes part of my life.</p></div><div class="about-quote">“Permanent internet home” &gt; polished corporate portfolio.</div></section></main></div>`;}
 
-  function renderSettings(){return `<div class="settings-shell"><aside class="settings-sidebar"><input class="settings-search" placeholder="Search"><div class="settings-profile-mini"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions</strong><small>Desktop preferences</small></span></div><div class="settings-list"><div class="settings-row active"><span class="settings-row-icon">◐</span>Appearance</div><div class="settings-row"><span class="settings-row-icon">⌘</span>Desktop & Dock</div><div class="settings-row"><span class="settings-row-icon">♪</span>Sound</div><div class="settings-row"><span class="settings-row-icon">◉</span>About</div></div></aside><main class="settings-main"><h1>Appearance</h1><section class="settings-card"><h2>Wallpaper</h2><p>Choose the grid appearance used across the desktop and interface.</p><div class="settings-theme-grid">${[["grid","Light"],["dark","Dark"],["maroon","Maroon"],["forest","Forest"]].map(([id,label])=>`<button data-settings-wallpaper="${id}" class="theme-choice ${id}"><span></span><strong>${label}</strong></button>`).join("")}</div></section><section class="settings-card"><h2>Desktop & Dock</h2><div class="settings-info-row"><span><strong>Customize the Dock naturally</strong><small>Drag an app from the desktop onto the Dock. Drag Dock apps left or right to reorder, or drag one away to remove it.</small></span></div><button class="mac-button" data-settings-reset>Restore Desktop Layout</button></section><section class="settings-card"><h2>About this build</h2><div class="settings-info-row"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions OS 10.6</strong><small>A personal website pretending to be a Mac.</small></span></div></section></main></div>`;}
+  function renderSettings(){return `<div class="settings-shell"><aside class="settings-sidebar"><input class="settings-search" placeholder="Search"><div class="settings-profile-mini"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions</strong><small>Desktop preferences</small></span></div><div class="settings-list"><div class="settings-row active"><span class="settings-row-icon">◐</span>Appearance</div><div class="settings-row"><span class="settings-row-icon">⌘</span>Desktop & Dock</div><div class="settings-row"><span class="settings-row-icon">♪</span>Sound</div><div class="settings-row"><span class="settings-row-icon">◉</span>About</div></div></aside><main class="settings-main"><h1>Appearance</h1><section class="settings-card"><h2>Wallpaper</h2><p>Choose the grid appearance used across the desktop and interface.</p><div class="settings-theme-grid">${[["grid","Light"],["dark","Dark"],["maroon","Maroon"],["forest","Forest"]].map(([id,label])=>`<button data-settings-wallpaper="${id}" class="theme-choice ${id}"><span></span><strong>${label}</strong></button>`).join("")}</div></section><section class="settings-card"><h2>Desktop & Dock</h2><div class="settings-info-row"><span><strong>Customize the Dock naturally</strong><small>Drag an app from the desktop onto the Dock. Drag Dock apps left or right to reorder, or drag one away to remove it.</small></span></div><button class="mac-button" data-settings-reset>Restore Desktop Layout</button></section><section class="settings-card"><h2>About this build</h2><div class="settings-info-row"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions OS 10.6.1</strong><small>A personal website pretending to be a Mac.</small></span></div></section></main></div>`;}
 
   function renderVideoElement(media, { className = "", autoplay = false, muted = true } = {}) {
     const poster = media.poster ? ` poster="${escapeHtml(media.poster)}"` : "";
@@ -1138,7 +1156,7 @@
     const timeLabel = now.toLocaleTimeString([], { hour:"numeric", minute:"2-digit" });
     return `<div class="notes-app"><aside class="notes-folders"><div class="notes-sidebar-top"><span></span></div><div class="notes-group"><button><span class="notes-quick-icon">⌁</span><strong>Quick Notes</strong><em>2</em></button></div><div class="notes-sidebar-label">On My Mac</div><div class="notes-group"><button class="active"><span class="notes-folder-icon">▭</span><strong>Notes</strong><em>4</em></button></div></aside><section class="notes-browser"><header class="notes-browser-toolbar"><div><strong>Notes</strong><small>4 notes</small></div><div class="notes-toolbar-actions"><button>•••</button><button class="notes-compose">□</button></div></header><div class="notes-note-list"><h3>Today</h3><button class="active"><strong>New Note</strong><span>${timeLabel}</span><small>${escapeHtml(state.notes.slice(0,42) || "No additional text")}</small></button><h3>Previous 7 Days</h3><button><strong>Supabase Database Setup</strong><span>Thursday</span><small>Media archive, placements, and upload system…</small></button><h3>Previous 30 Days</h3><button><strong>Alright, we're creating...</strong><span>7/24/26</span><small>Ideas for Rizvisions and the permanent internet home.</small></button><h3>2025</h3><button><strong>Hi, this is Riz from...</strong><span>4/24/25</span><small>I can speak to what I was building then.</small></button></div></section><main class="note-editor apple-note-editor"><div class="notes-editor-toolbar"><button>Aa</button><button>☑</button><button>▦</button><button>⌕</button><button>↯</button><span></span><button>≫</button><button>⌕</button></div><div class="note-meta">${dateLabel} at ${timeLabel}</div><textarea class="note-editor-textarea" aria-label="Note" placeholder="Start typing…"></textarea></main></div>`;
   }
-  function renderTerminal(){return `<div class="terminal-shell"><div class="terminal-output">Last login: ${new Date().toLocaleDateString()} on ttys001\n\nRizvisions OS 10.6\nType <span class="terminal-link">help</span> to see available commands.\n</div><div class="terminal-input-row"><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" spellcheck="false"></div></div>`;}
+  function renderTerminal(){return `<div class="terminal-shell"><div class="terminal-output">Last login: ${new Date().toLocaleDateString()} on ttys001\n\nRizvisions OS 10.6.1\nType <span class="terminal-link">help</span> to see available commands.\n</div><div class="terminal-input-row"><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" spellcheck="false"></div></div>`;}
   function renderTrash(){return `<div class="empty-state"><div><img src="assets/icons/macos/trash.png?v=106" alt="Trash"><h2>Trash is Empty</h2><p>Old domains, failed ideas, embarrassing drafts, and abandoned businesses will eventually live here.</p></div></div>`;}
 
   function renderProject(project, projectId) {
@@ -1217,16 +1235,29 @@
       const publicClient = window.supabase.createClient(config.url, config.publishableKey, {
         auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
       });
-      const { data, error } = await publicClient
+      const mediaResult = await publicClient
         .from("media_items")
-        .select("id,storage_path,poster_path,filename,display_name,media_type,mime_type,size_bytes,width,height,duration_seconds,caption,alt_text,sort_order,created_at,captured_at,camera_make,camera_model,lens_model,metadata,media_placements(id,surface,container,sort_order,is_featured,desktop_x,desktop_y,desktop_rotation,metadata)")
+        .select("id,storage_path,poster_path,filename,display_name,media_type,mime_type,size_bytes,width,height,duration_seconds,caption,alt_text,sort_order,created_at,captured_at,camera_make,camera_model,lens_model,metadata")
         .eq("is_published", true)
         .order("created_at", { ascending: false });
-      if (error) throw error;
+      if (mediaResult.error) throw mediaResult.error;
+
+      const placementResult = await publicClient
+        .from("media_placements")
+        .select("id,media_id,surface,container,sort_order,is_featured,desktop_x,desktop_y,desktop_rotation,metadata")
+        .order("sort_order", { ascending: true });
+      if (placementResult.error) throw placementResult.error;
+
+      const placementsByMedia = new Map();
+      (placementResult.data || []).forEach((entry) => {
+        const list = placementsByMedia.get(entry.media_id) || [];
+        list.push(entry);
+        placementsByMedia.set(entry.media_id, list);
+      });
 
       const getUrl = (path) => path ? publicClient.storage.from(config.bucket).getPublicUrl(path).data.publicUrl : "";
-      const allMedia = (Array.isArray(data) ? data : []).map((row, index) => {
-        const placements = Array.isArray(row.media_placements) ? row.media_placements : [];
+      const allMedia = (Array.isArray(mediaResult.data) ? mediaResult.data : []).map((row, index) => {
+        const placements = placementsByMedia.get(row.id) || [];
         return {
           id: row.id,
           type: row.media_type,
@@ -1291,16 +1322,20 @@
         monochrome: false
       }));
 
+      /* Reconcile persisted positions with the live placement list. Removed placements cannot ghost on refresh. */
+      const liveDesktopIds = new Set(CONTENT.desktopPhotos.map((item) => item.id));
+      Object.keys(state.photos || {}).forEach((id) => { if (!liveDesktopIds.has(id)) delete state.photos[id]; });
       CONTENT.desktopPhotos.forEach((item, index) => {
-        defaultPhotos[item.id] ||= { x:item.x, y:item.y, rotation:item.rotation || 0, z:index + 1 };
+        defaultPhotos[item.id] = { x:item.x, y:item.y, rotation:item.rotation || 0, z:index + 1 };
         state.photos[item.id] ||= clone(defaultPhotos[item.id]);
       });
+      saveState();
     } catch (error) {
       CONTENT.allMedia = [];
       CONTENT.photoLibrary = [];
       CONTENT.desktopPhotos = [];
       CONTENT.projectMedia = {};
-      console.info("Rizvisions media could not load. Run the V10.6 migration if this is the first deploy.", error);
+      console.info("Rizvisions media could not load.", error);
     } finally {
       CONTENT.mediaLoading = false;
       refreshMediaSurfaces();

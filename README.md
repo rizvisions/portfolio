@@ -1,6 +1,6 @@
-# Rizvisions macOS V10.6
+# Rizvisions macOS V10.6.1
 
-V10.6 is the desktop-polish and media-metadata release.
+V10.6.1 is the desktop-polish and media-metadata release.
 
 ## What changed
 
@@ -18,7 +18,7 @@ V10.6 is the desktop-polish and media-metadata release.
 
 ## Existing V10.5 installation
 
-1. Run `supabase/migrate-v10.6.sql` once in Supabase SQL Editor.
+1. Run `supabase/migrate-v10.6.1.sql` once in Supabase SQL Editor.
 2. Upload everything inside this folder to the root of `rizvisions/portfolio`, replacing the current site files.
 3. Wait for GitHub Pages to finish, then hard-refresh the site.
 
