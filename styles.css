@@ -2260,3 +2260,26 @@ body.desktop-ready .dock-wrap { transform: translateX(-50%) translateY(0); }
 .video-play[data-state="pause"] .video-icon-play { display: none; }
 .video-play[data-state="pause"] .video-icon-pause { display: inline; }
 .video-control-primary [data-video-mute][data-muted="true"] .sound-wave { display: none; }
+
+/* ========================================================================== */
+/* V10.6.2 — desktop media + Terminal regression hotfix                       */
+/* ========================================================================== */
+
+/* Retina Mac displays commonly expose ~1024 CSS px even when screenshots are
+   2048 px wide. V10.6.1 hid the entire desktop media layer at <=1050px, which
+   made valid Desktop placements disappear on common MacBook viewports. */
+@media (min-width: 761px) and (max-width: 1050px) {
+  .photo-stack { display: block !important; }
+  .photo-file { --photo-width: 118px; }
+}
+
+/* Generic theme input rules were more specific than the original Terminal
+   input rule in light mode, producing dark text on the dark terminal surface. */
+.terminal-shell .terminal-input,
+.os .terminal-shell .terminal-input {
+  color: #f5f5f7 !important;
+  caret-color: #f5f5f7 !important;
+  -webkit-text-fill-color: #f5f5f7 !important;
+  background: transparent !important;
+}
+.terminal-shell .terminal-input::selection { background: rgba(10,132,255,.58); color:#fff; }
