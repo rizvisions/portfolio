@@ -3216,3 +3216,169 @@ body.desktop-ready .dock-wrap { transform: translateX(-50%) translateY(0); }
   .photos-gallery-stage { grid-template-columns: 38px minmax(0,1fr) 38px; padding-inline: 4px; }
   .photos-gallery-info { top: 72px; right: 12px; width: min(320px,calc(100% - 24px)); max-height: calc(100% - 156px); }
 }
+
+/* ========================================================================== */
+/* V10.8.1 — unified modern window chrome and safe-area placement             */
+/* ========================================================================== */
+
+/* Current macOS folds the traffic lights into the app surface instead of
+   reserving a second title row. The narrow overlay keeps those controls and
+   a small drag target without blocking the app toolbar beneath it. */
+.mac-window:not(.media-window) > .window-titlebar {
+  position: absolute;
+  z-index: 90;
+  inset: 0 auto auto 0;
+  width: 126px;
+  height: 56px;
+  display: block;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.mac-window:not(.media-window) > .window-titlebar .traffic-lights {
+  height: 100%;
+  padding-left: 16px;
+}
+.mac-window:not(.media-window) > .window-titlebar .window-title,
+.mac-window:not(.media-window) > .window-titlebar > div:last-child { display: none; }
+.mac-window:not(.media-window) > .window-body { height: 100%; }
+.mac-window.maximized:not(.media-window) { border-radius: 15px; }
+
+/* Sidebar apps reserve their own native traffic-light lane. */
+.mac-window:not(.media-window) .finder-sidebar { padding-top: 66px; }
+.mac-window:not(.media-window) .photos-nav { padding-top: 64px; }
+.mac-window:not(.media-window) .settings-sidebar { padding-top: 64px; }
+.mac-window:not(.media-window) .about-rail { padding-top: 68px; }
+.mac-window:not(.media-window) .conversation-list { padding-top: 64px; }
+.mac-window:not(.media-window) .notes-sidebar-top { height: 46px; }
+.mac-window:not(.media-window) .calendar-sidebar { padding-top: 64px; }
+
+/* Toolbar-less and single-pane apps get the same clear top-left breathing room. */
+.mac-window:not(.media-window) .safari-toolbar { padding-left: 134px; }
+.mac-window:not(.media-window) .terminal-output { padding-top: 64px; }
+.mac-window:not(.media-window) .parker-app { padding-top: 68px; }
+.mac-window:not(.media-window) .project-folder-header { padding-top: 70px; }
+.mac-window:not(.media-window) .spotify-only {
+  box-sizing: border-box;
+  padding-top: 52px;
+}
+.mac-window:not(.media-window) .spotify-only iframe {
+  height: calc(100% - 52px);
+  min-height: calc(100% - 52px);
+}
+
+/* The Photos title is mathematically centered in the media pane, independent
+   of the unequal back and Info controls. */
+.photos-viewer-toolbar {
+  position: relative;
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+}
+.photos-viewer-copy {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(62%,560px);
+  transform: translate(-50%,-50%);
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  pointer-events: none;
+}
+.photos-viewer-copy > strong,
+.photos-viewer-copy > span { width: 100%; justify-content: center; }
+.photos-viewer-copy > strong,
+.photos-viewer-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.photos-viewer-toolbar > button { position: relative; z-index: 2; }
+
+/* A real filmstrip: every item remains visible, the selected item is centered,
+   and longer libraries can be scrubbed horizontally. */
+.photos-gallery > footer {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+.photos-gallery-filmstrip {
+  width: min(100%,760px);
+  height: 100%;
+  margin: 0 auto;
+  padding: 0 calc(50% - 28px);
+  box-sizing: border-box;
+  justify-content: flex-start;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-padding-inline: calc(50% - 28px);
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
+}
+.photos-gallery-filmstrip button {
+  position: relative;
+  flex: 0 0 56px;
+  width: 56px;
+  height: 60px;
+  scroll-snap-align: center;
+  border-color: rgba(0,0,0,.1);
+  background: #dedee2;
+  opacity: .76;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.photos-gallery-filmstrip button[data-media-type="video"]::after {
+  content: "▶";
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  padding-left: 1px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.9);
+  color: #1d1d1f;
+  font-size: 7px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.24);
+}
+.photos-gallery-filmstrip .media-thumb-shell > i { display: none; }
+.photos-gallery-filmstrip button.active {
+  border-color: #1d1d1f;
+  opacity: 1;
+  box-shadow: 0 2px 8px rgba(0,0,0,.16);
+}
+
+/* Browser fullscreen gets an explicit viewport canvas. This avoids WebKit
+   treating an intrinsic image size as a cover-style fullscreen replacement. */
+.media-viewer.image:fullscreen,
+.media-viewer.image:-webkit-full-screen {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  background: #000 !important;
+}
+.media-viewer.image:fullscreen > img,
+.media-viewer.image:-webkit-full-screen > img {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  object-fit: contain !important;
+  object-position: 50% 50% !important;
+  background: #000 !important;
+}
+
+@media (max-width: 760px) {
+  .mac-window:not(.media-window) .finder-toolbar,
+  .mac-window:not(.media-window) .photos-topbar,
+  .mac-window:not(.media-window) .calendar-toolbar,
+  .mac-window:not(.media-window) .notes-editor-toolbar { padding-left: 132px; }
+  .photos-viewer-copy { width: min(55%,360px); }
+}

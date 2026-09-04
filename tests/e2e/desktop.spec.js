@@ -13,6 +13,25 @@ test("opens and closes every desktop app without a page error", async ({ page })
 
   for (const appId of appIds) {
     const window = await openDesktopApp(page, appId);
+    await page.waitForTimeout(220);
+    const geometry = await window.evaluate((windowElement) => {
+      const rect = windowElement.getBoundingClientRect();
+      const desktop = document.querySelector("#desktop").getBoundingClientRect();
+      const dock = document.querySelector(".dock-wrap").getBoundingClientRect();
+      const workArea = { left:desktop.left+16, right:desktop.right-16, top:desktop.top+16, bottom:dock.top-16 };
+      return {
+        centerDeltaX:Math.abs((rect.left+rect.width/2)-(workArea.left+(workArea.right-workArea.left)/2)),
+        centerDeltaY:Math.abs((rect.top+rect.height/2)-(workArea.top+(workArea.bottom-workArea.top)/2)),
+        clearsDock:rect.bottom <= workArea.bottom+.5,
+        fullHeightBody:Math.abs(windowElement.querySelector(".window-body").getBoundingClientRect().height-windowElement.clientHeight) < 1,
+        hiddenLegacyTitle:getComputedStyle(windowElement.querySelector(".window-title")).display === "none"
+      };
+    });
+    expect(geometry.centerDeltaX).toBeLessThan(2);
+    expect(geometry.centerDeltaY).toBeLessThan(2);
+    expect(geometry.clearsDock).toBe(true);
+    expect(geometry.fullHeightBody).toBe(true);
+    expect(geometry.hiddenLegacyTitle).toBe(true);
     await window.locator('[data-window-action="close"]').click();
     await expect(window).toHaveCount(0);
   }
@@ -116,6 +135,18 @@ test("uses decoded media dimensions, centers above the Dock, and restores them a
   await assertGeometry();
   await mediaWindow.locator('[data-window-action="zoom"]').click();
   await expect(page.locator(".media-viewer:fullscreen")).toHaveCount(1);
+  const fullscreenContainment = await page.locator(".media-viewer.image:fullscreen").evaluate((viewer) => {
+    const image = viewer.querySelector("img");
+    const style = getComputedStyle(image);
+    const rect = image.getBoundingClientRect();
+    return {
+      objectFit:style.objectFit,
+      objectPosition:style.objectPosition,
+      position:style.position,
+      fillsViewport:Math.abs(rect.width-innerWidth) < 1 && Math.abs(rect.height-innerHeight) < 1
+    };
+  });
+  expect(fullscreenContainment).toEqual({ objectFit:"contain", objectPosition:"50% 50%", position:"fixed", fillsViewport:true });
   await page.evaluate(() => document.exitFullscreen());
   await expect(page.locator(".media-viewer:fullscreen")).toHaveCount(0);
   await page.waitForTimeout(120);

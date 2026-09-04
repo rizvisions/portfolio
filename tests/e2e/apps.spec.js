@@ -32,6 +32,24 @@ test("Photos opens to a clean square All Photos grid and a contained white viewe
   await expect(photosWindow.locator(".photos-gallery")).toBeVisible();
   await expect(photosWindow.locator(".photos-gallery")).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect(photosWindow.locator(".photos-gallery-media video")).toHaveCSS("object-fit", "contain");
+  const viewerChrome = await photosWindow.evaluate((windowElement) => {
+    const header = windowElement.querySelector(".photos-viewer-toolbar").getBoundingClientRect();
+    const copy = windowElement.querySelector(".photos-viewer-copy").getBoundingClientRect();
+    const footer = windowElement.querySelector(".photos-gallery > footer").getBoundingClientRect();
+    const dock = document.querySelector(".dock-wrap").getBoundingClientRect();
+    return {
+      centeredTitle:Math.abs((copy.left+copy.width/2)-(header.left+header.width/2)) < 1,
+      filmstripClearsDock:footer.bottom <= dock.top-15,
+      thumbnailCount:windowElement.querySelectorAll("[data-gallery-thumb]").length
+    };
+  });
+  expect(viewerChrome).toEqual({ centeredTitle:true, filmstripClearsDock:true, thumbnailCount:3 });
+  await expect(photosWindow.locator("[data-gallery-thumb]")).toHaveCount(3);
+  await photosWindow.locator('[data-gallery-thumb="1"]').click();
+  await expect(photosWindow.locator(".photos-gallery-counter")).toHaveText("2 of 3");
+  await expect(photosWindow.locator(".photos-gallery-title")).toHaveText("New Portrait Video");
+  await photosWindow.locator('[data-gallery-thumb="0"]').click();
+  await expect(photosWindow.locator(".photos-gallery-counter")).toHaveText("1 of 3");
   await expect(photosWindow.locator('[data-gallery-info]')).toHaveAttribute("aria-pressed", "false");
   const mediaWidthBeforeInfo = await photosWindow.locator(".photos-gallery-media").evaluate((node) => node.getBoundingClientRect().width);
   await photosWindow.locator('[data-gallery-info]').click();

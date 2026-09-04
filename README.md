@@ -1,6 +1,6 @@
-# Rizvisions macOS V10.8.0
+# Rizvisions macOS V10.8.1
 
-V10.8.0 refines Photos and individual media windows while preserving the macOS desktop and safe branch, test, review, and preview workflow introduced in V10.7.
+V10.8.1 refines Photos, individual media windows, and the shared window system while preserving the safe branch, test, review, and preview workflow introduced in V10.7.
 
 ## Product baseline
 
@@ -28,6 +28,10 @@ V10.8.0 refines Photos and individual media windows while preserving the macOS d
 - Standardized desktop media as square Polaroid cards while keeping the hover lift.
 - Made individual media windows use decoded source dimensions, stay centered above the Dock, preserve the true aspect ratio, tone-map HDR brightness, and restore exactly after exiting fullscreen.
 - Added an explicit muted slash, centered window-control symbols, and normalized the Calendar icon's optical size.
+- Integrated traffic lights into each app's own surface and removed the redundant generic app-name row.
+- Centered newly opened apps inside the usable desktop area so they never start behind the Dock.
+- Centered Photos viewer titles independently of its buttons and made the full media filmstrip horizontally browseable.
+- Added an explicit fullscreen image canvas so portrait and landscape photos remain fully contained.
 
 ## Release safeguards
 
@@ -55,4 +59,4 @@ New image uploads attempt to read embedded capture metadata in the browser befor
 4. Merge the approved pull request into `main`.
 5. GitHub Pages deploys the canonical `rizvisions.com` site.
 
-V10.8.0 does not require a Supabase migration.
+V10.8.1 does not require a Supabase migration.

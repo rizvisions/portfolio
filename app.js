@@ -78,6 +78,7 @@
     photos: clone(defaultPhotos),
     widget: clone(defaultWidget),
     widgetIndex: 0,
+    windowPlacementVersion: 2,
     windows: {},
     notes: "Rizvisions is my permanent internet home.\n\nThings to add:\n• the real photo archive\n• Parker work\n• Blue Specs story\n• WAP / Whop era\n• more personal artifacts\n• an iOS version for mobile"
   };
@@ -145,12 +146,14 @@
     try {
       const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
       if (!parsed) return clone(DEFAULT_STATE);
+      const windowPlacementVersion = Number(parsed.windowPlacementVersion) || 0;
       return {
         ...clone(DEFAULT_STATE), ...parsed,
         icons: { ...clone(defaultIcons), ...(parsed.icons || {}) },
         photos: { ...clone(defaultPhotos), ...(parsed.photos || {}) },
         widget: { ...clone(defaultWidget), ...(parsed.widget || {}) },
-        windows: parsed.windows || {},
+        windowPlacementVersion: 2,
+        windows: windowPlacementVersion >= 2 ? (parsed.windows || {}) : {},
         dock: normalizeDock(parsed.dock || DEFAULT_DOCK)
       };
     } catch { return clone(DEFAULT_STATE); }
@@ -459,17 +462,37 @@
   }
 
   function defaultWindowRect(appId, width, height) {
-    const w = Math.min(width, desktop.clientWidth - 40);
-    const h = Math.min(height, desktop.clientHeight - 118);
-    const offset = Math.abs(hashString(appId)) % 5;
-    return { left: Math.max(12, Math.round((desktop.clientWidth - w) / 2 + (offset - 2) * 18)), top: Math.max(10, Math.round((desktop.clientHeight - h) / 2 - 25 + offset * 8)), width:w, height:h };
+    const area = mediaWorkArea();
+    const availableWidth = area.right - area.left;
+    const availableHeight = area.bottom - area.top;
+    const w = Math.min(width, availableWidth);
+    const h = Math.min(height, availableHeight);
+    return {
+      left: Math.round(area.left + (availableWidth - w) / 2),
+      top: Math.round(area.top + (availableHeight - h) / 2),
+      width:w,
+      height:h
+    };
   }
 
   function clampWindowRect(rect, definition = {}) {
-    const minWidth = definition.min?.[0] || 560, minHeight = definition.min?.[1] || 390;
-    const width = Math.min(Math.max(minWidth, rect.width), desktop.clientWidth);
-    const height = Math.min(Math.max(minHeight, rect.height), desktop.clientHeight - 92);
-    return { width, height, left: Math.min(Math.max(-width + 130, rect.left), desktop.clientWidth - 130), top: Math.min(Math.max(0, rect.top), desktop.clientHeight - 145) };
+    const area = mediaWorkArea();
+    const availableWidth = area.right - area.left;
+    const availableHeight = area.bottom - area.top;
+    const minWidth = Math.min(definition.min?.[0] || 560, availableWidth);
+    const minHeight = Math.min(definition.min?.[1] || 390, availableHeight);
+    const requestedWidth = Number(rect.width) || minWidth;
+    const requestedHeight = Number(rect.height) || minHeight;
+    const width = Math.min(Math.max(minWidth, requestedWidth), availableWidth);
+    const height = Math.min(Math.max(minHeight, requestedHeight), availableHeight);
+    const requestedLeft = Number.isFinite(Number(rect.left)) ? Number(rect.left) : area.left;
+    const requestedTop = Number.isFinite(Number(rect.top)) ? Number(rect.top) : area.top;
+    return {
+      width,
+      height,
+      left:Math.min(Math.max(area.left, requestedLeft), area.right - width),
+      top:Math.min(Math.max(area.top, requestedTop), area.bottom - height)
+    };
   }
 
   function createWindow(appId, definition = appDefinitions[appId]) {
@@ -668,10 +691,12 @@
     if (!win) return;
     if (win.classList.contains("maximized")) {
       const previous = JSON.parse(win.dataset.previousRect || "{}");
-      win.classList.remove("maximized"); Object.assign(win.style, { left:`${previous.left || 20}px`, top:`${previous.top || 20}px`, width:`${previous.width || 850}px`, height:`${previous.height || 600}px` });
+      const restored = clampWindowRect(previous, win._windowDefinition || {});
+      win.classList.remove("maximized"); Object.assign(win.style, { left:`${restored.left}px`, top:`${restored.top}px`, width:`${restored.width}px`, height:`${restored.height}px` });
     } else {
+      const area = mediaWorkArea();
       win.dataset.previousRect = JSON.stringify({ left:win.offsetLeft, top:win.offsetTop, width:win.offsetWidth, height:win.offsetHeight });
-      win.classList.add("maximized"); Object.assign(win.style, { left:"0px", top:"0px", width:"100%", height:"calc(100% - 102px)" });
+      win.classList.add("maximized"); Object.assign(win.style, { left:`${area.left}px`, top:`${area.top}px`, width:`${area.right-area.left}px`, height:`${area.bottom-area.top}px` });
     }
     focusWindow(win);
   }
@@ -702,11 +727,13 @@
       document.addEventListener("fullscreenchange", win._fullscreenChangeHandler);
     }
     $(".drag-handle", win).addEventListener("pointerdown", (event) => beginWindowDrag(event, win));
+    $$(".finder-toolbar,.photos-topbar,.photos-viewer-toolbar,.chat-header,.safari-toolbar,.notes-browser-toolbar,.notes-editor-toolbar,.calendar-toolbar", win)
+      .forEach((surface) => surface.addEventListener("pointerdown", (event) => beginWindowDrag(event, win)));
     $$("[data-resize]", win).forEach((handle) => handle.addEventListener("pointerdown", (event) => beginWindowResize(event, win, handle.dataset.resize, definition)));
   }
 
   function beginWindowDrag(event, win) {
-    if (event.button !== 0 || event.target.closest(".traffic-lights") || win.classList.contains("maximized")) return;
+    if (event.button !== 0 || event.target.closest(".traffic-lights,button,input,textarea,a,[contenteditable='true']") || win.classList.contains("maximized")) return;
     event.preventDefault(); focusWindow(win);
     const startX = event.clientX, startY = event.clientY, startLeft = win.offsetLeft, startTop = win.offsetTop;
     const move = (moveEvent) => { const clamped = clampWindowRect({ left:startLeft+moveEvent.clientX-startX, top:startTop+moveEvent.clientY-startY, width:win.offsetWidth, height:win.offsetHeight }, { min:[320,220] }); win.style.left=`${clamped.left}px`; win.style.top=`${clamped.top}px`; };
@@ -727,7 +754,8 @@
         const requestedWidth = direction.includes("e") ? start.width + dx
           : direction.includes("w") ? start.width - dx
           : (direction.includes("s") ? start.height + dy : start.height - dy) * ratio;
-        const maxWidth = Math.min(desktop.clientWidth, (desktop.clientHeight - 92) * ratio);
+        const area = mediaWorkArea();
+        const maxWidth = Math.min(area.right - area.left, (area.bottom - area.top) * ratio);
         const boundedMinWidth = Math.min(Math.max(minW, minH * ratio), maxWidth);
         width = Math.max(boundedMinWidth, Math.min(maxWidth, requestedWidth));
         height = width / ratio;
@@ -740,7 +768,10 @@
         if (direction.includes("n")) { height=Math.max(minH,start.height-dy); top=start.top+(start.height-height); }
       }
       const clamped = ratio > 0
-        ? { width, height, left:Math.min(Math.max(-width + 130, left), desktop.clientWidth - 130), top:Math.min(Math.max(0, top), desktop.clientHeight - 145) }
+        ? (() => {
+          const area = mediaWorkArea();
+          return { width, height, left:Math.min(Math.max(area.left, left), area.right-width), top:Math.min(Math.max(area.top, top), area.bottom-height) };
+        })()
         : clampWindowRect({ left,top,width,height }, definition);
       Object.assign(win.style, { left:`${clamped.left}px`, top:`${clamped.top}px`, width:`${clamped.width}px`, height:`${clamped.height}px` });
     };
@@ -1197,8 +1228,11 @@
     $$(".photos-gallery-context", win).forEach((node) => { node.textContent = photoDateParts(media).day; });
     if (counter) counter.textContent = `${index + 1} of ${items.length}`;
     if (filmstrip) {
-      filmstrip.innerHTML = items.map((item, itemIndex) => `<button class="${itemIndex === index ? "active" : ""}" data-gallery-thumb="${itemIndex}" aria-current="${itemIndex === index ? "true" : "false"}" aria-label="Open ${escapeHtml(item.displayName || item.filename || `item ${itemIndex + 1}`)}">${renderMediaThumbnail(item)}</button>`).join("");
-      filmstrip.querySelector(".active")?.scrollIntoView({ inline:"center", block:"nearest", behavior:"smooth" });
+      filmstrip.innerHTML = items.map((item, itemIndex) => {
+        const type = item.type || mediaTypeFromSrc(item.src);
+        return `<button class="${itemIndex === index ? "active" : ""}" data-gallery-thumb="${itemIndex}" data-media-type="${escapeHtml(type)}" aria-current="${itemIndex === index ? "true" : "false"}" aria-label="Open ${escapeHtml(item.displayName || item.filename || `item ${itemIndex + 1}`)}">${renderMediaThumbnail(item)}</button>`;
+      }).join("");
+      filmstrip.querySelector(".active")?.scrollIntoView({ inline:"center", block:"nearest", behavior:"auto" });
       wireMediaThumbnails(filmstrip);
     }
     if (info) info.innerHTML = mediaInfoMarkup(media);
@@ -1252,7 +1286,7 @@
 
   function renderAbout(){return `<div class="about-app"><aside class="about-rail"><img class="about-eye" src="assets/icons/macos/rizvisions.png?v=106" alt=""><span>RIZVISIONS</span><nav><button class="active">Overview</button><button data-app="work">Work</button><button data-app="photos">Photos</button></nav></aside><main class="about-content"><header><span class="eyebrow">RIZ ZAHEER</span><h1>I build things on the internet and document the rest.</h1><p>Creator and operator in Chicago. I work at Parker, make photos and videos, and have used Rizvisions as a creative identity since middle school.</p></header><section class="about-stats"><div><small>Currently</small><strong>Parker</strong><button data-app="parker">Open app</button></div><div><small>Based</small><strong>Chicago</strong><span>Gold Coast / Oak Brook orbit</span></div><div><small>Internet</small><strong>30M+</strong><span>lifetime short-form views</span></div></section><section class="about-links"><button data-external="https://www.linkedin.com/in/riz-zaheer/">LinkedIn ↗</button><button data-app="instagram">Instagram</button><button data-external="https://x.com/rizvisions">X ↗</button><button data-app="spotify">Spotify</button></section><section class="about-now"><div><small>What this site is</small><p>A catch-all for work, personal stuff, photography, old businesses, current obsessions, and whatever else becomes part of my life.</p></div><div class="about-quote">“Permanent internet home” &gt; polished corporate portfolio.</div></section></main></div>`;}
 
-  function renderSettings(){return `<div class="settings-shell"><aside class="settings-sidebar"><input class="settings-search" placeholder="Search"><div class="settings-profile-mini"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions</strong><small>Desktop preferences</small></span></div><div class="settings-list"><div class="settings-row active"><span class="settings-row-icon">◐</span>Appearance</div><div class="settings-row"><span class="settings-row-icon">⌘</span>Desktop & Dock</div><div class="settings-row"><span class="settings-row-icon">♪</span>Sound</div><div class="settings-row"><span class="settings-row-icon">◉</span>About</div></div></aside><main class="settings-main"><h1>Appearance</h1><section class="settings-card"><h2>Wallpaper</h2><p>Choose the grid appearance used across the desktop and interface.</p><div class="settings-theme-grid">${[["grid","Light"],["dark","Dark"],["maroon","Maroon"],["forest","Forest"]].map(([id,label])=>`<button data-settings-wallpaper="${id}" class="theme-choice ${id}"><span></span><strong>${label}</strong></button>`).join("")}</div></section><section class="settings-card"><h2>Desktop & Dock</h2><div class="settings-info-row"><span><strong>Customize the Dock naturally</strong><small>Drag an app from the desktop onto the Dock. Drag Dock apps left or right to reorder, or drag one away to remove it.</small></span></div><button class="mac-button" data-settings-reset>Restore Desktop Layout</button></section><section class="settings-card"><h2>About this build</h2><div class="settings-info-row"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions OS 10.8.0</strong><small>A personal website pretending to be a Mac.</small></span></div></section></main></div>`;}
+  function renderSettings(){return `<div class="settings-shell"><aside class="settings-sidebar"><input class="settings-search" placeholder="Search"><div class="settings-profile-mini"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions</strong><small>Desktop preferences</small></span></div><div class="settings-list"><div class="settings-row active"><span class="settings-row-icon">◐</span>Appearance</div><div class="settings-row"><span class="settings-row-icon">⌘</span>Desktop & Dock</div><div class="settings-row"><span class="settings-row-icon">♪</span>Sound</div><div class="settings-row"><span class="settings-row-icon">◉</span>About</div></div></aside><main class="settings-main"><h1>Appearance</h1><section class="settings-card"><h2>Wallpaper</h2><p>Choose the grid appearance used across the desktop and interface.</p><div class="settings-theme-grid">${[["grid","Light"],["dark","Dark"],["maroon","Maroon"],["forest","Forest"]].map(([id,label])=>`<button data-settings-wallpaper="${id}" class="theme-choice ${id}"><span></span><strong>${label}</strong></button>`).join("")}</div></section><section class="settings-card"><h2>Desktop & Dock</h2><div class="settings-info-row"><span><strong>Customize the Dock naturally</strong><small>Drag an app from the desktop onto the Dock. Drag Dock apps left or right to reorder, or drag one away to remove it.</small></span></div><button class="mac-button" data-settings-reset>Restore Desktop Layout</button></section><section class="settings-card"><h2>About this build</h2><div class="settings-info-row"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions OS 10.8.1</strong><small>A personal website pretending to be a Mac.</small></span></div></section></main></div>`;}
 
   function renderVideoElement(media, { className = "", autoplay = false, muted = true } = {}) {
     const poster = media.poster ? ` poster="${escapeHtml(media.poster)}"` : "";
@@ -1400,7 +1434,7 @@
     const timeLabel = now.toLocaleTimeString([], { hour:"numeric", minute:"2-digit" });
     return `<div class="notes-app"><aside class="notes-folders"><div class="notes-sidebar-top"><span></span></div><div class="notes-group"><button><span class="notes-quick-icon">⌁</span><strong>Quick Notes</strong><em>2</em></button></div><div class="notes-sidebar-label">On My Mac</div><div class="notes-group"><button class="active"><span class="notes-folder-icon">▭</span><strong>Notes</strong><em>4</em></button></div></aside><section class="notes-browser"><header class="notes-browser-toolbar"><div><strong>Notes</strong><small>4 notes</small></div><div class="notes-toolbar-actions"><button>•••</button><button class="notes-compose">□</button></div></header><div class="notes-note-list"><h3>Today</h3><button class="active"><strong>New Note</strong><span>${timeLabel}</span><small>${escapeHtml(state.notes.slice(0,42) || "No additional text")}</small></button><h3>Previous 7 Days</h3><button><strong>Supabase Database Setup</strong><span>Thursday</span><small>Media archive, placements, and upload system…</small></button><h3>Previous 30 Days</h3><button><strong>Alright, we're creating...</strong><span>7/24/26</span><small>Ideas for Rizvisions and the permanent internet home.</small></button><h3>2025</h3><button><strong>Hi, this is Riz from...</strong><span>4/24/25</span><small>I can speak to what I was building then.</small></button></div></section><main class="note-editor apple-note-editor"><div class="notes-editor-toolbar"><button>Aa</button><button>☑</button><button>▦</button><button>⌕</button><button>↯</button><span></span><button>≫</button><button>⌕</button></div><div class="note-meta">${dateLabel} at ${timeLabel}</div><textarea class="note-editor-textarea" aria-label="Note" placeholder="Start typing…"></textarea></main></div>`;
   }
-  function renderTerminal(){return `<div class="terminal-shell"><div class="terminal-output">Last login: ${new Date().toLocaleDateString()} on ttys001\n\nRizvisions OS 10.8.0\nType <span class="terminal-link">help</span> to see available commands.\n</div><div class="terminal-input-row"><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" spellcheck="false"></div></div>`;}
+  function renderTerminal(){return `<div class="terminal-shell"><div class="terminal-output">Last login: ${new Date().toLocaleDateString()} on ttys001\n\nRizvisions OS 10.8.1\nType <span class="terminal-link">help</span> to see available commands.\n</div><div class="terminal-input-row"><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" spellcheck="false"></div></div>`;}
   function renderTrash(){return `<div class="empty-state"><div><img src="assets/icons/macos/trash.png?v=106" alt="Trash"><h2>Trash is Empty</h2><p>Old domains, failed ideas, embarrassing drafts, and abandoned businesses will eventually live here.</p></div></div>`;}
 
   function renderProject(project, projectId) {
