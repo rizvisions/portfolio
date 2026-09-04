@@ -6,24 +6,44 @@ test.beforeEach(async ({ page }) => {
   await openDesktop(page);
 });
 
-test("Photos opens to All Photos, newest first, with contained media", async ({ page }) => {
+test("Photos opens to a clean square All Photos grid and a contained white viewer", async ({ page }) => {
   const photosWindow = await openDesktopApp(page, "photos");
 
   await expect(photosWindow.locator('[data-photo-collection="all"]')).toHaveClass(/active/);
   await expect(photosWindow.locator('[data-photo-view="all"]')).toHaveClass(/active/);
   await expect(photosWindow.locator(".photos-archive-band")).toHaveCount(0);
   await expect(photosWindow.locator(".photos-date-group")).toHaveCount(0);
-  await expect(photosWindow.locator(".photo-natural-tile")).toHaveCount(2);
-  await expect(photosWindow.locator(".photo-natural-tile").first()).toHaveAttribute("data-media-id", "video-new");
+  await expect(photosWindow.locator(".photo-natural-tile")).toHaveCount(3);
+  await expect(photosWindow.locator(".photo-natural-tile").first()).toHaveAttribute("data-media-id", "video-landscape");
   await expect(photosWindow.locator('.photo-natural-tile[data-media-id="photo-old"] > img')).toHaveCSS("opacity", "1");
+  const tileLayout = await photosWindow.locator(".photo-natural-tile").evaluateAll((tiles) => tiles.map((tile) => {
+    const rect = tile.getBoundingClientRect();
+    return { left:rect.left, top:rect.top, right:rect.right, bottom:rect.bottom, ratio:rect.width/rect.height };
+  }));
+  expect(tileLayout.every((tile) => Math.abs(tile.ratio-1) < .01)).toBe(true);
+  for (let index = 0; index < tileLayout.length; index += 1) {
+    for (let other = index+1; other < tileLayout.length; other += 1) {
+      const a = tileLayout[index], b = tileLayout[other];
+      expect(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top).toBe(true);
+    }
+  }
 
-  await photosWindow.locator('.photo-natural-tile[data-media-id="video-new"]').click();
+  await photosWindow.locator('.photo-natural-tile[data-media-id="video-landscape"]').click();
   await expect(photosWindow.locator(".photos-gallery")).toBeVisible();
+  await expect(photosWindow.locator(".photos-gallery")).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect(photosWindow.locator(".photos-gallery-media video")).toHaveCSS("object-fit", "contain");
+  await expect(photosWindow.locator('[data-gallery-info]')).toHaveAttribute("aria-pressed", "false");
+  const mediaWidthBeforeInfo = await photosWindow.locator(".photos-gallery-media").evaluate((node) => node.getBoundingClientRect().width);
+  await photosWindow.locator('[data-gallery-info]').click();
   await expect(photosWindow.locator('[data-gallery-info]')).toHaveAttribute("aria-pressed", "true");
+  await expect(photosWindow.locator(".photos-gallery-info")).toBeVisible();
   await expect(photosWindow.locator(".photos-gallery-info")).toContainText("Dimensions");
-  await expect(photosWindow.locator(".photos-gallery-info")).toContainText("1080 × 1920");
+  await expect(photosWindow.locator(".photos-gallery-info")).toContainText("1920 × 1080");
+  await expect(photosWindow.locator(".photos-gallery-info")).toContainText("30 FPS");
   await expect(photosWindow.locator(".photos-gallery-info")).toContainText("Library");
+  await expect(photosWindow.locator(".photos-gallery-info iframe")).toHaveAttribute("src", /openstreetmap\.org/);
+  const mediaWidthAfterInfo = await photosWindow.locator(".photos-gallery-media").evaluate((node) => node.getBoundingClientRect().width);
+  expect(Math.abs(mediaWidthAfterInfo-mediaWidthBeforeInfo)).toBeLessThan(1);
 });
 
 test("Terminal input stays visible and accepts commands", async ({ page }) => {

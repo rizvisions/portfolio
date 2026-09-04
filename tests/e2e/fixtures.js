@@ -2,6 +2,28 @@ import { expect } from "@playwright/test";
 
 const mediaItems = [
   {
+    id: "video-landscape",
+    storage_path: "fixtures/video-landscape.mp4",
+    poster_path: null,
+    filename: "video-landscape.mp4",
+    display_name: "Chicago Landscape Video",
+    media_type: "video",
+    mime_type: "video/mp4",
+    size_bytes: 23592960,
+    width: 1920,
+    height: 1080,
+    duration_seconds: 15,
+    caption: "A horizontal video test.",
+    alt_text: "Landscape video in Chicago",
+    sort_order: 0,
+    created_at: "2026-09-03T12:00:00Z",
+    captured_at: "2026-09-03T12:00:00Z",
+    camera_make: "Apple",
+    camera_model: "iPhone 17 Pro",
+    lens_model: "Main Camera — 24 mm",
+    metadata: { frameRate: 30, codec: "HEVC", locationName: "Chicago, Illinois", latitude: 41.8781, longitude: -87.6298 }
+  },
+  {
     id: "video-new",
     storage_path: "fixtures/video-new.mp4",
     poster_path: null,
@@ -48,6 +70,8 @@ const mediaItems = [
 ];
 
 const mediaPlacements = [
+  { id: "desktop-landscape-video", media_id: "video-landscape", surface: "desktop", container: null, sort_order: 0, is_featured: false, desktop_x: 72, desktop_y: 70, desktop_rotation: 3, metadata: {} },
+  { id: "photos-landscape-video", media_id: "video-landscape", surface: "photos", container: "Library", sort_order: 0, is_featured: false, desktop_x: null, desktop_y: null, desktop_rotation: null, metadata: {} },
   { id: "desktop-video", media_id: "video-new", surface: "desktop", container: null, sort_order: 1, is_featured: false, desktop_x: 82, desktop_y: 28, desktop_rotation: -5, metadata: {} },
   { id: "photos-video", media_id: "video-new", surface: "photos", container: "Library", sort_order: 1, is_featured: true, desktop_x: null, desktop_y: null, desktop_rotation: null, metadata: {} },
   { id: "desktop-photo", media_id: "photo-old", surface: "desktop", container: null, sort_order: 2, is_featured: false, desktop_x: 84, desktop_y: 52, desktop_rotation: 6, metadata: {} },
@@ -84,4 +108,3 @@ export async function openDesktopApp(page, appId) {
   await expect(window).toBeVisible();
   return window;
 }
-

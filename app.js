@@ -568,7 +568,9 @@
   }
 
   function closeWindow(win = activeWindow) {
-    if (!win) return; saveWindowRect(win); win.remove(); playSound("close");
+    if (!win) return;
+    if (win._fullscreenChangeHandler) document.removeEventListener("fullscreenchange", win._fullscreenChangeHandler);
+    saveWindowRect(win); win.remove(); playSound("close");
     activeWindow = $$(".mac-window:not([hidden])", windowsRoot).sort((a,b) => Number(a.style.zIndex)-Number(b.style.zIndex)).pop() || null;
     if (activeWindow) focusWindow(activeWindow); else activeAppName.textContent = "Rizvisions";
     renderDock();
@@ -600,11 +602,26 @@
       if (action === "zoom") {
         if (win.classList.contains("media-window")) {
           const viewer = $(".media-viewer", win);
-          const request = document.fullscreenElement ? document.exitFullscreen?.() : viewer?.requestFullscreen?.();
-          request?.catch?.(() => {});
+          if (document.fullscreenElement) {
+            document.exitFullscreen?.().catch?.(() => {});
+          } else if (viewer?.requestFullscreen) {
+            win._preFullscreenRect = { left:win.offsetLeft, top:win.offsetTop, width:win.offsetWidth, height:win.offsetHeight };
+            viewer.requestFullscreen().catch(() => { win._preFullscreenRect = null; });
+          }
         } else zoomWindow(win);
       }
     }));
+    if (definition.lockAspect && !win._fullscreenChangeHandler) {
+      win._fullscreenChangeHandler = () => {
+        if (document.fullscreenElement || !win._preFullscreenRect || !win.isConnected) return;
+        const rect = win._preFullscreenRect;
+        win._preFullscreenRect = null;
+        requestAnimationFrame(() => {
+          Object.assign(win.style, { left:`${rect.left}px`, top:`${rect.top}px`, width:`${rect.width}px`, height:`${rect.height}px` });
+        });
+      };
+      document.addEventListener("fullscreenchange", win._fullscreenChangeHandler);
+    }
     $(".drag-handle", win).addEventListener("pointerdown", (event) => beginWindowDrag(event, win));
     $$("[data-resize]", win).forEach((handle) => handle.addEventListener("pointerdown", (event) => beginWindowResize(event, win, handle.dataset.resize, definition)));
   }
@@ -930,15 +947,20 @@
     $(`[data-gallery-next]`, win)?.addEventListener("click", () => stepPhotosGallery(win, 1));
     $(`[data-gallery-info]`, win)?.addEventListener("click", () => {
       const panel = $(".photos-gallery-info", win);
-      const gallery = $(".photos-gallery", win);
       const button = $("[data-gallery-info]", win);
       if (panel) {
         const willOpen = panel.hidden;
         panel.hidden = !willOpen;
-        gallery?.classList.toggle("info-open", willOpen);
+        panel.removeAttribute("style");
         button?.setAttribute("aria-pressed", String(willOpen));
       }
     });
+    $(`[data-info-close]`, win)?.addEventListener("click", () => {
+      const panel = $(".photos-gallery-info", win);
+      if (panel) panel.hidden = true;
+      $("[data-gallery-info]", win)?.setAttribute("aria-pressed", "false");
+    });
+    wirePhotosInfoPanel(win);
     $(".photos-gallery-filmstrip", win)?.addEventListener("click", (event) => {
       const thumb = event.target.closest("[data-gallery-thumb]");
       if (thumb) showPhotosGalleryItem(win, Number(thumb.dataset.galleryThumb));
@@ -977,10 +999,8 @@
     gallery.hidden = false;
     const info = $(".photos-gallery-info", win);
     const infoButton = $("[data-gallery-info]", win);
-    const showInfo = win.clientWidth >= 930;
-    if (info) info.hidden = !showInfo;
-    gallery.classList.toggle("info-open", showInfo);
-    infoButton?.setAttribute("aria-pressed", String(showInfo));
+    if (info) { info.hidden = true; info.removeAttribute("style"); }
+    infoButton?.setAttribute("aria-pressed", "false");
     showPhotosGalleryItem(win, win._galleryIndex);
     gallery.focus({ preventScroll: true });
   }
@@ -989,7 +1009,6 @@
     const gallery = $(".photos-gallery", win);
     if (!gallery) return;
     gallery.hidden = true;
-    gallery.classList.remove("info-open");
     const info = $(".photos-gallery-info", win); if (info) info.hidden = true;
     $("[data-gallery-info]", win)?.setAttribute("aria-pressed", "false");
     const video = gallery.querySelector("video");
@@ -1003,23 +1022,86 @@
     showPhotosGalleryItem(win, next);
   }
 
+  function wirePhotosInfoPanel(win) {
+    const panel = $(".photos-gallery-info", win);
+    const handle = $("[data-info-drag]", panel);
+    if (!panel || !handle || handle.dataset.dragWired === "true") return;
+    handle.dataset.dragWired = "true";
+    handle.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0 || event.target.closest("button")) return;
+      event.preventDefault();
+      const gallery = $(".photos-gallery", win);
+      const galleryRect = gallery.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const start = { x:event.clientX, y:event.clientY, left:panelRect.left-galleryRect.left, top:panelRect.top-galleryRect.top };
+      const move = (moveEvent) => {
+        const left = Math.max(12, Math.min(gallery.clientWidth-panel.offsetWidth-12, start.left+moveEvent.clientX-start.x));
+        const top = Math.max(66, Math.min(gallery.clientHeight-panel.offsetHeight-12, start.top+moveEvent.clientY-start.y));
+        Object.assign(panel.style, { left:`${left}px`, top:`${top}px`, right:"auto", bottom:"auto" });
+      };
+      const finish = () => {
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", finish);
+      };
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", finish, { once:true });
+    });
+  }
+
+  function formatMediaBytes(bytes) {
+    if (!Number.isFinite(Number(bytes)) || Number(bytes) <= 0) return "";
+    const units = ["B","KB","MB","GB"];
+    let value = Number(bytes), index = 0;
+    while (value >= 1024 && index < units.length-1) { value /= 1024; index += 1; }
+    return `${value >= 10 || index === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[index]}`;
+  }
+
+  function mediaLocation(media) {
+    const metadata = media.metadata || {};
+    const latitude = Number(metadata.latitude ?? metadata.lat);
+    const longitude = Number(metadata.longitude ?? metadata.lng ?? metadata.lon);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+    return { latitude, longitude, name:metadata.locationName || metadata.location || "" };
+  }
+
+  function mediaMapMarkup(media) {
+    const location = mediaLocation(media);
+    if (!location) return "";
+    const { latitude, longitude, name } = location;
+    const spread = .055;
+    const bbox = [longitude-spread, latitude-spread, longitude+spread, latitude+spread].map((value) => value.toFixed(6)).join(",");
+    const embed = `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${encodeURIComponent(`${latitude},${longitude}`)}`;
+    const link = `https://www.openstreetmap.org/?mlat=${encodeURIComponent(latitude)}&mlon=${encodeURIComponent(longitude)}#map=12/${encodeURIComponent(latitude)}/${encodeURIComponent(longitude)}`;
+    return `<section class="photos-info-location"><div><strong>${escapeHtml(name || "Location")}</strong><small>${latitude.toFixed(4)}, ${longitude.toFixed(4)}</small></div><iframe src="${escapeHtml(embed)}" title="Map showing where this media was captured" loading="lazy"></iframe><a href="${escapeHtml(link)}" target="_blank" rel="noopener">Open map ↗</a></section>`;
+  }
+
   function mediaInfoMarkup(media) {
     const capture = new Date(media.capturedAt || media.createdAt || Date.now());
     const type = (media.type || mediaTypeFromSrc(media.src)) === "video" ? "Video" : "Photo";
     const orientation = media.width && media.height ? (media.width > media.height ? "Landscape" : media.width < media.height ? "Portrait" : "Square") : "—";
     const camera = [media.cameraMake, media.cameraModel].filter(Boolean).join(" ") || "—";
+    const metadata = media.metadata || {};
+    const aperture = Number(metadata.fNumber) > 0 ? `ƒ/${Number(metadata.fNumber).toFixed(1)}` : "—";
+    const focalLength = Number(metadata.focalLength) > 0 ? `${Number(metadata.focalLength).toFixed(0)} mm` : "—";
+    const exposure = metadata.exposureTime ? (Number(metadata.exposureTime) < 1 ? `1/${Math.round(1/Number(metadata.exposureTime))} sec` : `${metadata.exposureTime} sec`) : "—";
+    const frameRate = Number(metadata.frameRate ?? metadata.fps) > 0 ? `${Number(metadata.frameRate ?? metadata.fps).toFixed(0)} FPS` : "—";
+    const fileSize = formatMediaBytes(media.sizeBytes);
     const details = [
-      ["Date", capture.toLocaleString("en-US", { month:"long", day:"numeric", year:"numeric", hour:"numeric", minute:"2-digit" })],
       ["Kind", type],
       ["Dimensions", media.width && media.height ? `${media.width} × ${media.height}` : "—"],
       ["Orientation", orientation],
-      ["Camera", camera],
       ["Lens", media.lensModel || "—"],
+      ["Focal length", focalLength],
+      ["Aperture", aperture],
+      ["Exposure", exposure],
+      ["ISO", metadata.iso || "—"],
       ...(type === "Video" ? [["Duration", media.duration ? formatMediaDuration(media.duration) : "—"]] : []),
+      ...(type === "Video" ? [["Frame rate", frameRate],["Codec", metadata.codec || "—"]] : []),
+      ["File size", fileSize || "—"],
       ["Collection", media.collection || "Library"],
-      ["File", media.filename || "—"]
+      ["Format", media.mimeType ? media.mimeType.replace(/^.*\//, "").toUpperCase() : "—"]
     ].filter(([, value]) => value !== "—");
-    return `<div class="photos-info-card"><header><span>Information</span><strong>${escapeHtml(media.displayName || media.filename || "Untitled")}</strong>${media.caption ? `<p>${escapeHtml(media.caption)}</p>` : ""}</header><dl>${details.map(([key,value])=>`<div><dt>${key}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl></div>`;
+    return `<div class="photos-info-card"><header><strong>${escapeHtml(media.displayName || media.filename || "Untitled")}</strong><small>${escapeHtml(media.filename || "")}</small><time>${escapeHtml(capture.toLocaleString("en-US", { month:"long", day:"numeric", year:"numeric", hour:"numeric", minute:"2-digit" }))}</time>${media.caption ? `<p>${escapeHtml(media.caption)}</p>` : ""}</header>${camera !== "—" ? `<section class="photos-info-camera"><strong>${escapeHtml(camera)}</strong>${media.lensModel ? `<span>${escapeHtml(media.lensModel)}</span>` : ""}</section>` : ""}<dl>${details.map(([key,value])=>`<div><dt>${key}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl>${mediaMapMarkup(media)}</div>`;
   }
 
   function showPhotosGalleryItem(win, index) {
@@ -1030,7 +1112,7 @@
     const stage = $(".photos-gallery-media", win);
     const counter = $(".photos-gallery-counter", win);
     const filmstrip = $(".photos-gallery-filmstrip", win);
-    const info = $(".photos-gallery-info", win);
+    const info = $(".photos-info-content", win);
     stage.innerHTML = renderGalleryMedia(media);
     $$(".photos-gallery-title", win).forEach((node) => { node.textContent = media.displayName || media.filename || "Untitled"; });
     $$(".photos-gallery-context", win).forEach((node) => { node.textContent = photoDateParts(media).day; });
@@ -1145,7 +1227,7 @@
     return `<div class="photos-natural-grid">${items.map((media, index) => {
       const type = media.type || mediaTypeFromSrc(media.src);
       const title = media.displayName || media.filename || "Untitled";
-      return `<button class="photo-natural-tile" data-media-id="${escapeHtml(media.id)}" data-media-index="${index + indexOffset}" data-media-type="${escapeHtml(type)}" style="--media-ratio:${mediaAspectRatio(media, type)}" aria-label="Open ${escapeHtml(title)}">${renderMediaThumbnail(media)}${type === "video" ? `<i class="video-duration">▶ ${media.duration ? formatMediaDuration(media.duration) : "video"}</i>` : ""}</button>`;
+      return `<button class="photo-natural-tile" data-media-id="${escapeHtml(media.id)}" data-media-index="${index + indexOffset}" data-media-type="${escapeHtml(type)}" aria-label="Open ${escapeHtml(title)}">${renderMediaThumbnail(media)}${type === "video" ? `<i class="video-duration">▶ ${media.duration ? formatMediaDuration(media.duration) : "video"}</i>` : ""}</button>`;
     }).join("")}</div>`;
   }
 
@@ -1186,7 +1268,7 @@
       body = `${featuredBlock}<section class="photos-library-feed">${renderChronology(photos, viewMode)}</section>`;
     }
 
-    return `<div class="photos-app"><aside class="photos-nav"><div class="photos-nav-title"><img src="assets/icons/macos/photos.png?v=106" alt=""><strong>Photos</strong></div><div class="sidebar-title">Library</div><button data-photo-collection="all" class="${activeCollection === "all" ? "active" : ""}"><span>▦</span>All Photos</button><button data-photo-collection="photos" class="${activeCollection === "photos" ? "active" : ""}"><span>▧</span>Photos</button><button data-photo-collection="videos" class="${activeCollection === "videos" ? "active" : ""}"><span>▶</span>Videos</button>${collectionButtons ? `<div class="sidebar-title collections-label">Collections</div>${collectionButtons}` : ""}</aside><main class="photos-library"><div class="photos-topbar"><div><h1>${escapeHtml(title)}</h1><small>${photos.length} ${photos.length === 1 ? "item" : "items"}${photos.length ? ` · newest first` : ""}</small></div><div class="photos-segmented" aria-label="Group photos by"><button data-photo-view="years" class="${viewMode === "years" ? "active" : ""}">Years</button><button data-photo-view="months" class="${viewMode === "months" ? "active" : ""}">Months</button><button data-photo-view="all" class="${viewMode === "all" ? "active" : ""}">All Photos</button></div></div><div class="photos-scroll-content">${body}</div><section class="photos-gallery" tabindex="-1" hidden><header class="photos-viewer-toolbar"><button data-gallery-close class="photos-viewer-back" aria-label="Back to library">‹</button><div class="photos-viewer-copy"><strong class="photos-gallery-title"></strong><span><small class="photos-gallery-context"></small><small class="photos-gallery-counter"></small></span></div><span></span><button data-gallery-info aria-label="Show information" aria-pressed="false">i</button></header><div class="photos-gallery-stage"><button class="gallery-arrow gallery-prev" data-gallery-prev aria-label="Previous item">‹</button><div class="photos-gallery-media"></div><button class="gallery-arrow gallery-next" data-gallery-next aria-label="Next item">›</button></div><footer><div class="photos-gallery-filmstrip"></div></footer><aside class="photos-gallery-info" hidden></aside></section></main></div>`;
+    return `<div class="photos-app"><aside class="photos-nav"><div class="photos-nav-title"><img src="assets/icons/macos/photos.png?v=106" alt=""><strong>Photos</strong></div><div class="sidebar-title">Library</div><button data-photo-collection="all" class="${activeCollection === "all" ? "active" : ""}"><span>▦</span>All Photos</button><button data-photo-collection="photos" class="${activeCollection === "photos" ? "active" : ""}"><span>▧</span>Photos</button><button data-photo-collection="videos" class="${activeCollection === "videos" ? "active" : ""}"><span>▶</span>Videos</button>${collectionButtons ? `<div class="sidebar-title collections-label">Collections</div>${collectionButtons}` : ""}</aside><main class="photos-library"><div class="photos-topbar"><div><h1>${escapeHtml(title)}</h1><small>${photos.length} ${photos.length === 1 ? "item" : "items"}${photos.length ? ` · newest first` : ""}</small></div><div class="photos-segmented" aria-label="Group photos by"><button data-photo-view="years" class="${viewMode === "years" ? "active" : ""}">Years</button><button data-photo-view="months" class="${viewMode === "months" ? "active" : ""}">Months</button><button data-photo-view="all" class="${viewMode === "all" ? "active" : ""}">All Photos</button></div></div><div class="photos-scroll-content">${body}</div><section class="photos-gallery" tabindex="-1" hidden><header class="photos-viewer-toolbar"><button data-gallery-close class="photos-viewer-back" aria-label="Back to library">‹</button><div class="photos-viewer-copy"><strong class="photos-gallery-title"></strong><span><small class="photos-gallery-context"></small><small class="photos-gallery-counter"></small></span></div><button data-gallery-info aria-label="Show information" aria-pressed="false">i</button></header><div class="photos-gallery-stage"><button class="gallery-arrow gallery-prev" data-gallery-prev aria-label="Previous item">‹</button><div class="photos-gallery-media"></div><button class="gallery-arrow gallery-next" data-gallery-next aria-label="Next item">›</button></div><footer><div class="photos-gallery-filmstrip"></div></footer><aside class="photos-gallery-info" role="dialog" aria-label="Media information" hidden><header class="photos-info-windowbar" data-info-drag><i></i><span>Info</span><button type="button" data-info-close aria-label="Close information">×</button></header><div class="photos-info-content"></div></aside></section></main></div>`;
   }
 
   function mediaTimestamp(media) {
@@ -1353,6 +1435,8 @@
           storagePath: row.storage_path,
           displayName: row.display_name || row.filename,
           filename: row.filename,
+          mimeType: row.mime_type || "",
+          sizeBytes: Number(row.size_bytes) || null,
           alt: row.alt_text || row.display_name || row.caption || row.filename,
           caption: row.caption || "",
           width: Number(row.width) || null,

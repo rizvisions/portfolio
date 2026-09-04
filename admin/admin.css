@@ -116,6 +116,9 @@ input:focus, textarea:focus, select:focus { border-color: var(--blue); box-shado
 .desktop-fields input { padding: 9px 10px; }
 .advanced-details { padding: 12px 15px; }
 .advanced-details summary { cursor: pointer; font-weight: 650; }
+.metadata-edit-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin: 15px 0; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
+.metadata-edit-grid label { display: grid; gap: 6px; color: var(--muted); font-size: 12px; font-weight: 650; }
+.metadata-edit-grid label:first-child { grid-column: 1 / -1; }
 .advanced-details dl { display: grid; gap: 10px; margin: 14px 0 2px; }
 .advanced-details dl div { display: grid; grid-template-columns: 110px 1fr; gap: 10px; }
 .advanced-details dt { color: var(--muted); }
@@ -151,6 +154,8 @@ input:focus, textarea:focus, select:focus { border-color: var(--blue); box-shado
   .auth-secondary button:last-child { grid-column: auto; }
   .media-grid { grid-template-columns: 1fr; }
   .placement-options, .desktop-fields { grid-template-columns: 1fr; padding-left: 0; }
+  .metadata-edit-grid { grid-template-columns: 1fr; }
+  .metadata-edit-grid label:first-child { grid-column: auto; }
   .advanced-details dl div { grid-template-columns: 1fr; gap: 2px; }
   .header-actions a { display: none; }
 }

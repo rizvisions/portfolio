@@ -160,6 +160,13 @@
 
           <details class="advanced-details">
             <summary>Advanced details</summary>
+            <div class="metadata-edit-grid">
+              <label>Location name<input id="locationNameInput" type="text" placeholder="Chicago, Illinois"></label>
+              <label>Latitude<input id="latitudeInput" type="number" min="-90" max="90" step="any" placeholder="Detected when available"></label>
+              <label>Longitude<input id="longitudeInput" type="number" min="-180" max="180" step="any" placeholder="Detected when available"></label>
+              <label>Frame rate<input id="frameRateInput" type="number" min="1" max="240" step="0.01" placeholder="For video"></label>
+              <label>Codec<input id="codecInput" type="text" placeholder="HEVC, H.264…"></label>
+            </div>
             <dl>
               <div><dt>Original file</dt><dd id="originalFilename"></dd></div>
               <div><dt>Captured</dt><dd id="mediaCapturedAt"></dd></div>

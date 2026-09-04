@@ -21,10 +21,12 @@ V10.8.0 refines Photos and individual media windows while preserving the macOS d
 - Kept Photos focused on the direct newest-first All Photos library without an editorial banner.
 - Fixed hidden image thumbnails and made posterless video thumbnails open on the first click.
 - Kept Featured compact and native to the Photos working surface.
-- Added filenames, orientation, collection, camera, lens, dimensions, and duration to the immersive viewer information panel.
-- Rebalanced the viewer so contained media gets the available space and the information panel stays compact.
+- Standardized the Photos library itself as a clean square thumbnail grid while preserving natural dimensions in full view.
+- Rebuilt the in-app viewer as a white, breathable canvas with fully contained media and a separate draggable Info panel.
+- Added camera, lens, dimensions, exposure, aperture, ISO, file size, frame rate, codec, and GPS display when available, plus a map for geotagged media.
+- Added optional location, frame-rate, and codec editing in Admin without changing the Supabase schema.
 - Standardized desktop media as square Polaroid cards while keeping the hover lift.
-- Made individual media windows follow and preserve the asset's true aspect ratio with hover-only chrome.
+- Made individual media windows follow and preserve the asset's true aspect ratio with hover-only chrome, stable landscape playback, and exact restoration after exiting fullscreen.
 - Added an explicit muted slash, centered window-control symbols, and normalized the Calendar icon's optical size.
 
 ## Release safeguards
@@ -43,7 +45,7 @@ The intro shows once per browser tab session. Add `?hello=1` to the site URL to 
 
 ## Media metadata
 
-New image uploads attempt to read embedded capture metadata in the browser before upload. When original capture metadata is not available, the file's last-modified timestamp is used as a fallback. Video uploads store dimensions, duration, and a timestamp fallback from the source file.
+New image uploads attempt to read embedded capture metadata in the browser before upload, including GPS coordinates when present. When original capture metadata is not available, the file's last-modified timestamp is used as a fallback. Video uploads store dimensions, duration, and a timestamp fallback from the source file. Location name, coordinates, frame rate, and codec can also be completed manually in Admin.
 
 ## Deployment workflow
 

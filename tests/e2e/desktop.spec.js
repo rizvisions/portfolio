@@ -22,10 +22,10 @@ test("opens and closes every desktop app without a page error", async ({ page })
 
 test("renders mixed desktop photos and posterless videos together", async ({ page }) => {
   const files = page.locator("#desktopPhotos .photo-file");
-  await expect(files).toHaveCount(2);
+  await expect(files).toHaveCount(3);
   await expect(page.locator('#desktopPhotos .photo-file[data-media-type="image"]')).toHaveCount(1);
-  await expect(page.locator('#desktopPhotos .photo-file[data-media-type="video"]')).toHaveCount(1);
-  await expect(page.locator('#desktopPhotos .photo-file[data-media-type="video"] video')).toHaveCount(1);
+  await expect(page.locator('#desktopPhotos .photo-file[data-media-type="video"]')).toHaveCount(2);
+  await expect(page.locator('#desktopPhotos .photo-file[data-media-type="video"] video')).toHaveCount(2);
   const cards = await files.evaluateAll((items) => items.map((item) => ({
     width: getComputedStyle(item).width,
     previewRatio: getComputedStyle(item.querySelector(".photo-paper > img, .photo-paper > video")).aspectRatio
@@ -35,7 +35,7 @@ test("renders mixed desktop photos and posterless videos together", async ({ pag
 });
 
 test("opens desktop video at its true ratio and keeps that ratio while resizing", async ({ page }) => {
-  await page.locator('#desktopPhotos .photo-file[data-media-type="video"]').dblclick();
+  await page.locator('#desktopPhotos .photo-file[data-photo-id="video-new"]').dblclick();
   const mediaWindow = page.locator("#windows .media-window-video");
   await expect(mediaWindow).toBeVisible();
 
@@ -56,6 +56,29 @@ test("opens desktop video at its true ratio and keeps that ratio while resizing"
   await expect(mediaWindow.locator(".window-titlebar")).toHaveCSS("opacity", "0");
   await mediaWindow.hover();
   await expect(mediaWindow.locator(".window-titlebar")).toHaveCSS("opacity", "1");
+
+  await mediaWindow.locator('[data-window-action="zoom"]').click();
+  await expect(page.locator(".media-viewer:fullscreen")).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".media-viewer:fullscreen")).toHaveCount(0);
+  const afterFullscreen = await mediaWindow.boundingBox();
+  expect(Math.abs(afterFullscreen.width / afterFullscreen.height - 1080 / 1920)).toBeLessThan(.01);
+});
+
+test("keeps a landscape video frame stable while controls appear and hide", async ({ page }) => {
+  await page.locator('#desktopPhotos .photo-file[data-photo-id="video-landscape"]').dblclick();
+  const mediaWindow = page.locator("#windows .media-window-video");
+  await expect(mediaWindow).toBeVisible();
+  const before = await mediaWindow.locator(".apple-video-element").boundingBox();
+  expect(Math.abs(before.width / before.height - 1920 / 1080)).toBeLessThan(.01);
+
+  await mediaWindow.locator(".apple-video-player").hover();
+  await page.waitForTimeout(1800);
+  const after = await mediaWindow.locator(".apple-video-element").boundingBox();
+  expect(Math.abs(after.x-before.x)).toBeLessThan(.5);
+  expect(Math.abs(after.y-before.y)).toBeLessThan(.5);
+  expect(Math.abs(after.width-before.width)).toBeLessThan(.5);
+  expect(Math.abs(after.height-before.height)).toBeLessThan(.5);
 });
 
 test("centers traffic-light symbols and optically sizes Calendar", async ({ page }) => {
