@@ -44,6 +44,23 @@ test("Photos opens to a clean square All Photos grid and a contained white viewe
   await expect(photosWindow.locator(".photos-gallery-info iframe")).toHaveAttribute("src", /openstreetmap\.org/);
   const mediaWidthAfterInfo = await photosWindow.locator(".photos-gallery-media").evaluate((node) => node.getBoundingClientRect().width);
   expect(Math.abs(mediaWidthAfterInfo-mediaWidthBeforeInfo)).toBeLessThan(1);
+
+  await photosWindow.locator('[data-gallery-close]').click();
+  await photosWindow.locator('.photo-natural-tile[data-media-id="photo-old"]').click();
+  const photoContainment = await photosWindow.locator(".photos-gallery-media").evaluate((stage) => {
+    const image = stage.querySelector("img");
+    const stageRect = stage.getBoundingClientRect();
+    const imageRect = image.getBoundingClientRect();
+    return {
+      complete: image.complete && image.naturalWidth === 800 && image.naturalHeight === 1200,
+      objectFit: getComputedStyle(image).objectFit,
+      inside:
+        imageRect.left >= stageRect.left && imageRect.right <= stageRect.right &&
+        imageRect.top >= stageRect.top && imageRect.bottom <= stageRect.bottom,
+      noOverflow: stage.scrollWidth <= stage.clientWidth && stage.scrollHeight <= stage.clientHeight
+    };
+  });
+  expect(photoContainment).toEqual({ complete:true, objectFit:"contain", inside:true, noOverflow:true });
 });
 
 test("Terminal input stays visible and accepts commands", async ({ page }) => {

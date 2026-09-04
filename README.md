@@ -13,7 +13,7 @@ V10.8.0 refines Photos and individual media windows while preserving the macOS d
 - Added the handwritten Apple-style `hello` first-load experience, followed by a local-time greeting.
 - Rebuilt Photos around newest-first chronology, Photos / Videos filters, Years / Months / All Photos views, a smaller Featured strip, and a contained gallery viewer.
 - Added image capture metadata ingestion in Admin when metadata is available: capture date, camera, lens, dimensions, and selected EXIF fields.
-- Individual videos autoplay muted, preserve the entire frame, and use a hover-only QuickTime-style control overlay.
+- Individual videos autoplay muted, loop, preserve the entire frame, remember the shared audio choice, and use a hover-only QuickTime-style control overlay.
 - Removed browser-native reset confirmation from the main desktop.
 
 ## V10.8 media update
@@ -22,11 +22,11 @@ V10.8.0 refines Photos and individual media windows while preserving the macOS d
 - Fixed hidden image thumbnails and made posterless video thumbnails open on the first click.
 - Kept Featured compact and native to the Photos working surface.
 - Standardized the Photos library itself as a clean square thumbnail grid while preserving natural dimensions in full view.
-- Rebuilt the in-app viewer as a white, breathable canvas with fully contained media and a separate draggable Info panel.
+- Rebuilt the in-app viewer as a white, breathable canvas with a fixed, fully contained media stage and a separate draggable Info panel.
 - Added camera, lens, dimensions, exposure, aperture, ISO, file size, frame rate, codec, and GPS display when available, plus a map for geotagged media.
 - Added optional location, frame-rate, and codec editing in Admin without changing the Supabase schema.
 - Standardized desktop media as square Polaroid cards while keeping the hover lift.
-- Made individual media windows follow and preserve the asset's true aspect ratio with hover-only chrome, stable landscape playback, and exact restoration after exiting fullscreen.
+- Made individual media windows use decoded source dimensions, stay centered above the Dock, preserve the true aspect ratio, tone-map HDR brightness, and restore exactly after exiting fullscreen.
 - Added an explicit muted slash, centered window-control symbols, and normalized the Calendar icon's optical size.
 
 ## Release safeguards

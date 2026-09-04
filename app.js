@@ -69,6 +69,8 @@
     brightness: 100,
     volume: 54,
     sound: true,
+    mediaMuted: true,
+    mediaVolume: .55,
     focus: false,
     dockMagnification: true,
     dock: [...DEFAULT_DOCK],
@@ -514,8 +516,9 @@
 
   function mediaWindowSize(media, type) {
     const ratio = Math.max(.28, Math.min(4, mediaAspectRatio(media, type)));
-    const availableWidth = Math.max(420, desktop.clientWidth - 100);
-    const availableHeight = Math.max(420, desktop.clientHeight - 145);
+    const area = mediaWorkArea();
+    const availableWidth = Math.max(240, area.right - area.left);
+    const availableHeight = Math.max(280, area.bottom - area.top);
     let bodyWidth, bodyHeight;
     if (ratio < 1) {
       bodyHeight = Math.min(790, availableHeight);
@@ -526,6 +529,86 @@
       if (bodyHeight > availableHeight) { bodyHeight = availableHeight; bodyWidth = bodyHeight * ratio; }
     }
     return [Math.round(Math.min(availableWidth, bodyWidth)), Math.round(Math.min(availableHeight, bodyHeight))];
+  }
+
+  function mediaWorkArea() {
+    const gap = 16;
+    const desktopRect = desktop.getBoundingClientRect();
+    const dockWrap = dock.closest(".dock-wrap");
+    const dockRect = dockWrap?.getBoundingClientRect();
+    const dockTop = dockRect?.height ? Math.floor(dockRect.top - desktopRect.top - gap) : desktop.clientHeight - 118;
+    return {
+      left: gap,
+      top: gap,
+      right: Math.max(gap + 240, desktop.clientWidth - gap),
+      bottom: Math.max(gap + 280, Math.min(desktop.clientHeight - gap, dockTop))
+    };
+  }
+
+  function fitMediaRectToWorkArea(ratio, preferred = {}, center = true) {
+    const safeRatio = Math.max(.28, Math.min(4, Number(ratio) || 1));
+    const area = mediaWorkArea();
+    const maxWidth = area.right - area.left;
+    const maxHeight = area.bottom - area.top;
+    let width;
+    let height;
+    if (safeRatio < 1) {
+      height = Math.min(maxHeight, Number(preferred.height) || Math.min(790, maxHeight));
+      width = height * safeRatio;
+    } else {
+      width = Math.min(maxWidth, Number(preferred.width) || Math.min(1080, maxWidth));
+      height = width / safeRatio;
+    }
+    if (width > maxWidth) { width = maxWidth; height = width / safeRatio; }
+    if (height > maxHeight) { height = maxHeight; width = height * safeRatio; }
+    const centeredLeft = area.left + (maxWidth - width) / 2;
+    const centeredTop = area.top + (maxHeight - height) / 2;
+    const requestedLeft = Number(preferred.left);
+    const requestedTop = Number(preferred.top);
+    const left = center || !Number.isFinite(requestedLeft)
+      ? centeredLeft
+      : Math.max(area.left, Math.min(area.right - width, requestedLeft));
+    const top = center || !Number.isFinite(requestedTop)
+      ? centeredTop
+      : Math.max(area.top, Math.min(area.bottom - height, requestedTop));
+    return { left:Math.round(left), top:Math.round(top), width:Math.round(width), height:Math.round(height) };
+  }
+
+  function applyMediaWindowRect(win, rect) {
+    Object.assign(win.style, { left:`${rect.left}px`, top:`${rect.top}px`, width:`${rect.width}px`, height:`${rect.height}px` });
+  }
+
+  function syncMediaWindowToIntrinsic(win, media, type) {
+    const element = type === "video" ? $("video", win) : $(".media-viewer > img", win);
+    if (!element) return;
+    const sync = () => {
+      const width = type === "video" ? element.videoWidth : element.naturalWidth;
+      const height = type === "video" ? element.videoHeight : element.naturalHeight;
+      if (!(width > 0 && height > 0) || !win.isConnected) return;
+      const ratio = Math.max(.28, Math.min(4, width / height));
+      const current = { width:win.offsetWidth, height:win.offsetHeight };
+      const minWidth = ratio < 1 ? Math.max(220, Math.round(380 * ratio)) : 420;
+      win._mediaIntrinsicRatio = ratio;
+      win._windowDefinition.lockAspect = ratio;
+      win._windowDefinition.min = [minWidth, Math.round(minWidth / ratio)];
+      win.style.setProperty("--media-aspect", String(ratio));
+      applyMediaWindowRect(win, fitMediaRectToWorkArea(ratio, current, true));
+      saveWindowRect(win);
+    };
+    if ((type === "video" && element.readyState >= 1) || (type !== "video" && element.complete)) sync();
+    else element.addEventListener(type === "video" ? "loadedmetadata" : "load", sync, { once:true });
+  }
+
+  function restoreMediaWindowAfterFullscreen(win) {
+    if (!win._preFullscreenRect || !win.isConnected) return;
+    const preferred = win._preFullscreenRect;
+    const ratio = win._mediaIntrinsicRatio || Number(win._windowDefinition?.lockAspect) || preferred.width / preferred.height;
+    const rect = fitMediaRectToWorkArea(ratio, preferred, false);
+    win._preFullscreenRect = null;
+    const restore = () => { if (win.isConnected && !document.fullscreenElement) applyMediaWindowRect(win, rect); };
+    restore();
+    requestAnimationFrame(() => requestAnimationFrame(restore));
+    setTimeout(restore, 80);
   }
 
   function openMediaFile(media) {
@@ -545,7 +628,9 @@
         render:() => renderMediaViewer(media, type)
       });
       win.classList.add("media-window", `media-window-${type}`);
+      applyMediaWindowRect(win, fitMediaRectToWorkArea(ratio, { width, height }, true));
       wireMediaPlayback(win, media);
+      syncMediaWindowToIntrinsic(win, media, type);
     }
     win.hidden = false; focusWindow(win); playSound("open");
     return win;
@@ -614,11 +699,7 @@
     if (definition.lockAspect && !win._fullscreenChangeHandler) {
       win._fullscreenChangeHandler = () => {
         if (document.fullscreenElement || !win._preFullscreenRect || !win.isConnected) return;
-        const rect = win._preFullscreenRect;
-        win._preFullscreenRect = null;
-        requestAnimationFrame(() => {
-          Object.assign(win.style, { left:`${rect.left}px`, top:`${rect.top}px`, width:`${rect.width}px`, height:`${rect.height}px` });
-        });
+        restoreMediaWindowAfterFullscreen(win);
       };
       document.addEventListener("fullscreenchange", win._fullscreenChangeHandler);
     }
@@ -1177,7 +1258,7 @@
 
   function renderVideoElement(media, { className = "", autoplay = false, muted = true } = {}) {
     const poster = media.poster ? ` poster="${escapeHtml(media.poster)}"` : "";
-    return `<video class="${escapeHtml(className)}" ${autoplay ? "autoplay" : ""} ${muted ? "muted" : ""} playsinline preload="auto"${poster} src="${escapeHtml(media.src)}"></video>`;
+    return `<video class="${escapeHtml(className)}" ${autoplay ? "autoplay" : ""} ${muted ? "muted" : ""} loop playsinline preload="auto"${poster} src="${escapeHtml(media.src)}"></video>`;
   }
 
   function renderAppleVideoPlayer(media, { autoplay = true, compact = false } = {}) {
@@ -1338,6 +1419,8 @@
 
   function wireAppleVideoPlayer(player) {
     const video = $("video", player); if (!video) return;
+    if (player.dataset.playbackWired === "true") return;
+    player.dataset.playbackWired = "true";
     const play = $("[data-video-play]", player);
     const mute = $("[data-video-mute]", player);
     const volume = $("[data-video-volume]", player);
@@ -1362,14 +1445,33 @@
       clearTimeout(hideTimer);
       if (!video.paused) hideTimer = setTimeout(() => player.classList.remove("controls-visible"), 1500);
     };
-    video.muted = true;
-    video.defaultMuted = true;
-    video.volume = Number(volume?.value || .55);
+    const storedVolume = Math.max(0, Math.min(1, Number(state.mediaVolume ?? .55)));
+    video.loop = true;
+    video.defaultMuted = Boolean(state.mediaMuted);
+    video.volume = storedVolume;
+    video.muted = Boolean(state.mediaMuted) || storedVolume === 0;
+    if (volume) volume.value = String(storedVolume);
     video.play().catch(() => update());
     ["loadedmetadata","timeupdate","play","pause","volumechange","ended"].forEach((event) => video.addEventListener(event, update));
     play?.addEventListener("click", (event) => { event.stopPropagation(); if (video.paused) video.play().catch(()=>{}); else video.pause(); reveal(); });
-    mute?.addEventListener("click", (event) => { event.stopPropagation(); video.muted = !video.muted; reveal(); update(); });
-    volume?.addEventListener("input", (event) => { video.volume = Number(event.target.value); video.muted = video.volume === 0; reveal(); });
+    const applyAudioPreference = () => {
+      $$(".apple-video-element").forEach((otherVideo) => {
+        otherVideo.volume = Math.max(0, Math.min(1, Number(state.mediaVolume ?? .55)));
+        otherVideo.muted = Boolean(state.mediaMuted) || otherVideo.volume === 0;
+      });
+    };
+    mute?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const isMuted = video.muted || video.volume === 0;
+      if (isMuted && Number(state.mediaVolume) === 0) state.mediaVolume = .55;
+      state.mediaMuted = !isMuted;
+      saveState(); applyAudioPreference(); reveal(); update();
+    });
+    volume?.addEventListener("input", (event) => {
+      state.mediaVolume = Math.max(0, Math.min(1, Number(event.target.value)));
+      state.mediaMuted = state.mediaVolume === 0;
+      saveState(); applyAudioPreference(); reveal(); update();
+    });
     progress?.addEventListener("input", (event) => { if (Number.isFinite(video.duration)) video.currentTime = (Number(event.target.value) / 1000) * video.duration; reveal(); });
     $$('[data-video-skip]', player).forEach((button) => button.addEventListener("click", (event) => { event.stopPropagation(); video.currentTime = Math.max(0, Math.min(video.duration || Infinity, video.currentTime + Number(button.dataset.videoSkip))); reveal(); }));
     player.addEventListener("pointermove", reveal);

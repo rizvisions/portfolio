@@ -91,6 +91,14 @@ export async function installDeterministicMedia(page, { delay = 0 } = {}) {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mediaPlacements) });
   });
   await page.route("**/storage/v1/object/public/**", async (route) => {
+    if (route.request().url().includes("photo-old.jpg")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "image/svg+xml",
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200" viewBox="0 0 800 1200"><rect width="800" height="1200" fill="#e7eef7"/><circle cx="400" cy="390" r="210" fill="#6f87a6"/><rect x="170" y="650" width="460" height="420" rx="90" fill="#30445f"/></svg>'
+      });
+      return;
+    }
     await route.fulfill({ status: 200, contentType: "application/octet-stream", body: "fixture" });
   });
 }

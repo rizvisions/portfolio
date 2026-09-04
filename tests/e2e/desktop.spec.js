@@ -80,6 +80,66 @@ test("keeps a landscape video frame stable while controls appear and hide", asyn
   expect(Math.abs(after.y-before.y)).toBeLessThan(.5);
   expect(Math.abs(after.width-before.width)).toBeLessThan(.5);
   expect(Math.abs(after.height-before.height)).toBeLessThan(.5);
+  await expect(mediaWindow.locator(".apple-video-element")).toHaveCSS("transform", "none");
+  expect(await mediaWindow.locator(".apple-video-element").evaluate((video) => getComputedStyle(video).getPropertyValue("dynamic-range-limit"))).toBe("standard");
+});
+
+test("uses decoded media dimensions, centers above the Dock, and restores them after fullscreen", async ({ page }) => {
+  await page.locator('#desktopPhotos .photo-file[data-photo-id="photo-old"]').dblclick();
+  const mediaWindow = page.locator('#windows [data-app-window="media-photo-old"]');
+  const image = mediaWindow.locator(".media-viewer > img");
+  await expect(image).toHaveJSProperty("complete", true);
+  await expect.poll(async () => (await image.evaluate((node) => node.naturalWidth))).toBe(800);
+
+  const assertGeometry = async () => {
+    const geometry = await page.evaluate(() => {
+      const win = document.querySelector('[data-app-window="media-photo-old"]');
+      const desktop = document.querySelector("#desktop");
+      const dock = document.querySelector(".dock-wrap");
+      const winRect = win.getBoundingClientRect();
+      const desktopRect = desktop.getBoundingClientRect();
+      const dockRect = dock.getBoundingClientRect();
+      const workTop = desktopRect.top + 16;
+      const workBottom = dockRect.top - 16;
+      return {
+        ratio: winRect.width / winRect.height,
+        topGap: winRect.top - workTop,
+        bottomGap: workBottom - winRect.bottom,
+        clearsDock: winRect.bottom <= workBottom + .5
+      };
+    });
+    expect(Math.abs(geometry.ratio - 2 / 3)).toBeLessThan(.01);
+    expect(Math.abs(geometry.topGap - geometry.bottomGap)).toBeLessThan(2);
+    expect(geometry.clearsDock).toBe(true);
+  };
+
+  await assertGeometry();
+  await mediaWindow.locator('[data-window-action="zoom"]').click();
+  await expect(page.locator(".media-viewer:fullscreen")).toHaveCount(1);
+  await page.evaluate(() => document.exitFullscreen());
+  await expect(page.locator(".media-viewer:fullscreen")).toHaveCount(0);
+  await page.waitForTimeout(120);
+  await assertGeometry();
+});
+
+test("loops videos and remembers the shared mute choice", async ({ page }) => {
+  await page.locator('#desktopPhotos .photo-file[data-photo-id="video-new"]').dblclick();
+  const first = page.locator('#windows [data-app-window="media-video-new"]');
+  const firstVideo = first.locator(".apple-video-element");
+  await expect(firstVideo).toHaveJSProperty("loop", true);
+  await expect(firstVideo).toHaveJSProperty("muted", true);
+  await first.locator("[data-video-mute]").click();
+  await expect(firstVideo).toHaveJSProperty("muted", false);
+
+  await page.locator('#desktopPhotos .photo-file[data-photo-id="video-landscape"]').dblclick();
+  const second = page.locator('#windows [data-app-window="media-video-landscape"]');
+  const secondVideo = second.locator(".apple-video-element");
+  await expect(secondVideo).toHaveJSProperty("loop", true);
+  await expect(secondVideo).toHaveJSProperty("muted", false);
+
+  await second.locator("[data-video-mute]").click();
+  await expect(firstVideo).toHaveJSProperty("muted", true);
+  await expect(secondVideo).toHaveJSProperty("muted", true);
 });
 
 test("centers traffic-light symbols and optically sizes Calendar", async ({ page }) => {
