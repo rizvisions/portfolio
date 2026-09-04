@@ -1,6 +1,6 @@
-# Rizvisions macOS V10.7.0
+# Rizvisions macOS V10.8.0
 
-V10.7.0 stabilizes the macOS desktop and adds a safe branch, test, review, and preview workflow for future releases.
+V10.8.0 turns Photos into a more personal Rizvisions Archive while preserving the macOS desktop and safe branch, test, review, and preview workflow introduced in V10.7.
 
 ## Product baseline
 
@@ -16,7 +16,16 @@ V10.7.0 stabilizes the macOS desktop and adds a safe branch, test, review, and p
 - Individual videos autoplay muted, preserve the entire frame, and use a hover-only QuickTime-style control overlay.
 - Removed browser-native reset confirmation from the main desktop.
 
-## V10.7 safeguards
+## V10.8 archive update
+
+- Added a personal archive masthead with live moment, photo, and video counts.
+- Grouped All Photos into readable day-based moments while retaining newest-first ordering.
+- Refined Featured into a compact editorial strip with capture dates and media types.
+- Added filenames, orientation, collection, camera, lens, dimensions, and duration to the immersive viewer information panel.
+- Made the information panel immediately visible on larger windows and synchronized its accessible toggle state.
+- Preserved real portrait, landscape, and square proportions for desktop media placements.
+
+## Release safeguards
 
 - Static integrity tests guard local assets, frontend secrets, migration guidance, and version labels.
 - Playwright exercises the desktop at 1440×900 and 1280×800.
@@ -42,4 +51,4 @@ New image uploads attempt to read embedded capture metadata in the browser befor
 4. Merge the approved pull request into `main`.
 5. GitHub Pages deploys the canonical `rizvisions.com` site.
 
-V10.7.0 does not require a Supabase migration.
+V10.8.0 does not require a Supabase migration.

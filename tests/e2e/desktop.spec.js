@@ -25,6 +25,8 @@ test("renders mixed desktop photos and posterless videos together", async ({ pag
   await expect(files).toHaveCount(2);
   await expect(page.locator('#desktopPhotos .photo-file[data-media-type="image"]')).toHaveCount(1);
   await expect(page.locator('#desktopPhotos .photo-file[data-media-type="video"]')).toHaveCount(1);
+  await expect(page.locator('#desktopPhotos .photo-file[data-media-type="image"]')).toHaveAttribute("data-media-orientation", "landscape");
+  await expect(page.locator('#desktopPhotos .photo-file[data-media-type="video"]')).toHaveAttribute("data-media-orientation", "portrait");
   await expect(page.locator('#desktopPhotos .photo-file[data-media-type="video"] video')).toHaveCount(1);
 });
 

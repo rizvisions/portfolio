@@ -24,15 +24,14 @@ test("frontend files do not contain Supabase service-role credentials", async ()
   frontend.forEach((source) => assert.doesNotMatch(source, forbidden));
 });
 
-test("public version labels agree on V10.7", async () => {
+test("public version labels agree on V10.8", async () => {
   const [readme, app] = await Promise.all([read("README.md"), read("app.js")]);
-  assert.match(readme, /V10\.7\.0/);
-  assert.match(app, /Rizvisions OS 10\.7\.0/);
-  assert.match(app, /Version 10\.7/);
+  assert.match(readme, /V10\.8\.0/);
+  assert.match(app, /Rizvisions OS 10\.8\.0/);
+  assert.match(app, /Version 10\.8/);
 });
 
 test("admin placement recovery points to the placement migration", async () => {
   const admin = await read("admin/admin.js");
   assert.match(admin, /media_placements[\s\S]{0,300}migrate-v10\.5\.sql/);
 });
-

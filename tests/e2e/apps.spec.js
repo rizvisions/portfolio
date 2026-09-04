@@ -11,11 +11,18 @@ test("Photos opens to All Photos, newest first, with contained media", async ({ 
 
   await expect(photosWindow.locator('[data-photo-collection="all"]')).toHaveClass(/active/);
   await expect(photosWindow.locator('[data-photo-view="all"]')).toHaveClass(/active/);
+  await expect(photosWindow.locator(".photos-archive-band")).toContainText("2");
+  await expect(photosWindow.locator(".photos-archive-band")).toContainText("Photos, videos, and fragments worth keeping.");
+  await expect(photosWindow.locator(".photos-date-group")).toHaveCount(2);
   await expect(photosWindow.locator(".photo-natural-tile").first()).toHaveAttribute("data-media-id", "video-new");
 
   await photosWindow.locator('.photo-natural-tile[data-media-id="video-new"]').click();
   await expect(photosWindow.locator(".photos-gallery")).toBeVisible();
   await expect(photosWindow.locator(".photos-gallery-media video")).toHaveCSS("object-fit", "contain");
+  await expect(photosWindow.locator('[data-gallery-info]')).toHaveAttribute("aria-pressed", "true");
+  await expect(photosWindow.locator(".photos-gallery-info")).toContainText("Dimensions");
+  await expect(photosWindow.locator(".photos-gallery-info")).toContainText("1080 × 1920");
+  await expect(photosWindow.locator(".photos-gallery-info")).toContainText("Library");
 });
 
 test("Terminal input stays visible and accepts commands", async ({ page }) => {
