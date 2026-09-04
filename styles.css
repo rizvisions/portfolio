@@ -2912,7 +2912,12 @@ body.desktop-ready .dock-wrap { transform: translateX(-50%) translateY(0); }
 .photos-info-card dd { margin: 0; color: rgba(255,255,255,.88); font-size: 10px; line-height: 1.35; overflow-wrap: anywhere; }
 
 /* Preview/QuickTime windows are the media ratio, with chrome overlaid on hover. */
-.media-window { background: #000; }
+.media-window {
+  min-width: 0;
+  min-height: 0;
+  resize: none;
+  background: #000;
+}
 .media-window .window-titlebar {
   position: absolute;
   z-index: 30;
