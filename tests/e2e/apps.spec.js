@@ -11,10 +11,11 @@ test("Photos opens to All Photos, newest first, with contained media", async ({ 
 
   await expect(photosWindow.locator('[data-photo-collection="all"]')).toHaveClass(/active/);
   await expect(photosWindow.locator('[data-photo-view="all"]')).toHaveClass(/active/);
-  await expect(photosWindow.locator(".photos-archive-band")).toContainText("2");
-  await expect(photosWindow.locator(".photos-archive-band")).toContainText("Photos, videos, and fragments worth keeping.");
-  await expect(photosWindow.locator(".photos-date-group")).toHaveCount(2);
+  await expect(photosWindow.locator(".photos-archive-band")).toHaveCount(0);
+  await expect(photosWindow.locator(".photos-date-group")).toHaveCount(0);
+  await expect(photosWindow.locator(".photo-natural-tile")).toHaveCount(2);
   await expect(photosWindow.locator(".photo-natural-tile").first()).toHaveAttribute("data-media-id", "video-new");
+  await expect(photosWindow.locator('.photo-natural-tile[data-media-id="photo-old"] > img')).toHaveCSS("opacity", "1");
 
   await photosWindow.locator('.photo-natural-tile[data-media-id="video-new"]').click();
   await expect(photosWindow.locator(".photos-gallery")).toBeVisible();

@@ -248,8 +248,8 @@
       file.style.setProperty("--photo-x", `${saved.x ?? photo.x}%`);
       file.style.setProperty("--photo-y", `${saved.y ?? photo.y}%`);
       file.style.setProperty("--photo-rotation", `${saved.rotation ?? photo.rotation ?? 0}deg`);
-      file.style.setProperty("--photo-aspect", String(aspect));
-      file.style.setProperty("--photo-width", `${photo.desktopWidth || (orientation === "landscape" ? 150 : orientation === "portrait" ? 116 : 132)}px`);
+      file.style.setProperty("--photo-aspect", "1");
+      file.style.setProperty("--photo-width", `${photo.desktopWidth || 132}px`);
       file.style.left = "var(--photo-x)"; file.style.top = "var(--photo-y)";
       file.style.zIndex = String(saved.z || index + 1);
       const isVideo = mediaType === "video";
@@ -480,7 +480,8 @@
     $(".window-title", win).textContent = definition.title;
     $(".window-body", win).innerHTML = definition.render();
     const saved = state.windows[appId];
-    const initial = clampWindowRect(saved || defaultWindowRect(appId, ...definition.size), definition);
+    const initial = clampWindowRect((definition.lockAspect ? null : saved) || defaultWindowRect(appId, ...definition.size), definition);
+    win._windowDefinition = definition;
     Object.assign(win.style, { left:`${initial.left}px`, top:`${initial.top}px`, width:`${initial.width}px`, height:`${initial.height}px`, zIndex:++zCounter });
     windowsRoot.appendChild(win); wireWindow(win, definition); wireAppSpecific(win, appId); focusWindow(win);
     return win;
@@ -519,13 +520,12 @@
     if (ratio < 1) {
       bodyHeight = Math.min(790, availableHeight);
       bodyWidth = bodyHeight * ratio;
-      if (bodyWidth < 330) { bodyWidth = 330; bodyHeight = bodyWidth / ratio; }
     } else {
       bodyWidth = Math.min(1080, availableWidth);
       bodyHeight = bodyWidth / ratio;
       if (bodyHeight > availableHeight) { bodyHeight = availableHeight; bodyWidth = bodyHeight * ratio; }
     }
-    return [Math.round(Math.min(availableWidth, bodyWidth)), Math.round(Math.min(availableHeight + 56, bodyHeight + 56))];
+    return [Math.round(Math.min(availableWidth, bodyWidth)), Math.round(Math.min(availableHeight, bodyHeight))];
   }
 
   function openMediaFile(media) {
@@ -535,11 +535,13 @@
     let win = windowsRoot.querySelector(`[data-app-window="${CSS.escape(appId)}"]`);
     if (!win) {
       const type = media.type || mediaTypeFromSrc(media.src);
+      const ratio = Math.max(.28, Math.min(4, mediaAspectRatio(media, type)));
       const [width, height] = mediaWindowSize(media, type);
+      const minWidth = ratio < 1 ? Math.max(240, Math.round(380 * ratio)) : 480;
       win = createWindow(appId, {
         name: type === "video" ? "Video" : "Preview",
         title: media.displayName || media.filename || media.src.split("/").pop() || "Media",
-        size:[width,height], min:type === "video" && mediaAspectRatio(media,type) < 1 ? [320,430] : [460,340],
+        size:[width,height], min:[minWidth, Math.round(minWidth / ratio)], lockAspect:ratio,
         render:() => renderMediaViewer(media, type)
       });
       win.classList.add("media-window", `media-window-${type}`);
@@ -593,7 +595,15 @@
     win.addEventListener("pointerdown", () => focusWindow(win));
     $$("[data-window-action]", win).forEach((button) => button.addEventListener("click", (event) => {
       event.stopPropagation(); const action = button.dataset.windowAction;
-      if (action === "close") closeWindow(win); if (action === "minimize") minimizeWindow(win); if (action === "zoom") zoomWindow(win);
+      if (action === "close") closeWindow(win);
+      if (action === "minimize") minimizeWindow(win);
+      if (action === "zoom") {
+        if (win.classList.contains("media-window")) {
+          const viewer = $(".media-viewer", win);
+          const request = document.fullscreenElement ? document.exitFullscreen?.() : viewer?.requestFullscreen?.();
+          request?.catch?.(() => {});
+        } else zoomWindow(win);
+      }
     }));
     $(".drag-handle", win).addEventListener("pointerdown", (event) => beginWindowDrag(event, win));
     $$("[data-resize]", win).forEach((handle) => handle.addEventListener("pointerdown", (event) => beginWindowResize(event, win, handle.dataset.resize, definition)));
@@ -616,11 +626,26 @@
     const move = (moveEvent) => {
       const dx = moveEvent.clientX-start.x, dy = moveEvent.clientY-start.y;
       let left=start.left, top=start.top, width=start.width, height=start.height;
-      if (direction.includes("e")) width = Math.max(minW, start.width + dx);
-      if (direction.includes("s")) height = Math.max(minH, start.height + dy);
-      if (direction.includes("w")) { width=Math.max(minW,start.width-dx); left=start.left+(start.width-width); }
-      if (direction.includes("n")) { height=Math.max(minH,start.height-dy); top=start.top+(start.height-height); }
-      const clamped = clampWindowRect({ left,top,width,height }, definition);
+      const ratio = Number(definition.lockAspect);
+      if (ratio > 0) {
+        const requestedWidth = direction.includes("e") ? start.width + dx
+          : direction.includes("w") ? start.width - dx
+          : (direction.includes("s") ? start.height + dy : start.height - dy) * ratio;
+        const maxWidth = Math.min(desktop.clientWidth, (desktop.clientHeight - 92) * ratio);
+        const boundedMinWidth = Math.min(Math.max(minW, minH * ratio), maxWidth);
+        width = Math.max(boundedMinWidth, Math.min(maxWidth, requestedWidth));
+        height = width / ratio;
+        if (direction.includes("w")) left = start.left + (start.width - width);
+        if (direction.includes("n")) top = start.top + (start.height - height);
+      } else {
+        if (direction.includes("e")) width = Math.max(minW, start.width + dx);
+        if (direction.includes("s")) height = Math.max(minH, start.height + dy);
+        if (direction.includes("w")) { width=Math.max(minW,start.width-dx); left=start.left+(start.width-width); }
+        if (direction.includes("n")) { height=Math.max(minH,start.height-dy); top=start.top+(start.height-height); }
+      }
+      const clamped = ratio > 0
+        ? { width, height, left:Math.min(Math.max(-width + 130, left), desktop.clientWidth - 130), top:Math.min(Math.max(0, top), desktop.clientHeight - 145) }
+        : clampWindowRect({ left,top,width,height }, definition);
       Object.assign(win.style, { left:`${clamped.left}px`, top:`${clamped.top}px`, width:`${clamped.width}px`, height:`${clamped.height}px` });
     };
     const finish = () => { window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",finish); document.body.classList.remove("window-resizing"); saveWindowRect(win); };
@@ -855,6 +880,27 @@
     }));
   }
 
+  function wireMediaThumbnails(root) {
+    $$(".media-thumb-shell video", root).forEach((video) => {
+      if (video.dataset.thumbnailWired === "true") return;
+      video.dataset.thumbnailWired = "true";
+      video.muted = true;
+      video.defaultMuted = true;
+      const primeFrame = () => {
+        if (video.readyState < 2) return;
+        video.pause();
+        if (video.currentTime === 0 && Number.isFinite(video.duration) && video.duration > 0) {
+          try { video.currentTime = Math.min(.08, video.duration / 10); } catch {}
+        }
+      };
+      if (video.readyState >= 2) primeFrame();
+      else video.addEventListener("loadeddata", primeFrame, { once:true });
+      const tile = video.closest("button");
+      tile?.addEventListener("pointerenter", () => video.play().catch(() => {}));
+      tile?.addEventListener("pointerleave", () => video.pause());
+    });
+  }
+
   function wirePhotosApp(win) {
     const collection = win.dataset.photosCollection || "all";
     const viewMode = win.dataset.photosView || "all";
@@ -906,6 +952,7 @@
       };
       win.addEventListener("keydown", win._photosKeyHandler);
     }
+    wireMediaThumbnails(win);
     wireMediaPlayback(win);
   }
 
@@ -971,8 +1018,8 @@
       ...(type === "Video" ? [["Duration", media.duration ? formatMediaDuration(media.duration) : "—"]] : []),
       ["Collection", media.collection || "Library"],
       ["File", media.filename || "—"]
-    ];
-    return `<div class="photos-info-card"><span class="photos-info-eyebrow">INFORMATION</span><strong>${escapeHtml(media.displayName || media.filename || "Untitled")}</strong>${media.caption ? `<p>${escapeHtml(media.caption)}</p>` : `<p class="photos-info-empty">No caption added.</p>`}<dl>${details.map(([key,value])=>`<div><dt>${key}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl></div>`;
+    ].filter(([, value]) => value !== "—");
+    return `<div class="photos-info-card"><header><span>Information</span><strong>${escapeHtml(media.displayName || media.filename || "Untitled")}</strong>${media.caption ? `<p>${escapeHtml(media.caption)}</p>` : ""}</header><dl>${details.map(([key,value])=>`<div><dt>${key}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl></div>`;
   }
 
   function showPhotosGalleryItem(win, index) {
@@ -991,6 +1038,7 @@
     if (filmstrip) {
       filmstrip.innerHTML = items.map((item, itemIndex) => `<button class="${itemIndex === index ? "active" : ""}" data-gallery-thumb="${itemIndex}" aria-current="${itemIndex === index ? "true" : "false"}" aria-label="Open ${escapeHtml(item.displayName || item.filename || `item ${itemIndex + 1}`)}">${renderMediaThumbnail(item)}</button>`).join("");
       filmstrip.querySelector(".active")?.scrollIntoView({ inline:"center", block:"nearest", behavior:"smooth" });
+      wireMediaThumbnails(filmstrip);
     }
     if (info) info.innerHTML = mediaInfoMarkup(media);
     wireMediaPlayback(stage, media);
@@ -1051,12 +1099,11 @@
   }
 
   function renderAppleVideoPlayer(media, { autoplay = true, compact = false } = {}) {
-    const speaker = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4Z" fill="currentColor"/><path class="sound-wave" d="M16 9.2c1.1 1.5 1.1 4.1 0 5.6M18.7 7c2.3 2.8 2.3 7.2 0 10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`;
+    const speaker = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4Z" fill="currentColor"/><path class="sound-wave" d="M16 9.2c1.1 1.5 1.1 4.1 0 5.6M18.7 7c2.3 2.8 2.3 7.2 0 10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path class="video-muted-slash" d="M5.5 5.5 19 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
     const back = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 6 4.8 12 11 18V6Zm8 0-6.2 6L19 18V6Z" fill="currentColor"/></svg>`;
     const forward = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 6 6.2 6L5 18V6Zm8 0 6.2 6L13 18V6Z" fill="currentColor"/></svg>`;
     const playPause = `<span class="video-icon-play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7V5Z" fill="currentColor"/></svg></span><span class="video-icon-pause"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7V5Zm6 0h4v14h-4V5Z" fill="currentColor"/></svg></span>`;
-    const full = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M9 20h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`;
-    return `<div class="apple-video-player ${compact ? "compact" : ""}">${renderVideoElement(media,{className:"apple-video-element",autoplay,muted:true})}<div class="apple-video-controls"><div class="video-control-primary"><button type="button" data-video-mute data-muted="true" aria-label="Mute or unmute">${speaker}</button><input class="video-volume" data-video-volume type="range" min="0" max="1" step="0.01" value="0.55" aria-label="Volume"><span class="video-control-spacer"></span><button type="button" data-video-skip="-10" aria-label="Back 10 seconds">${back}</button><button type="button" class="video-play" data-video-play data-state="play" aria-label="Play or pause">${playPause}</button><button type="button" data-video-skip="10" aria-label="Forward 10 seconds">${forward}</button><span class="video-control-spacer"></span><button type="button" data-video-fullscreen aria-label="Full screen">${full}</button></div><div class="video-control-timeline"><time data-video-time>0:00</time><input data-video-progress type="range" min="0" max="1000" value="0" aria-label="Video progress"><time data-video-duration>0:00</time></div></div></div>`;
+    return `<div class="apple-video-player ${compact ? "compact" : ""}">${renderVideoElement(media,{className:"apple-video-element",autoplay,muted:true})}<div class="apple-video-controls"><div class="video-control-primary"><button type="button" data-video-mute data-muted="true" aria-label="Unmute">${speaker}</button><input class="video-volume" data-video-volume type="range" min="0" max="1" step="0.01" value="0.55" aria-label="Volume"><span class="video-control-spacer"></span><button type="button" data-video-skip="-10" aria-label="Back 10 seconds">${back}</button><button type="button" class="video-play" data-video-play data-state="play" aria-label="Play or pause">${playPause}</button><button type="button" data-video-skip="10" aria-label="Forward 10 seconds">${forward}</button><span class="video-control-spacer"></span></div><div class="video-control-timeline"><time data-video-time>0:00</time><input data-video-progress type="range" min="0" max="1000" value="0" aria-label="Video progress"><time data-video-duration>0:00</time></div></div></div>`;
   }
 
   function renderMediaThumbnail(media) {
@@ -1098,12 +1145,13 @@
     return `<div class="photos-natural-grid">${items.map((media, index) => {
       const type = media.type || mediaTypeFromSrc(media.src);
       const title = media.displayName || media.filename || "Untitled";
-      return `<button class="photo-natural-tile" data-media-id="${escapeHtml(media.id)}" data-media-index="${index + indexOffset}" data-media-type="${escapeHtml(type)}" style="--media-ratio:${mediaAspectRatio(media, type)}" aria-label="Open ${escapeHtml(title)}"><span class="photo-tile-visual">${renderMediaThumbnail(media)}</span><span class="photo-tile-scrim" aria-hidden="true"></span><span class="photo-tile-meta"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(photoDateParts(media).short)}</small></span>${type === "video" ? `<i class="video-duration">▶ ${media.duration ? formatMediaDuration(media.duration) : "video"}</i>` : ""}</button>`;
+      return `<button class="photo-natural-tile" data-media-id="${escapeHtml(media.id)}" data-media-index="${index + indexOffset}" data-media-type="${escapeHtml(type)}" style="--media-ratio:${mediaAspectRatio(media, type)}" aria-label="Open ${escapeHtml(title)}">${renderMediaThumbnail(media)}${type === "video" ? `<i class="video-duration">▶ ${media.duration ? formatMediaDuration(media.duration) : "video"}</i>` : ""}</button>`;
     }).join("")}</div>`;
   }
 
   function renderChronology(items, viewMode) {
-    const keyFor = (item) => viewMode === "years" ? photoDateParts(item).year : viewMode === "months" ? photoDateParts(item).month : photoDateParts(item).day;
+    if (viewMode === "all") return renderPhotoTiles(items);
+    const keyFor = (item) => viewMode === "years" ? photoDateParts(item).year : photoDateParts(item).month;
     const groups = [];
     items.forEach((item) => {
       const key = keyFor(item);
@@ -1124,17 +1172,9 @@
     const rawCollections = [...new Set(allPhotos.map((item) => item.collection).filter((name) => name && name.toLowerCase() !== "library"))];
     const photos = photosForCollection(activeCollection);
     const featured = activeCollection === "all" ? photos.filter((item) => item.isFeatured) : [];
-    const photoCount = allPhotos.filter((item) => (item.type || mediaTypeFromSrc(item.src)) !== "video").length;
-    const videoCount = allPhotos.filter((item) => (item.type || mediaTypeFromSrc(item.src)) === "video").length;
     const loading = Boolean(CONTENT.mediaLoading);
-    const collectionButtons = rawCollections.map((collection) => {
-      const count = allPhotos.filter((item) => item.collection === collection).length;
-      return `<button data-photo-collection="collection:${escapeHtml(collection)}" class="${activeCollection === `collection:${collection}` ? "active" : ""}"><span class="photos-nav-icon">▣</span><strong>${escapeHtml(collection)}</strong><small>${count}</small></button>`;
-    }).join("");
+    const collectionButtons = rawCollections.map((collection) => `<button data-photo-collection="collection:${escapeHtml(collection)}" class="${activeCollection === `collection:${collection}` ? "active" : ""}"><span>▣</span>${escapeHtml(collection)}</button>`).join("");
     const title = activeCollection === "all" ? "All Photos" : activeCollection === "photos" ? "Photos" : activeCollection === "videos" ? "Videos" : activeCollection.replace(/^collection:/, "");
-    const newest = allPhotos[0] ? new Date(allPhotos[0].capturedAt || allPhotos[0].createdAt) : null;
-    const oldest = allPhotos.at(-1) ? new Date(allPhotos.at(-1).capturedAt || allPhotos.at(-1).createdAt) : null;
-    const archiveRange = newest && oldest ? (newest.getFullYear() === oldest.getFullYear() ? String(newest.getFullYear()) : `${oldest.getFullYear()}—${newest.getFullYear()}`) : "Archive";
 
     let body = "";
     if (loading) {
@@ -1142,12 +1182,11 @@
     } else if (!photos.length) {
       body = `<div class="photos-empty"><img src="assets/icons/macos/photos.png?v=106" alt=""><h2>${allPhotos.length ? "No items here yet" : "Your library is empty"}</h2><p>${allPhotos.length ? "Choose another view from the sidebar." : "Upload photos or videos at rizvisions.com/admin."}</p></div>`;
     } else {
-      const archiveBand = activeCollection === "all" ? `<section class="photos-archive-band" aria-label="Archive summary"><div><span>RIZVISIONS ARCHIVE</span><strong>Photos, videos, and fragments worth keeping.</strong><small>${archiveRange}</small></div><dl><div><dt>Moments</dt><dd>${allPhotos.length}</dd></div><div><dt>Photos</dt><dd>${photoCount}</dd></div><div><dt>Videos</dt><dd>${videoCount}</dd></div></dl></section>` : "";
-      const featuredBlock = featured.length ? `<section class="photos-featured-strip"><header><div><span>FEATURED</span><strong>Selected memories</strong></div><small>${featured.length}</small></header><div class="photos-featured-track">${featured.map((media) => `<button class="photos-featured-card" data-featured-id="${escapeHtml(media.id)}" style="--media-ratio:${mediaAspectRatio(media, media.type)}" aria-label="Open featured item ${escapeHtml(media.displayName || media.filename || "Untitled")}">${renderMediaThumbnail(media)}<span class="photos-featured-copy"><small>${escapeHtml(photoDateParts(media).short)}</small><strong>${escapeHtml(media.displayName || media.filename || "Untitled")}</strong><em>${(media.type || mediaTypeFromSrc(media.src)) === "video" ? "Video" : "Photo"}</em></span></button>`).join("")}</div></section>` : "";
-      body = `${archiveBand}${featuredBlock}<section class="photos-library-feed">${renderChronology(photos, viewMode)}</section>`;
+      const featuredBlock = featured.length ? `<section class="photos-featured-strip"><header><strong>Featured</strong><small>${featured.length}</small></header><div class="photos-featured-track">${featured.map((media) => `<button class="photos-featured-card" data-featured-id="${escapeHtml(media.id)}" style="--media-ratio:${mediaAspectRatio(media, media.type)}">${renderMediaThumbnail(media)}<span>${escapeHtml(media.displayName || media.filename || "Untitled")}</span></button>`).join("")}</div></section>` : "";
+      body = `${featuredBlock}<section class="photos-library-feed">${renderChronology(photos, viewMode)}</section>`;
     }
 
-    return `<div class="photos-app"><aside class="photos-nav"><div class="photos-nav-title"><img src="assets/icons/macos/photos.png?v=106" alt=""><span><strong>Photos</strong><small>Rizvisions Archive</small></span></div><div class="sidebar-title">Library</div><button data-photo-collection="all" class="${activeCollection === "all" ? "active" : ""}"><span class="photos-nav-icon">▦</span><strong>All Photos</strong><small>${allPhotos.length}</small></button><button data-photo-collection="photos" class="${activeCollection === "photos" ? "active" : ""}"><span class="photos-nav-icon">▧</span><strong>Photos</strong><small>${photoCount}</small></button><button data-photo-collection="videos" class="${activeCollection === "videos" ? "active" : ""}"><span class="photos-nav-icon">▶</span><strong>Videos</strong><small>${videoCount}</small></button>${collectionButtons ? `<div class="sidebar-title collections-label">Collections</div>${collectionButtons}` : ""}</aside><main class="photos-library"><div class="photos-topbar"><div class="photos-topbar-copy"><h1>${escapeHtml(title)}</h1><small>${photos.length} ${photos.length === 1 ? "item" : "items"}</small></div><div class="photos-segmented" aria-label="Group photos by"><button data-photo-view="years" class="${viewMode === "years" ? "active" : ""}">Years</button><button data-photo-view="months" class="${viewMode === "months" ? "active" : ""}">Months</button><button data-photo-view="all" class="${viewMode === "all" ? "active" : ""}">All Photos</button></div><span class="photos-sort-label">Newest first</span></div><div class="photos-scroll-content">${body}</div><section class="photos-gallery" tabindex="-1" hidden><header class="photos-viewer-toolbar"><button data-gallery-close class="photos-viewer-back" aria-label="Back to library">‹</button><div class="photos-viewer-copy"><strong class="photos-gallery-title"></strong><span><small class="photos-gallery-context"></small><small class="photos-gallery-counter"></small></span></div><span></span><button data-gallery-info aria-label="Show information" aria-pressed="false">i</button></header><div class="photos-gallery-stage"><button class="gallery-arrow gallery-prev" data-gallery-prev aria-label="Previous item">‹</button><div class="photos-gallery-media"></div><button class="gallery-arrow gallery-next" data-gallery-next aria-label="Next item">›</button></div><footer><div class="photos-gallery-filmstrip"></div></footer><aside class="photos-gallery-info" hidden></aside></section></main></div>`;
+    return `<div class="photos-app"><aside class="photos-nav"><div class="photos-nav-title"><img src="assets/icons/macos/photos.png?v=106" alt=""><strong>Photos</strong></div><div class="sidebar-title">Library</div><button data-photo-collection="all" class="${activeCollection === "all" ? "active" : ""}"><span>▦</span>All Photos</button><button data-photo-collection="photos" class="${activeCollection === "photos" ? "active" : ""}"><span>▧</span>Photos</button><button data-photo-collection="videos" class="${activeCollection === "videos" ? "active" : ""}"><span>▶</span>Videos</button>${collectionButtons ? `<div class="sidebar-title collections-label">Collections</div>${collectionButtons}` : ""}</aside><main class="photos-library"><div class="photos-topbar"><div><h1>${escapeHtml(title)}</h1><small>${photos.length} ${photos.length === 1 ? "item" : "items"}${photos.length ? ` · newest first` : ""}</small></div><div class="photos-segmented" aria-label="Group photos by"><button data-photo-view="years" class="${viewMode === "years" ? "active" : ""}">Years</button><button data-photo-view="months" class="${viewMode === "months" ? "active" : ""}">Months</button><button data-photo-view="all" class="${viewMode === "all" ? "active" : ""}">All Photos</button></div></div><div class="photos-scroll-content">${body}</div><section class="photos-gallery" tabindex="-1" hidden><header class="photos-viewer-toolbar"><button data-gallery-close class="photos-viewer-back" aria-label="Back to library">‹</button><div class="photos-viewer-copy"><strong class="photos-gallery-title"></strong><span><small class="photos-gallery-context"></small><small class="photos-gallery-counter"></small></span></div><span></span><button data-gallery-info aria-label="Show information" aria-pressed="false">i</button></header><div class="photos-gallery-stage"><button class="gallery-arrow gallery-prev" data-gallery-prev aria-label="Previous item">‹</button><div class="photos-gallery-media"></div><button class="gallery-arrow gallery-next" data-gallery-next aria-label="Next item">›</button></div><footer><div class="photos-gallery-filmstrip"></div></footer><aside class="photos-gallery-info" hidden></aside></section></main></div>`;
   }
 
   function mediaTimestamp(media) {
@@ -1227,7 +1266,11 @@
     const fmt = (seconds) => formatMediaDuration(Number.isFinite(seconds) ? seconds : 0) || "0:00";
     const update = () => {
       if (play) play.dataset.state = video.paused ? "play" : "pause";
-      if (mute) mute.dataset.muted = (video.muted || video.volume === 0) ? "true" : "false";
+      if (mute) {
+        const isMuted = video.muted || video.volume === 0;
+        mute.dataset.muted = isMuted ? "true" : "false";
+        mute.setAttribute("aria-label", isMuted ? "Unmute" : "Mute");
+      }
       if (current) current.textContent = fmt(video.currentTime);
       if (duration) duration.textContent = fmt(video.duration);
       if (progress && Number.isFinite(video.duration) && video.duration > 0) progress.value = String(Math.round((video.currentTime / video.duration) * 1000));
@@ -1247,7 +1290,6 @@
     volume?.addEventListener("input", (event) => { video.volume = Number(event.target.value); video.muted = video.volume === 0; reveal(); });
     progress?.addEventListener("input", (event) => { if (Number.isFinite(video.duration)) video.currentTime = (Number(event.target.value) / 1000) * video.duration; reveal(); });
     $$('[data-video-skip]', player).forEach((button) => button.addEventListener("click", (event) => { event.stopPropagation(); video.currentTime = Math.max(0, Math.min(video.duration || Infinity, video.currentTime + Number(button.dataset.videoSkip))); reveal(); }));
-    $("[data-video-fullscreen]", player)?.addEventListener("click", (event) => { event.stopPropagation(); (video.requestFullscreen ? video.requestFullscreen() : player.requestFullscreen?.()); });
     player.addEventListener("pointermove", reveal);
     player.addEventListener("pointerenter", reveal);
     player.addEventListener("pointerleave", () => { if (!video.paused) player.classList.remove("controls-visible"); });
@@ -1257,7 +1299,7 @@
 
   function wireMediaPlayback(root, media = null) {
     $$(".apple-video-player", root).forEach(wireAppleVideoPlayer);
-    $$('video', root).forEach((video) => {
+    $$(".media-viewer video, .photos-gallery-media video", root).forEach((video) => {
       video.addEventListener("error", () => {
         const errorPanel = video.closest(".media-viewer")?.querySelector(".media-playback-error");
         if (errorPanel) errorPanel.hidden = false;

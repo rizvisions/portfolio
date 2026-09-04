@@ -25,9 +25,51 @@ test("renders mixed desktop photos and posterless videos together", async ({ pag
   await expect(files).toHaveCount(2);
   await expect(page.locator('#desktopPhotos .photo-file[data-media-type="image"]')).toHaveCount(1);
   await expect(page.locator('#desktopPhotos .photo-file[data-media-type="video"]')).toHaveCount(1);
-  await expect(page.locator('#desktopPhotos .photo-file[data-media-type="image"]')).toHaveAttribute("data-media-orientation", "landscape");
-  await expect(page.locator('#desktopPhotos .photo-file[data-media-type="video"]')).toHaveAttribute("data-media-orientation", "portrait");
   await expect(page.locator('#desktopPhotos .photo-file[data-media-type="video"] video')).toHaveCount(1);
+  const cards = await files.evaluateAll((items) => items.map((item) => ({
+    width: getComputedStyle(item).width,
+    previewRatio: getComputedStyle(item.querySelector(".photo-paper > img, .photo-paper > video")).aspectRatio
+  })));
+  expect(new Set(cards.map((card) => card.width)).size).toBe(1);
+  expect(cards.every((card) => card.previewRatio === "1 / 1")).toBe(true);
+});
+
+test("opens desktop video at its true ratio and keeps that ratio while resizing", async ({ page }) => {
+  await page.locator('#desktopPhotos .photo-file[data-media-type="video"]').dblclick();
+  const mediaWindow = page.locator("#windows .media-window-video");
+  await expect(mediaWindow).toBeVisible();
+
+  const initial = await mediaWindow.boundingBox();
+  expect(Math.abs(initial.width / initial.height - 1080 / 1920)).toBeLessThan(.01);
+
+  const handle = mediaWindow.locator('[data-resize="se"]');
+  const handleBox = await handle.boundingBox();
+  await page.mouse.move(handleBox.x + 2, handleBox.y + 2);
+  await page.mouse.down();
+  await page.mouse.move(handleBox.x - 55, handleBox.y - 25, { steps: 5 });
+  await page.mouse.up();
+  const resized = await mediaWindow.boundingBox();
+  expect(Math.abs(resized.width / resized.height - 1080 / 1920)).toBeLessThan(.01);
+
+  await expect(mediaWindow.locator(".video-muted-slash")).toBeVisible();
+  await page.mouse.move(5, 5);
+  await expect(mediaWindow.locator(".window-titlebar")).toHaveCSS("opacity", "0");
+  await mediaWindow.hover();
+  await expect(mediaWindow.locator(".window-titlebar")).toHaveCSS("opacity", "1");
+});
+
+test("centers traffic-light symbols and optically sizes Calendar", async ({ page }) => {
+  const calendar = page.locator('.desktop-item[data-id="calendar"] .calendar-icon');
+  await expect(calendar).toHaveCSS("width", "64px");
+  await expect(calendar).toHaveCSS("height", "64px");
+
+  const settingsWindow = await openDesktopApp(page, "settings");
+  await settingsWindow.locator(".traffic-lights").hover();
+  const minimizeSymbol = await settingsWindow.locator(".traffic.minimize").evaluate((button) => {
+    const style = getComputedStyle(button, "::after");
+    return { inset: style.inset, width: style.width, height: style.height };
+  });
+  expect(minimizeSymbol).toEqual({ inset: "0px", width: "6px", height: "1px" });
 });
 
 test("keeps a minimized unpinned app in the Dock", async ({ page }) => {

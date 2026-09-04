@@ -1,6 +1,6 @@
 # Rizvisions macOS V10.8.0
 
-V10.8.0 turns Photos into a more personal Rizvisions Archive while preserving the macOS desktop and safe branch, test, review, and preview workflow introduced in V10.7.
+V10.8.0 refines Photos and individual media windows while preserving the macOS desktop and safe branch, test, review, and preview workflow introduced in V10.7.
 
 ## Product baseline
 
@@ -16,14 +16,16 @@ V10.8.0 turns Photos into a more personal Rizvisions Archive while preserving th
 - Individual videos autoplay muted, preserve the entire frame, and use a hover-only QuickTime-style control overlay.
 - Removed browser-native reset confirmation from the main desktop.
 
-## V10.8 archive update
+## V10.8 media update
 
-- Added a personal archive masthead with live moment, photo, and video counts.
-- Grouped All Photos into readable day-based moments while retaining newest-first ordering.
-- Refined Featured into a compact editorial strip with capture dates and media types.
+- Kept Photos focused on the direct newest-first All Photos library without an editorial banner.
+- Fixed hidden image thumbnails and made posterless video thumbnails open on the first click.
+- Kept Featured compact and native to the Photos working surface.
 - Added filenames, orientation, collection, camera, lens, dimensions, and duration to the immersive viewer information panel.
-- Made the information panel immediately visible on larger windows and synchronized its accessible toggle state.
-- Preserved real portrait, landscape, and square proportions for desktop media placements.
+- Rebalanced the viewer so contained media gets the available space and the information panel stays compact.
+- Standardized desktop media as square Polaroid cards while keeping the hover lift.
+- Made individual media windows follow and preserve the asset's true aspect ratio with hover-only chrome.
+- Added an explicit muted slash, centered window-control symbols, and normalized the Calendar icon's optical size.
 
 ## Release safeguards
 
