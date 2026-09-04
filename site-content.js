@@ -1,5 +1,5 @@
 /*
-  Rizvisions V10.6 loads media, placements, and capture metadata from Supabase.
+  Rizvisions V10.7 loads media, placements, and capture metadata from Supabase.
   No bundled stock photo fallback is used.
 */
 window.RIZVISIONS_CONTENT = {

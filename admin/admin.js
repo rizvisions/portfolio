@@ -201,7 +201,7 @@
 
     if (error) {
       const migrationHint = /media_placements|relationship|schema cache/i.test(error.message)
-        ? " Run supabase/migrate-v10.6.sql once in the SQL Editor."
+        ? " Run supabase/migrate-v10.5.sql once in the SQL Editor, then apply migrate-v10.6.sql for media metadata."
         : "";
       setStatus(libraryStatus, `${error.message}${migrationHint}`, true);
       return;
