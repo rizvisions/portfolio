@@ -1,8 +1,8 @@
-# Rizvisions macOS V10.6.3
+# Rizvisions macOS V10.7.0
 
-V10.6.3 is a front-end hotfix on top of the desktop-polish and media-metadata release.
+V10.7.0 stabilizes the macOS desktop and adds a safe branch, test, review, and preview workflow for future releases.
 
-## What changed
+## Product baseline
 
 - Centered the 12-app desktop grid and added Calendar, Notes, and Terminal to the third row.
 - Simplified Finder / Selected Work navigation to Recents and Applications.
@@ -16,12 +16,15 @@ V10.6.3 is a front-end hotfix on top of the desktop-polish and media-metadata re
 - Individual videos autoplay muted, preserve the entire frame, and use a hover-only QuickTime-style control overlay.
 - Removed browser-native reset confirmation from the main desktop.
 
-## Existing V10.5 installation
+## V10.7 safeguards
 
-2. Upload everything inside this folder to the root of `rizvisions/portfolio`, replacing the current site files.
-3. Wait for GitHub Pages to finish, then hard-refresh the site.
+- Static integrity tests guard local assets, frontend secrets, migration guidance, and version labels.
+- Playwright exercises the desktop at 1440×900 and 1280×800.
+- GitHub Actions runs the complete suite for pull requests and `codex/**` branches.
+- Browser traces, screenshots, and videos are retained when a regression fails.
+- `AGENTS.md` preserves the product and engineering rules for future work.
 
-The migration preserves all existing uploads and placements.
+Run the checks with `npm install` followed by `npm test`.
 
 ## First-load intro testing
 
@@ -31,9 +34,12 @@ The intro shows once per browser tab session. Add `?hello=1` to the site URL to 
 
 New image uploads attempt to read embedded capture metadata in the browser before upload. When original capture metadata is not available, the file's last-modified timestamp is used as a fallback. Video uploads store dimensions, duration, and a timestamp fallback from the source file.
 
-## V10.6.3 hotfix
+## Deployment workflow
 
-- Fixes mixed photo + video Desktop placements disappearing together.
-- Root cause: desktop videos without a poster called a removed JavaScript helper, which aborted the entire desktop-media render.
-- Videos now use a safe passive video thumbnail fallback when no poster exists.
-- No Supabase migration is required for V10.6.3.
+1. Create a feature branch from `main`.
+2. Make focused changes and add a regression test for each bug fix.
+3. Run the full suite and review the interactive branch preview.
+4. Merge the approved pull request into `main`.
+5. GitHub Pages deploys the canonical `rizvisions.com` site.
+
+V10.7.0 does not require a Supabase migration.
