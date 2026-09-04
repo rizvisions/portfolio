@@ -69,6 +69,7 @@ test("keeps a landscape video frame stable while controls appear and hide", asyn
   await page.locator('#desktopPhotos .photo-file[data-photo-id="video-landscape"]').dblclick();
   const mediaWindow = page.locator("#windows .media-window-video");
   await expect(mediaWindow).toBeVisible();
+  await page.waitForTimeout(300);
   const before = await mediaWindow.locator(".apple-video-element").boundingBox();
   expect(Math.abs(before.width / before.height - 1920 / 1080)).toBeLessThan(.01);
 
