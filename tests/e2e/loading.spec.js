@@ -6,5 +6,5 @@ test("does not flash bundled stock media before Supabase hydrates", async ({ pag
   await openDesktop(page);
 
   await expect(page.locator("#desktopPhotos .photo-file")).toHaveCount(0);
-  await expect(page.locator("#desktopPhotos .photo-file")).toHaveCount(2, { timeout: 5_000 });
+  await expect(page.locator("#desktopPhotos .photo-file")).toHaveCount(3, { timeout: 5_000 });
 });

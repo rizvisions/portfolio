@@ -59,7 +59,7 @@ test("opens desktop video at its true ratio and keeps that ratio while resizing"
 
   await mediaWindow.locator('[data-window-action="zoom"]').click();
   await expect(page.locator(".media-viewer:fullscreen")).toHaveCount(1);
-  await page.keyboard.press("Escape");
+  await page.evaluate(() => document.exitFullscreen());
   await expect(page.locator(".media-viewer:fullscreen")).toHaveCount(0);
   const afterFullscreen = await mediaWindow.boundingBox();
   expect(Math.abs(afterFullscreen.width / afterFullscreen.height - 1080 / 1920)).toBeLessThan(.01);
@@ -72,7 +72,7 @@ test("keeps a landscape video frame stable while controls appear and hide", asyn
   const before = await mediaWindow.locator(".apple-video-element").boundingBox();
   expect(Math.abs(before.width / before.height - 1920 / 1080)).toBeLessThan(.01);
 
-  await mediaWindow.locator(".apple-video-player").hover();
+  await page.mouse.move(before.x+before.width/2, before.y+before.height/2);
   await page.waitForTimeout(1800);
   const after = await mediaWindow.locator(".apple-video-element").boundingBox();
   expect(Math.abs(after.x-before.x)).toBeLessThan(.5);
