@@ -1362,7 +1362,7 @@
         x: item.x ?? defaults[index % defaults.length].x,
         y: item.y ?? defaults[index % defaults.length].y,
         rotation: item.rotation || defaults[index % defaults.length].rotation,
-        width: 132,
+        desktopWidth: 132,
         monochrome: false
       }));
 
