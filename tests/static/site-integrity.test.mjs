@@ -24,11 +24,11 @@ test("frontend files do not contain Supabase service-role credentials", async ()
   frontend.forEach((source) => assert.doesNotMatch(source, forbidden));
 });
 
-test("public version labels agree on V10.7", async () => {
+test("public version labels agree on V10.8.1", async () => {
   const [readme, app] = await Promise.all([read("README.md"), read("app.js")]);
-  assert.match(readme, /V10\.7\.0/);
-  assert.match(app, /Rizvisions OS 10\.7\.0/);
-  assert.match(app, /Version 10\.7/);
+  assert.match(readme, /V10\.8\.1/);
+  assert.match(app, /Rizvisions OS 10\.8\.1/);
+  assert.match(app, /Version 10\.8/);
 });
 
 test("admin placement recovery points to the placement migration", async () => {
@@ -36,3 +36,11 @@ test("admin placement recovery points to the placement migration", async () => {
   assert.match(admin, /media_placements[\s\S]{0,300}migrate-v10\.5\.sql/);
 });
 
+test("admin preserves editable media location and video metadata", async () => {
+  const [html, admin] = await Promise.all([read("admin/index.html"), read("admin/admin.js")]);
+  for (const field of ["locationNameInput","latitudeInput","longitudeInput","frameRateInput","codecInput"]) {
+    assert.match(html, new RegExp(`id=["']${field}["']`));
+    assert.match(admin, new RegExp(field));
+  }
+  assert.match(admin, /metadata:\s*\{[\s\S]{0,500}locationName[\s\S]{0,500}frameRate/);
+});

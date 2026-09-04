@@ -69,6 +69,8 @@
     brightness: 100,
     volume: 54,
     sound: true,
+    mediaMuted: true,
+    mediaVolume: .55,
     focus: false,
     dockMagnification: true,
     dock: [...DEFAULT_DOCK],
@@ -76,6 +78,7 @@
     photos: clone(defaultPhotos),
     widget: clone(defaultWidget),
     widgetIndex: 0,
+    windowPlacementVersion: 2,
     windows: {},
     notes: "Rizvisions is my permanent internet home.\n\nThings to add:\n• the real photo archive\n• Parker work\n• Blue Specs story\n• WAP / Whop era\n• more personal artifacts\n• an iOS version for mobile"
   };
@@ -143,12 +146,14 @@
     try {
       const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
       if (!parsed) return clone(DEFAULT_STATE);
+      const windowPlacementVersion = Number(parsed.windowPlacementVersion) || 0;
       return {
         ...clone(DEFAULT_STATE), ...parsed,
         icons: { ...clone(defaultIcons), ...(parsed.icons || {}) },
         photos: { ...clone(defaultPhotos), ...(parsed.photos || {}) },
         widget: { ...clone(defaultWidget), ...(parsed.widget || {}) },
-        windows: parsed.windows || {},
+        windowPlacementVersion: 2,
+        windows: windowPlacementVersion >= 2 ? (parsed.windows || {}) : {},
         dock: normalizeDock(parsed.dock || DEFAULT_DOCK)
       };
     } catch { return clone(DEFAULT_STATE); }
@@ -236,18 +241,23 @@
     desktopPhotosRoot.innerHTML = "";
     (CONTENT.desktopPhotos || []).forEach((photo, index) => {
       const saved = state.photos[photo.id] || defaultPhotos[photo.id] || {};
+      const mediaType = photo.type || mediaTypeFromSrc(photo.src);
+      const aspect = Math.max(.55, Math.min(1.8, mediaAspectRatio(photo, mediaType)));
+      const orientation = aspect > 1.12 ? "landscape" : aspect < .88 ? "portrait" : "square";
       const file = document.createElement("button");
       file.type = "button";
       file.className = "photo-file";
       file.dataset.photoId = photo.id;
-      file.dataset.mediaType = photo.type || mediaTypeFromSrc(photo.src);
+      file.dataset.mediaType = mediaType;
+      file.dataset.mediaOrientation = orientation;
       file.style.setProperty("--photo-x", `${saved.x ?? photo.x}%`);
       file.style.setProperty("--photo-y", `${saved.y ?? photo.y}%`);
       file.style.setProperty("--photo-rotation", `${saved.rotation ?? photo.rotation ?? 0}deg`);
-      file.style.setProperty("--photo-width", `${photo.width || 132}px`);
+      file.style.setProperty("--photo-aspect", "1");
+      file.style.setProperty("--photo-width", `${photo.desktopWidth || 132}px`);
       file.style.left = "var(--photo-x)"; file.style.top = "var(--photo-y)";
       file.style.zIndex = String(saved.z || index + 1);
-      const isVideo = (photo.type || mediaTypeFromSrc(photo.src)) === "video";
+      const isVideo = mediaType === "video";
       const preview = isVideo
         ? (
             photo.poster
@@ -452,17 +462,37 @@
   }
 
   function defaultWindowRect(appId, width, height) {
-    const w = Math.min(width, desktop.clientWidth - 40);
-    const h = Math.min(height, desktop.clientHeight - 118);
-    const offset = Math.abs(hashString(appId)) % 5;
-    return { left: Math.max(12, Math.round((desktop.clientWidth - w) / 2 + (offset - 2) * 18)), top: Math.max(10, Math.round((desktop.clientHeight - h) / 2 - 25 + offset * 8)), width:w, height:h };
+    const area = mediaWorkArea();
+    const availableWidth = area.right - area.left;
+    const availableHeight = area.bottom - area.top;
+    const w = Math.min(width, availableWidth);
+    const h = Math.min(height, availableHeight);
+    return {
+      left: Math.round(area.left + (availableWidth - w) / 2),
+      top: Math.round(area.top + (availableHeight - h) / 2),
+      width:w,
+      height:h
+    };
   }
 
   function clampWindowRect(rect, definition = {}) {
-    const minWidth = definition.min?.[0] || 560, minHeight = definition.min?.[1] || 390;
-    const width = Math.min(Math.max(minWidth, rect.width), desktop.clientWidth);
-    const height = Math.min(Math.max(minHeight, rect.height), desktop.clientHeight - 92);
-    return { width, height, left: Math.min(Math.max(-width + 130, rect.left), desktop.clientWidth - 130), top: Math.min(Math.max(0, rect.top), desktop.clientHeight - 145) };
+    const area = mediaWorkArea();
+    const availableWidth = area.right - area.left;
+    const availableHeight = area.bottom - area.top;
+    const minWidth = Math.min(definition.min?.[0] || 560, availableWidth);
+    const minHeight = Math.min(definition.min?.[1] || 390, availableHeight);
+    const requestedWidth = Number(rect.width) || minWidth;
+    const requestedHeight = Number(rect.height) || minHeight;
+    const width = Math.min(Math.max(minWidth, requestedWidth), availableWidth);
+    const height = Math.min(Math.max(minHeight, requestedHeight), availableHeight);
+    const requestedLeft = Number.isFinite(Number(rect.left)) ? Number(rect.left) : area.left;
+    const requestedTop = Number.isFinite(Number(rect.top)) ? Number(rect.top) : area.top;
+    return {
+      width,
+      height,
+      left:Math.min(Math.max(area.left, requestedLeft), area.right - width),
+      top:Math.min(Math.max(area.top, requestedTop), area.bottom - height)
+    };
   }
 
   function createWindow(appId, definition = appDefinitions[appId]) {
@@ -475,7 +505,8 @@
     $(".window-title", win).textContent = definition.title;
     $(".window-body", win).innerHTML = definition.render();
     const saved = state.windows[appId];
-    const initial = clampWindowRect(saved || defaultWindowRect(appId, ...definition.size), definition);
+    const initial = clampWindowRect((definition.lockAspect ? null : saved) || defaultWindowRect(appId, ...definition.size), definition);
+    win._windowDefinition = definition;
     Object.assign(win.style, { left:`${initial.left}px`, top:`${initial.top}px`, width:`${initial.width}px`, height:`${initial.height}px`, zIndex:++zCounter });
     windowsRoot.appendChild(win); wireWindow(win, definition); wireAppSpecific(win, appId); focusWindow(win);
     return win;
@@ -508,19 +539,97 @@
 
   function mediaWindowSize(media, type) {
     const ratio = Math.max(.28, Math.min(4, mediaAspectRatio(media, type)));
-    const availableWidth = Math.max(420, desktop.clientWidth - 100);
-    const availableHeight = Math.max(420, desktop.clientHeight - 145);
+    const area = mediaWorkArea();
+    const availableWidth = Math.max(240, area.right - area.left);
+    const availableHeight = Math.max(280, area.bottom - area.top);
     let bodyWidth, bodyHeight;
     if (ratio < 1) {
       bodyHeight = Math.min(790, availableHeight);
       bodyWidth = bodyHeight * ratio;
-      if (bodyWidth < 330) { bodyWidth = 330; bodyHeight = bodyWidth / ratio; }
     } else {
       bodyWidth = Math.min(1080, availableWidth);
       bodyHeight = bodyWidth / ratio;
       if (bodyHeight > availableHeight) { bodyHeight = availableHeight; bodyWidth = bodyHeight * ratio; }
     }
-    return [Math.round(Math.min(availableWidth, bodyWidth)), Math.round(Math.min(availableHeight + 56, bodyHeight + 56))];
+    return [Math.round(Math.min(availableWidth, bodyWidth)), Math.round(Math.min(availableHeight, bodyHeight))];
+  }
+
+  function mediaWorkArea() {
+    const gap = 16;
+    const dockWrap = dock.closest(".dock-wrap");
+    const dockTop = dockWrap?.offsetHeight ? Math.floor(dockWrap.offsetTop - gap) : desktop.clientHeight - 118;
+    return {
+      left: gap,
+      top: gap,
+      right: Math.max(gap + 240, desktop.clientWidth - gap),
+      bottom: Math.max(gap + 280, Math.min(desktop.clientHeight - gap, dockTop))
+    };
+  }
+
+  function fitMediaRectToWorkArea(ratio, preferred = {}, center = true) {
+    const safeRatio = Math.max(.28, Math.min(4, Number(ratio) || 1));
+    const area = mediaWorkArea();
+    const maxWidth = area.right - area.left;
+    const maxHeight = area.bottom - area.top;
+    let width;
+    let height;
+    if (safeRatio < 1) {
+      height = Math.min(maxHeight, Number(preferred.height) || Math.min(790, maxHeight));
+      width = height * safeRatio;
+    } else {
+      width = Math.min(maxWidth, Number(preferred.width) || Math.min(1080, maxWidth));
+      height = width / safeRatio;
+    }
+    if (width > maxWidth) { width = maxWidth; height = width / safeRatio; }
+    if (height > maxHeight) { height = maxHeight; width = height * safeRatio; }
+    const centeredLeft = area.left + (maxWidth - width) / 2;
+    const centeredTop = area.top + (maxHeight - height) / 2;
+    const requestedLeft = Number(preferred.left);
+    const requestedTop = Number(preferred.top);
+    const left = center || !Number.isFinite(requestedLeft)
+      ? centeredLeft
+      : Math.max(area.left, Math.min(area.right - width, requestedLeft));
+    const top = center || !Number.isFinite(requestedTop)
+      ? centeredTop
+      : Math.max(area.top, Math.min(area.bottom - height, requestedTop));
+    return { left:Math.round(left), top:Math.round(top), width:Math.round(width), height:Math.round(height) };
+  }
+
+  function applyMediaWindowRect(win, rect) {
+    Object.assign(win.style, { left:`${rect.left}px`, top:`${rect.top}px`, width:`${rect.width}px`, height:`${rect.height}px` });
+  }
+
+  function syncMediaWindowToIntrinsic(win, media, type) {
+    const element = type === "video" ? $("video", win) : $(".media-viewer > img", win);
+    if (!element) return;
+    const sync = () => {
+      const width = type === "video" ? element.videoWidth : element.naturalWidth;
+      const height = type === "video" ? element.videoHeight : element.naturalHeight;
+      if (!(width > 0 && height > 0) || !win.isConnected) return;
+      const ratio = Math.max(.28, Math.min(4, width / height));
+      const current = { width:win.offsetWidth, height:win.offsetHeight };
+      const minWidth = ratio < 1 ? Math.max(220, Math.round(380 * ratio)) : 420;
+      win._mediaIntrinsicRatio = ratio;
+      win._windowDefinition.lockAspect = ratio;
+      win._windowDefinition.min = [minWidth, Math.round(minWidth / ratio)];
+      win.style.setProperty("--media-aspect", String(ratio));
+      applyMediaWindowRect(win, fitMediaRectToWorkArea(ratio, current, true));
+      saveWindowRect(win);
+    };
+    if ((type === "video" && element.readyState >= 1) || (type !== "video" && element.complete)) sync();
+    else element.addEventListener(type === "video" ? "loadedmetadata" : "load", sync, { once:true });
+  }
+
+  function restoreMediaWindowAfterFullscreen(win) {
+    if (!win._preFullscreenRect || !win.isConnected) return;
+    const preferred = win._preFullscreenRect;
+    const ratio = win._mediaIntrinsicRatio || Number(win._windowDefinition?.lockAspect) || preferred.width / preferred.height;
+    const rect = fitMediaRectToWorkArea(ratio, preferred, false);
+    win._preFullscreenRect = null;
+    const restore = () => { if (win.isConnected && !document.fullscreenElement) applyMediaWindowRect(win, rect); };
+    restore();
+    requestAnimationFrame(() => requestAnimationFrame(restore));
+    setTimeout(restore, 80);
   }
 
   function openMediaFile(media) {
@@ -530,15 +639,19 @@
     let win = windowsRoot.querySelector(`[data-app-window="${CSS.escape(appId)}"]`);
     if (!win) {
       const type = media.type || mediaTypeFromSrc(media.src);
+      const ratio = Math.max(.28, Math.min(4, mediaAspectRatio(media, type)));
       const [width, height] = mediaWindowSize(media, type);
+      const minWidth = ratio < 1 ? Math.max(240, Math.round(380 * ratio)) : 480;
       win = createWindow(appId, {
         name: type === "video" ? "Video" : "Preview",
         title: media.displayName || media.filename || media.src.split("/").pop() || "Media",
-        size:[width,height], min:type === "video" && mediaAspectRatio(media,type) < 1 ? [320,430] : [460,340],
+        size:[width,height], min:[minWidth, Math.round(minWidth / ratio)], lockAspect:ratio,
         render:() => renderMediaViewer(media, type)
       });
       win.classList.add("media-window", `media-window-${type}`);
+      applyMediaWindowRect(win, fitMediaRectToWorkArea(ratio, { width, height }, true));
       wireMediaPlayback(win, media);
+      syncMediaWindowToIntrinsic(win, media, type);
     }
     win.hidden = false; focusWindow(win); playSound("open");
     return win;
@@ -561,7 +674,9 @@
   }
 
   function closeWindow(win = activeWindow) {
-    if (!win) return; saveWindowRect(win); win.remove(); playSound("close");
+    if (!win) return;
+    if (win._fullscreenChangeHandler) document.removeEventListener("fullscreenchange", win._fullscreenChangeHandler);
+    saveWindowRect(win); win.remove(); playSound("close");
     activeWindow = $$(".mac-window:not([hidden])", windowsRoot).sort((a,b) => Number(a.style.zIndex)-Number(b.style.zIndex)).pop() || null;
     if (activeWindow) focusWindow(activeWindow); else activeAppName.textContent = "Rizvisions";
     renderDock();
@@ -576,10 +691,12 @@
     if (!win) return;
     if (win.classList.contains("maximized")) {
       const previous = JSON.parse(win.dataset.previousRect || "{}");
-      win.classList.remove("maximized"); Object.assign(win.style, { left:`${previous.left || 20}px`, top:`${previous.top || 20}px`, width:`${previous.width || 850}px`, height:`${previous.height || 600}px` });
+      const restored = clampWindowRect(previous, win._windowDefinition || {});
+      win.classList.remove("maximized"); Object.assign(win.style, { left:`${restored.left}px`, top:`${restored.top}px`, width:`${restored.width}px`, height:`${restored.height}px` });
     } else {
+      const area = mediaWorkArea();
       win.dataset.previousRect = JSON.stringify({ left:win.offsetLeft, top:win.offsetTop, width:win.offsetWidth, height:win.offsetHeight });
-      win.classList.add("maximized"); Object.assign(win.style, { left:"0px", top:"0px", width:"100%", height:"calc(100% - 102px)" });
+      win.classList.add("maximized"); Object.assign(win.style, { left:`${area.left}px`, top:`${area.top}px`, width:`${area.right-area.left}px`, height:`${area.bottom-area.top}px` });
     }
     focusWindow(win);
   }
@@ -588,14 +705,35 @@
     win.addEventListener("pointerdown", () => focusWindow(win));
     $$("[data-window-action]", win).forEach((button) => button.addEventListener("click", (event) => {
       event.stopPropagation(); const action = button.dataset.windowAction;
-      if (action === "close") closeWindow(win); if (action === "minimize") minimizeWindow(win); if (action === "zoom") zoomWindow(win);
+      if (action === "close") closeWindow(win);
+      if (action === "minimize") minimizeWindow(win);
+      if (action === "zoom") {
+        if (win.classList.contains("media-window")) {
+          const viewer = $(".media-viewer", win);
+          if (document.fullscreenElement) {
+            document.exitFullscreen?.().catch?.(() => {});
+          } else if (viewer?.requestFullscreen) {
+            win._preFullscreenRect = { left:win.offsetLeft, top:win.offsetTop, width:win.offsetWidth, height:win.offsetHeight };
+            viewer.requestFullscreen().catch(() => { win._preFullscreenRect = null; });
+          }
+        } else zoomWindow(win);
+      }
     }));
+    if (definition.lockAspect && !win._fullscreenChangeHandler) {
+      win._fullscreenChangeHandler = () => {
+        if (document.fullscreenElement || !win._preFullscreenRect || !win.isConnected) return;
+        restoreMediaWindowAfterFullscreen(win);
+      };
+      document.addEventListener("fullscreenchange", win._fullscreenChangeHandler);
+    }
     $(".drag-handle", win).addEventListener("pointerdown", (event) => beginWindowDrag(event, win));
+    $$(".finder-toolbar,.photos-topbar,.photos-viewer-toolbar,.chat-header,.safari-toolbar,.notes-browser-toolbar,.notes-editor-toolbar,.calendar-toolbar", win)
+      .forEach((surface) => surface.addEventListener("pointerdown", (event) => beginWindowDrag(event, win)));
     $$("[data-resize]", win).forEach((handle) => handle.addEventListener("pointerdown", (event) => beginWindowResize(event, win, handle.dataset.resize, definition)));
   }
 
   function beginWindowDrag(event, win) {
-    if (event.button !== 0 || event.target.closest(".traffic-lights") || win.classList.contains("maximized")) return;
+    if (event.button !== 0 || event.target.closest(".traffic-lights,button,input,textarea,a,[contenteditable='true']") || win.classList.contains("maximized")) return;
     event.preventDefault(); focusWindow(win);
     const startX = event.clientX, startY = event.clientY, startLeft = win.offsetLeft, startTop = win.offsetTop;
     const move = (moveEvent) => { const clamped = clampWindowRect({ left:startLeft+moveEvent.clientX-startX, top:startTop+moveEvent.clientY-startY, width:win.offsetWidth, height:win.offsetHeight }, { min:[320,220] }); win.style.left=`${clamped.left}px`; win.style.top=`${clamped.top}px`; };
@@ -611,11 +749,30 @@
     const move = (moveEvent) => {
       const dx = moveEvent.clientX-start.x, dy = moveEvent.clientY-start.y;
       let left=start.left, top=start.top, width=start.width, height=start.height;
-      if (direction.includes("e")) width = Math.max(minW, start.width + dx);
-      if (direction.includes("s")) height = Math.max(minH, start.height + dy);
-      if (direction.includes("w")) { width=Math.max(minW,start.width-dx); left=start.left+(start.width-width); }
-      if (direction.includes("n")) { height=Math.max(minH,start.height-dy); top=start.top+(start.height-height); }
-      const clamped = clampWindowRect({ left,top,width,height }, definition);
+      const ratio = Number(definition.lockAspect);
+      if (ratio > 0) {
+        const requestedWidth = direction.includes("e") ? start.width + dx
+          : direction.includes("w") ? start.width - dx
+          : (direction.includes("s") ? start.height + dy : start.height - dy) * ratio;
+        const area = mediaWorkArea();
+        const maxWidth = Math.min(area.right - area.left, (area.bottom - area.top) * ratio);
+        const boundedMinWidth = Math.min(Math.max(minW, minH * ratio), maxWidth);
+        width = Math.max(boundedMinWidth, Math.min(maxWidth, requestedWidth));
+        height = width / ratio;
+        if (direction.includes("w")) left = start.left + (start.width - width);
+        if (direction.includes("n")) top = start.top + (start.height - height);
+      } else {
+        if (direction.includes("e")) width = Math.max(minW, start.width + dx);
+        if (direction.includes("s")) height = Math.max(minH, start.height + dy);
+        if (direction.includes("w")) { width=Math.max(minW,start.width-dx); left=start.left+(start.width-width); }
+        if (direction.includes("n")) { height=Math.max(minH,start.height-dy); top=start.top+(start.height-height); }
+      }
+      const clamped = ratio > 0
+        ? (() => {
+          const area = mediaWorkArea();
+          return { width, height, left:Math.min(Math.max(area.left, left), area.right-width), top:Math.min(Math.max(area.top, top), area.bottom-height) };
+        })()
+        : clampWindowRect({ left,top,width,height }, definition);
       Object.assign(win.style, { left:`${clamped.left}px`, top:`${clamped.top}px`, width:`${clamped.width}px`, height:`${clamped.height}px` });
     };
     const finish = () => { window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",finish); document.body.classList.remove("window-resizing"); saveWindowRect(win); };
@@ -850,6 +1007,27 @@
     }));
   }
 
+  function wireMediaThumbnails(root) {
+    $$(".media-thumb-shell video", root).forEach((video) => {
+      if (video.dataset.thumbnailWired === "true") return;
+      video.dataset.thumbnailWired = "true";
+      video.muted = true;
+      video.defaultMuted = true;
+      const primeFrame = () => {
+        if (video.readyState < 2) return;
+        video.pause();
+        if (video.currentTime === 0 && Number.isFinite(video.duration) && video.duration > 0) {
+          try { video.currentTime = Math.min(.08, video.duration / 10); } catch {}
+        }
+      };
+      if (video.readyState >= 2) primeFrame();
+      else video.addEventListener("loadeddata", primeFrame, { once:true });
+      const tile = video.closest("button");
+      tile?.addEventListener("pointerenter", () => video.play().catch(() => {}));
+      tile?.addEventListener("pointerleave", () => video.pause());
+    });
+  }
+
   function wirePhotosApp(win) {
     const collection = win.dataset.photosCollection || "all";
     const viewMode = win.dataset.photosView || "all";
@@ -879,12 +1057,20 @@
     $(`[data-gallery-next]`, win)?.addEventListener("click", () => stepPhotosGallery(win, 1));
     $(`[data-gallery-info]`, win)?.addEventListener("click", () => {
       const panel = $(".photos-gallery-info", win);
-      const gallery = $(".photos-gallery", win);
+      const button = $("[data-gallery-info]", win);
       if (panel) {
-        panel.hidden = !panel.hidden;
-        gallery?.classList.toggle("info-open", !panel.hidden);
+        const willOpen = panel.hidden;
+        panel.hidden = !willOpen;
+        panel.removeAttribute("style");
+        button?.setAttribute("aria-pressed", String(willOpen));
       }
     });
+    $(`[data-info-close]`, win)?.addEventListener("click", () => {
+      const panel = $(".photos-gallery-info", win);
+      if (panel) panel.hidden = true;
+      $("[data-gallery-info]", win)?.setAttribute("aria-pressed", "false");
+    });
+    wirePhotosInfoPanel(win);
     $(".photos-gallery-filmstrip", win)?.addEventListener("click", (event) => {
       const thumb = event.target.closest("[data-gallery-thumb]");
       if (thumb) showPhotosGalleryItem(win, Number(thumb.dataset.galleryThumb));
@@ -898,6 +1084,7 @@
       };
       win.addEventListener("keydown", win._photosKeyHandler);
     }
+    wireMediaThumbnails(win);
     wireMediaPlayback(win);
   }
 
@@ -920,6 +1107,10 @@
     const gallery = $(".photos-gallery", win);
     if (!gallery) return;
     gallery.hidden = false;
+    const info = $(".photos-gallery-info", win);
+    const infoButton = $("[data-gallery-info]", win);
+    if (info) { info.hidden = true; info.removeAttribute("style"); }
+    infoButton?.setAttribute("aria-pressed", "false");
     showPhotosGalleryItem(win, win._galleryIndex);
     gallery.focus({ preventScroll: true });
   }
@@ -928,8 +1119,8 @@
     const gallery = $(".photos-gallery", win);
     if (!gallery) return;
     gallery.hidden = true;
-    gallery.classList.remove("info-open");
     const info = $(".photos-gallery-info", win); if (info) info.hidden = true;
+    $("[data-gallery-info]", win)?.setAttribute("aria-pressed", "false");
     const video = gallery.querySelector("video");
     if (video) video.pause();
   }
@@ -941,15 +1132,86 @@
     showPhotosGalleryItem(win, next);
   }
 
+  function wirePhotosInfoPanel(win) {
+    const panel = $(".photos-gallery-info", win);
+    const handle = $("[data-info-drag]", panel);
+    if (!panel || !handle || handle.dataset.dragWired === "true") return;
+    handle.dataset.dragWired = "true";
+    handle.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0 || event.target.closest("button")) return;
+      event.preventDefault();
+      const gallery = $(".photos-gallery", win);
+      const galleryRect = gallery.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const start = { x:event.clientX, y:event.clientY, left:panelRect.left-galleryRect.left, top:panelRect.top-galleryRect.top };
+      const move = (moveEvent) => {
+        const left = Math.max(12, Math.min(gallery.clientWidth-panel.offsetWidth-12, start.left+moveEvent.clientX-start.x));
+        const top = Math.max(66, Math.min(gallery.clientHeight-panel.offsetHeight-12, start.top+moveEvent.clientY-start.y));
+        Object.assign(panel.style, { left:`${left}px`, top:`${top}px`, right:"auto", bottom:"auto" });
+      };
+      const finish = () => {
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", finish);
+      };
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", finish, { once:true });
+    });
+  }
+
+  function formatMediaBytes(bytes) {
+    if (!Number.isFinite(Number(bytes)) || Number(bytes) <= 0) return "";
+    const units = ["B","KB","MB","GB"];
+    let value = Number(bytes), index = 0;
+    while (value >= 1024 && index < units.length-1) { value /= 1024; index += 1; }
+    return `${value >= 10 || index === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[index]}`;
+  }
+
+  function mediaLocation(media) {
+    const metadata = media.metadata || {};
+    const latitude = Number(metadata.latitude ?? metadata.lat);
+    const longitude = Number(metadata.longitude ?? metadata.lng ?? metadata.lon);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+    return { latitude, longitude, name:metadata.locationName || metadata.location || "" };
+  }
+
+  function mediaMapMarkup(media) {
+    const location = mediaLocation(media);
+    if (!location) return "";
+    const { latitude, longitude, name } = location;
+    const spread = .055;
+    const bbox = [longitude-spread, latitude-spread, longitude+spread, latitude+spread].map((value) => value.toFixed(6)).join(",");
+    const embed = `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${encodeURIComponent(`${latitude},${longitude}`)}`;
+    const link = `https://www.openstreetmap.org/?mlat=${encodeURIComponent(latitude)}&mlon=${encodeURIComponent(longitude)}#map=12/${encodeURIComponent(latitude)}/${encodeURIComponent(longitude)}`;
+    return `<section class="photos-info-location"><div><strong>${escapeHtml(name || "Location")}</strong><small>${latitude.toFixed(4)}, ${longitude.toFixed(4)}</small></div><iframe src="${escapeHtml(embed)}" title="Map showing where this media was captured" loading="lazy"></iframe><a href="${escapeHtml(link)}" target="_blank" rel="noopener">Open map ↗</a></section>`;
+  }
+
   function mediaInfoMarkup(media) {
     const capture = new Date(media.capturedAt || media.createdAt || Date.now());
+    const type = (media.type || mediaTypeFromSrc(media.src)) === "video" ? "Video" : "Photo";
+    const orientation = media.width && media.height ? (media.width > media.height ? "Landscape" : media.width < media.height ? "Portrait" : "Square") : "—";
+    const camera = [media.cameraMake, media.cameraModel].filter(Boolean).join(" ") || "—";
+    const metadata = media.metadata || {};
+    const aperture = Number(metadata.fNumber) > 0 ? `ƒ/${Number(metadata.fNumber).toFixed(1)}` : "—";
+    const focalLength = Number(metadata.focalLength) > 0 ? `${Number(metadata.focalLength).toFixed(0)} mm` : "—";
+    const exposure = metadata.exposureTime ? (Number(metadata.exposureTime) < 1 ? `1/${Math.round(1/Number(metadata.exposureTime))} sec` : `${metadata.exposureTime} sec`) : "—";
+    const frameRate = Number(metadata.frameRate ?? metadata.fps) > 0 ? `${Number(metadata.frameRate ?? metadata.fps).toFixed(0)} FPS` : "—";
+    const fileSize = formatMediaBytes(media.sizeBytes);
     const details = [
-      ["Date", capture.toLocaleString("en-US", { month:"long", day:"numeric", year:"numeric", hour:"numeric", minute:"2-digit" })],
+      ["Kind", type],
       ["Dimensions", media.width && media.height ? `${media.width} × ${media.height}` : "—"],
-      [media.type === "video" ? "Duration" : "Camera", media.type === "video" ? (media.duration ? formatMediaDuration(media.duration) : "—") : ([media.cameraMake, media.cameraModel].filter(Boolean).join(" ") || "—")],
-      ["Lens", media.lensModel || "—"]
-    ];
-    return `<div class="photos-info-card"><strong>${escapeHtml(media.displayName || media.filename || "Untitled")}</strong>${media.caption ? `<p>${escapeHtml(media.caption)}</p>` : ""}<dl>${details.map(([key,value])=>`<div><dt>${key}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl></div>`;
+      ["Orientation", orientation],
+      ["Lens", media.lensModel || "—"],
+      ["Focal length", focalLength],
+      ["Aperture", aperture],
+      ["Exposure", exposure],
+      ["ISO", metadata.iso || "—"],
+      ...(type === "Video" ? [["Duration", media.duration ? formatMediaDuration(media.duration) : "—"]] : []),
+      ...(type === "Video" ? [["Frame rate", frameRate],["Codec", metadata.codec || "—"]] : []),
+      ["File size", fileSize || "—"],
+      ["Collection", media.collection || "Library"],
+      ["Format", media.mimeType ? media.mimeType.replace(/^.*\//, "").toUpperCase() : "—"]
+    ].filter(([, value]) => value !== "—");
+    return `<div class="photos-info-card"><header><strong>${escapeHtml(media.displayName || media.filename || "Untitled")}</strong><small>${escapeHtml(media.filename || "")}</small><time>${escapeHtml(capture.toLocaleString("en-US", { month:"long", day:"numeric", year:"numeric", hour:"numeric", minute:"2-digit" }))}</time>${media.caption ? `<p>${escapeHtml(media.caption)}</p>` : ""}</header>${camera !== "—" ? `<section class="photos-info-camera"><strong>${escapeHtml(camera)}</strong>${media.lensModel ? `<span>${escapeHtml(media.lensModel)}</span>` : ""}</section>` : ""}<dl>${details.map(([key,value])=>`<div><dt>${key}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl>${mediaMapMarkup(media)}</div>`;
   }
 
   function showPhotosGalleryItem(win, index) {
@@ -960,13 +1222,18 @@
     const stage = $(".photos-gallery-media", win);
     const counter = $(".photos-gallery-counter", win);
     const filmstrip = $(".photos-gallery-filmstrip", win);
-    const info = $(".photos-gallery-info", win);
+    const info = $(".photos-info-content", win);
     stage.innerHTML = renderGalleryMedia(media);
     $$(".photos-gallery-title", win).forEach((node) => { node.textContent = media.displayName || media.filename || "Untitled"; });
+    $$(".photos-gallery-context", win).forEach((node) => { node.textContent = photoDateParts(media).day; });
     if (counter) counter.textContent = `${index + 1} of ${items.length}`;
     if (filmstrip) {
-      filmstrip.innerHTML = items.map((item, itemIndex) => `<button class="${itemIndex === index ? "active" : ""}" data-gallery-thumb="${itemIndex}" aria-label="Open ${escapeHtml(item.displayName || item.filename || `item ${itemIndex + 1}`)}">${renderMediaThumbnail(item)}</button>`).join("");
-      filmstrip.querySelector(".active")?.scrollIntoView({ inline:"center", block:"nearest", behavior:"smooth" });
+      filmstrip.innerHTML = items.map((item, itemIndex) => {
+        const type = item.type || mediaTypeFromSrc(item.src);
+        return `<button class="${itemIndex === index ? "active" : ""}" data-gallery-thumb="${itemIndex}" data-media-type="${escapeHtml(type)}" aria-current="${itemIndex === index ? "true" : "false"}" aria-label="Open ${escapeHtml(item.displayName || item.filename || `item ${itemIndex + 1}`)}">${renderMediaThumbnail(item)}</button>`;
+      }).join("");
+      filmstrip.querySelector(".active")?.scrollIntoView({ inline:"center", block:"nearest", behavior:"auto" });
+      wireMediaThumbnails(filmstrip);
     }
     if (info) info.innerHTML = mediaInfoMarkup(media);
     wireMediaPlayback(stage, media);
@@ -1019,20 +1286,19 @@
 
   function renderAbout(){return `<div class="about-app"><aside class="about-rail"><img class="about-eye" src="assets/icons/macos/rizvisions.png?v=106" alt=""><span>RIZVISIONS</span><nav><button class="active">Overview</button><button data-app="work">Work</button><button data-app="photos">Photos</button></nav></aside><main class="about-content"><header><span class="eyebrow">RIZ ZAHEER</span><h1>I build things on the internet and document the rest.</h1><p>Creator and operator in Chicago. I work at Parker, make photos and videos, and have used Rizvisions as a creative identity since middle school.</p></header><section class="about-stats"><div><small>Currently</small><strong>Parker</strong><button data-app="parker">Open app</button></div><div><small>Based</small><strong>Chicago</strong><span>Gold Coast / Oak Brook orbit</span></div><div><small>Internet</small><strong>30M+</strong><span>lifetime short-form views</span></div></section><section class="about-links"><button data-external="https://www.linkedin.com/in/riz-zaheer/">LinkedIn ↗</button><button data-app="instagram">Instagram</button><button data-external="https://x.com/rizvisions">X ↗</button><button data-app="spotify">Spotify</button></section><section class="about-now"><div><small>What this site is</small><p>A catch-all for work, personal stuff, photography, old businesses, current obsessions, and whatever else becomes part of my life.</p></div><div class="about-quote">“Permanent internet home” &gt; polished corporate portfolio.</div></section></main></div>`;}
 
-  function renderSettings(){return `<div class="settings-shell"><aside class="settings-sidebar"><input class="settings-search" placeholder="Search"><div class="settings-profile-mini"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions</strong><small>Desktop preferences</small></span></div><div class="settings-list"><div class="settings-row active"><span class="settings-row-icon">◐</span>Appearance</div><div class="settings-row"><span class="settings-row-icon">⌘</span>Desktop & Dock</div><div class="settings-row"><span class="settings-row-icon">♪</span>Sound</div><div class="settings-row"><span class="settings-row-icon">◉</span>About</div></div></aside><main class="settings-main"><h1>Appearance</h1><section class="settings-card"><h2>Wallpaper</h2><p>Choose the grid appearance used across the desktop and interface.</p><div class="settings-theme-grid">${[["grid","Light"],["dark","Dark"],["maroon","Maroon"],["forest","Forest"]].map(([id,label])=>`<button data-settings-wallpaper="${id}" class="theme-choice ${id}"><span></span><strong>${label}</strong></button>`).join("")}</div></section><section class="settings-card"><h2>Desktop & Dock</h2><div class="settings-info-row"><span><strong>Customize the Dock naturally</strong><small>Drag an app from the desktop onto the Dock. Drag Dock apps left or right to reorder, or drag one away to remove it.</small></span></div><button class="mac-button" data-settings-reset>Restore Desktop Layout</button></section><section class="settings-card"><h2>About this build</h2><div class="settings-info-row"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions OS 10.7.0</strong><small>A personal website pretending to be a Mac.</small></span></div></section></main></div>`;}
+  function renderSettings(){return `<div class="settings-shell"><aside class="settings-sidebar"><input class="settings-search" placeholder="Search"><div class="settings-profile-mini"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions</strong><small>Desktop preferences</small></span></div><div class="settings-list"><div class="settings-row active"><span class="settings-row-icon">◐</span>Appearance</div><div class="settings-row"><span class="settings-row-icon">⌘</span>Desktop & Dock</div><div class="settings-row"><span class="settings-row-icon">♪</span>Sound</div><div class="settings-row"><span class="settings-row-icon">◉</span>About</div></div></aside><main class="settings-main"><h1>Appearance</h1><section class="settings-card"><h2>Wallpaper</h2><p>Choose the grid appearance used across the desktop and interface.</p><div class="settings-theme-grid">${[["grid","Light"],["dark","Dark"],["maroon","Maroon"],["forest","Forest"]].map(([id,label])=>`<button data-settings-wallpaper="${id}" class="theme-choice ${id}"><span></span><strong>${label}</strong></button>`).join("")}</div></section><section class="settings-card"><h2>Desktop & Dock</h2><div class="settings-info-row"><span><strong>Customize the Dock naturally</strong><small>Drag an app from the desktop onto the Dock. Drag Dock apps left or right to reorder, or drag one away to remove it.</small></span></div><button class="mac-button" data-settings-reset>Restore Desktop Layout</button></section><section class="settings-card"><h2>About this build</h2><div class="settings-info-row"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions OS 10.8.1</strong><small>A personal website pretending to be a Mac.</small></span></div></section></main></div>`;}
 
   function renderVideoElement(media, { className = "", autoplay = false, muted = true } = {}) {
     const poster = media.poster ? ` poster="${escapeHtml(media.poster)}"` : "";
-    return `<video class="${escapeHtml(className)}" ${autoplay ? "autoplay" : ""} ${muted ? "muted" : ""} playsinline preload="auto"${poster} src="${escapeHtml(media.src)}"></video>`;
+    return `<video class="${escapeHtml(className)}" ${autoplay ? "autoplay" : ""} ${muted ? "muted" : ""} loop playsinline preload="auto"${poster} src="${escapeHtml(media.src)}"></video>`;
   }
 
   function renderAppleVideoPlayer(media, { autoplay = true, compact = false } = {}) {
-    const speaker = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4Z" fill="currentColor"/><path class="sound-wave" d="M16 9.2c1.1 1.5 1.1 4.1 0 5.6M18.7 7c2.3 2.8 2.3 7.2 0 10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`;
+    const speaker = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4Z" fill="currentColor"/><path class="sound-wave" d="M16 9.2c1.1 1.5 1.1 4.1 0 5.6M18.7 7c2.3 2.8 2.3 7.2 0 10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path class="video-muted-slash" d="M5.5 5.5 19 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
     const back = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 6 4.8 12 11 18V6Zm8 0-6.2 6L19 18V6Z" fill="currentColor"/></svg>`;
     const forward = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 6 6.2 6L5 18V6Zm8 0 6.2 6L13 18V6Z" fill="currentColor"/></svg>`;
     const playPause = `<span class="video-icon-play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7V5Z" fill="currentColor"/></svg></span><span class="video-icon-pause"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7V5Zm6 0h4v14h-4V5Z" fill="currentColor"/></svg></span>`;
-    const full = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M9 20h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`;
-    return `<div class="apple-video-player ${compact ? "compact" : ""}">${renderVideoElement(media,{className:"apple-video-element",autoplay,muted:true})}<div class="apple-video-controls"><div class="video-control-primary"><button type="button" data-video-mute data-muted="true" aria-label="Mute or unmute">${speaker}</button><input class="video-volume" data-video-volume type="range" min="0" max="1" step="0.01" value="0.55" aria-label="Volume"><span class="video-control-spacer"></span><button type="button" data-video-skip="-10" aria-label="Back 10 seconds">${back}</button><button type="button" class="video-play" data-video-play data-state="play" aria-label="Play or pause">${playPause}</button><button type="button" data-video-skip="10" aria-label="Forward 10 seconds">${forward}</button><span class="video-control-spacer"></span><button type="button" data-video-fullscreen aria-label="Full screen">${full}</button></div><div class="video-control-timeline"><time data-video-time>0:00</time><input data-video-progress type="range" min="0" max="1000" value="0" aria-label="Video progress"><time data-video-duration>0:00</time></div></div></div>`;
+    return `<div class="apple-video-player ${compact ? "compact" : ""}">${renderVideoElement(media,{className:"apple-video-element",autoplay,muted:true})}<div class="apple-video-controls"><div class="video-control-primary"><button type="button" data-video-mute data-muted="true" aria-label="Unmute">${speaker}</button><input class="video-volume" data-video-volume type="range" min="0" max="1" step="0.01" value="0.55" aria-label="Volume"><span class="video-control-spacer"></span><button type="button" data-video-skip="-10" aria-label="Back 10 seconds">${back}</button><button type="button" class="video-play" data-video-play data-state="play" aria-label="Play or pause">${playPause}</button><button type="button" data-video-skip="10" aria-label="Forward 10 seconds">${forward}</button><span class="video-control-spacer"></span></div><div class="video-control-timeline"><time data-video-time>0:00</time><input data-video-progress type="range" min="0" max="1000" value="0" aria-label="Video progress"><time data-video-duration>0:00</time></div></div></div>`;
   }
 
   function renderMediaThumbnail(media) {
@@ -1065,12 +1331,17 @@
     return {
       year: String(date.getFullYear()),
       month: date.toLocaleDateString("en-US", { month:"long", year:"numeric" }),
-      day: date.toLocaleDateString("en-US", { month:"long", day:"numeric", year:"numeric" })
+      day: date.toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric", year:"numeric" }),
+      short: date.toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" })
     };
   }
 
   function renderPhotoTiles(items, indexOffset = 0) {
-    return `<div class="photos-natural-grid">${items.map((media, index) => `<button class="photo-natural-tile" data-media-id="${escapeHtml(media.id)}" data-media-index="${index + indexOffset}" data-media-type="${escapeHtml(media.type || mediaTypeFromSrc(media.src))}" style="--media-ratio:${mediaAspectRatio(media, media.type)}">${renderMediaThumbnail(media)}${media.type === "video" ? `<i class="video-duration">▶ ${media.duration ? formatMediaDuration(media.duration) : "video"}</i>` : ""}</button>`).join("")}</div>`;
+    return `<div class="photos-natural-grid">${items.map((media, index) => {
+      const type = media.type || mediaTypeFromSrc(media.src);
+      const title = media.displayName || media.filename || "Untitled";
+      return `<button class="photo-natural-tile" data-media-id="${escapeHtml(media.id)}" data-media-index="${index + indexOffset}" data-media-type="${escapeHtml(type)}" aria-label="Open ${escapeHtml(title)}">${renderMediaThumbnail(media)}${type === "video" ? `<i class="video-duration">▶ ${media.duration ? formatMediaDuration(media.duration) : "video"}</i>` : ""}</button>`;
+    }).join("")}</div>`;
   }
 
   function renderChronology(items, viewMode) {
@@ -1110,7 +1381,7 @@
       body = `${featuredBlock}<section class="photos-library-feed">${renderChronology(photos, viewMode)}</section>`;
     }
 
-    return `<div class="photos-app"><aside class="photos-nav"><div class="photos-nav-title"><img src="assets/icons/macos/photos.png?v=106" alt=""><strong>Photos</strong></div><div class="sidebar-title">Library</div><button data-photo-collection="all" class="${activeCollection === "all" ? "active" : ""}"><span>▦</span>All Photos</button><button data-photo-collection="photos" class="${activeCollection === "photos" ? "active" : ""}"><span>▧</span>Photos</button><button data-photo-collection="videos" class="${activeCollection === "videos" ? "active" : ""}"><span>▶</span>Videos</button>${collectionButtons ? `<div class="sidebar-title collections-label">Collections</div>${collectionButtons}` : ""}</aside><main class="photos-library"><div class="photos-topbar"><div><h1>${escapeHtml(title)}</h1><small>${photos.length} ${photos.length === 1 ? "item" : "items"}${photos.length ? ` · newest first` : ""}</small></div><div class="photos-segmented"><button data-photo-view="years" class="${viewMode === "years" ? "active" : ""}">Years</button><button data-photo-view="months" class="${viewMode === "months" ? "active" : ""}">Months</button><button data-photo-view="all" class="${viewMode === "all" ? "active" : ""}">All Photos</button></div></div><div class="photos-scroll-content">${body}</div><section class="photos-gallery" tabindex="-1" hidden><header class="photos-viewer-toolbar"><button data-gallery-close class="photos-viewer-back" aria-label="Back">‹</button><div><strong class="photos-gallery-title"></strong><small class="photos-gallery-counter"></small></div><span></span><button data-gallery-info aria-label="Info">ⓘ</button></header><div class="photos-gallery-stage"><button class="gallery-arrow gallery-prev" data-gallery-prev aria-label="Previous item">‹</button><div class="photos-gallery-media"></div><button class="gallery-arrow gallery-next" data-gallery-next aria-label="Next item">›</button></div><footer><div class="photos-gallery-filmstrip"></div></footer><aside class="photos-gallery-info" hidden></aside></section></main></div>`;
+    return `<div class="photos-app"><aside class="photos-nav"><div class="photos-nav-title"><img src="assets/icons/macos/photos.png?v=106" alt=""><strong>Photos</strong></div><div class="sidebar-title">Library</div><button data-photo-collection="all" class="${activeCollection === "all" ? "active" : ""}"><span>▦</span>All Photos</button><button data-photo-collection="photos" class="${activeCollection === "photos" ? "active" : ""}"><span>▧</span>Photos</button><button data-photo-collection="videos" class="${activeCollection === "videos" ? "active" : ""}"><span>▶</span>Videos</button>${collectionButtons ? `<div class="sidebar-title collections-label">Collections</div>${collectionButtons}` : ""}</aside><main class="photos-library"><div class="photos-topbar"><div><h1>${escapeHtml(title)}</h1><small>${photos.length} ${photos.length === 1 ? "item" : "items"}${photos.length ? ` · newest first` : ""}</small></div><div class="photos-segmented" aria-label="Group photos by"><button data-photo-view="years" class="${viewMode === "years" ? "active" : ""}">Years</button><button data-photo-view="months" class="${viewMode === "months" ? "active" : ""}">Months</button><button data-photo-view="all" class="${viewMode === "all" ? "active" : ""}">All Photos</button></div></div><div class="photos-scroll-content">${body}</div><section class="photos-gallery" tabindex="-1" hidden><header class="photos-viewer-toolbar"><button data-gallery-close class="photos-viewer-back" aria-label="Back to library">‹</button><div class="photos-viewer-copy"><strong class="photos-gallery-title"></strong><span><small class="photos-gallery-context"></small><small class="photos-gallery-counter"></small></span></div><button data-gallery-info aria-label="Show information" aria-pressed="false">i</button></header><div class="photos-gallery-stage"><button class="gallery-arrow gallery-prev" data-gallery-prev aria-label="Previous item">‹</button><div class="photos-gallery-media"></div><button class="gallery-arrow gallery-next" data-gallery-next aria-label="Next item">›</button></div><footer><div class="photos-gallery-filmstrip"></div></footer><aside class="photos-gallery-info" role="dialog" aria-label="Media information" hidden><header class="photos-info-windowbar" data-info-drag><i></i><span>Info</span><button type="button" data-info-close aria-label="Close information">×</button></header><div class="photos-info-content"></div></aside></section></main></div>`;
   }
 
   function mediaTimestamp(media) {
@@ -1163,7 +1434,7 @@
     const timeLabel = now.toLocaleTimeString([], { hour:"numeric", minute:"2-digit" });
     return `<div class="notes-app"><aside class="notes-folders"><div class="notes-sidebar-top"><span></span></div><div class="notes-group"><button><span class="notes-quick-icon">⌁</span><strong>Quick Notes</strong><em>2</em></button></div><div class="notes-sidebar-label">On My Mac</div><div class="notes-group"><button class="active"><span class="notes-folder-icon">▭</span><strong>Notes</strong><em>4</em></button></div></aside><section class="notes-browser"><header class="notes-browser-toolbar"><div><strong>Notes</strong><small>4 notes</small></div><div class="notes-toolbar-actions"><button>•••</button><button class="notes-compose">□</button></div></header><div class="notes-note-list"><h3>Today</h3><button class="active"><strong>New Note</strong><span>${timeLabel}</span><small>${escapeHtml(state.notes.slice(0,42) || "No additional text")}</small></button><h3>Previous 7 Days</h3><button><strong>Supabase Database Setup</strong><span>Thursday</span><small>Media archive, placements, and upload system…</small></button><h3>Previous 30 Days</h3><button><strong>Alright, we're creating...</strong><span>7/24/26</span><small>Ideas for Rizvisions and the permanent internet home.</small></button><h3>2025</h3><button><strong>Hi, this is Riz from...</strong><span>4/24/25</span><small>I can speak to what I was building then.</small></button></div></section><main class="note-editor apple-note-editor"><div class="notes-editor-toolbar"><button>Aa</button><button>☑</button><button>▦</button><button>⌕</button><button>↯</button><span></span><button>≫</button><button>⌕</button></div><div class="note-meta">${dateLabel} at ${timeLabel}</div><textarea class="note-editor-textarea" aria-label="Note" placeholder="Start typing…"></textarea></main></div>`;
   }
-  function renderTerminal(){return `<div class="terminal-shell"><div class="terminal-output">Last login: ${new Date().toLocaleDateString()} on ttys001\n\nRizvisions OS 10.7.0\nType <span class="terminal-link">help</span> to see available commands.\n</div><div class="terminal-input-row"><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" spellcheck="false"></div></div>`;}
+  function renderTerminal(){return `<div class="terminal-shell"><div class="terminal-output">Last login: ${new Date().toLocaleDateString()} on ttys001\n\nRizvisions OS 10.8.1\nType <span class="terminal-link">help</span> to see available commands.\n</div><div class="terminal-input-row"><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" spellcheck="false"></div></div>`;}
   function renderTrash(){return `<div class="empty-state"><div><img src="assets/icons/macos/trash.png?v=106" alt="Trash"><h2>Trash is Empty</h2><p>Old domains, failed ideas, embarrassing drafts, and abandoned businesses will eventually live here.</p></div></div>`;}
 
   function renderProject(project, projectId) {
@@ -1180,6 +1451,8 @@
 
   function wireAppleVideoPlayer(player) {
     const video = $("video", player); if (!video) return;
+    if (player.dataset.playbackWired === "true") return;
+    player.dataset.playbackWired = "true";
     const play = $("[data-video-play]", player);
     const mute = $("[data-video-mute]", player);
     const volume = $("[data-video-volume]", player);
@@ -1190,7 +1463,11 @@
     const fmt = (seconds) => formatMediaDuration(Number.isFinite(seconds) ? seconds : 0) || "0:00";
     const update = () => {
       if (play) play.dataset.state = video.paused ? "play" : "pause";
-      if (mute) mute.dataset.muted = (video.muted || video.volume === 0) ? "true" : "false";
+      if (mute) {
+        const isMuted = video.muted || video.volume === 0;
+        mute.dataset.muted = isMuted ? "true" : "false";
+        mute.setAttribute("aria-label", isMuted ? "Unmute" : "Mute");
+      }
       if (current) current.textContent = fmt(video.currentTime);
       if (duration) duration.textContent = fmt(video.duration);
       if (progress && Number.isFinite(video.duration) && video.duration > 0) progress.value = String(Math.round((video.currentTime / video.duration) * 1000));
@@ -1200,17 +1477,35 @@
       clearTimeout(hideTimer);
       if (!video.paused) hideTimer = setTimeout(() => player.classList.remove("controls-visible"), 1500);
     };
-    video.muted = true;
-    video.defaultMuted = true;
-    video.volume = Number(volume?.value || .55);
+    const storedVolume = Math.max(0, Math.min(1, Number(state.mediaVolume ?? .55)));
+    video.loop = true;
+    video.defaultMuted = Boolean(state.mediaMuted);
+    video.volume = storedVolume;
+    video.muted = Boolean(state.mediaMuted) || storedVolume === 0;
+    if (volume) volume.value = String(storedVolume);
     video.play().catch(() => update());
     ["loadedmetadata","timeupdate","play","pause","volumechange","ended"].forEach((event) => video.addEventListener(event, update));
     play?.addEventListener("click", (event) => { event.stopPropagation(); if (video.paused) video.play().catch(()=>{}); else video.pause(); reveal(); });
-    mute?.addEventListener("click", (event) => { event.stopPropagation(); video.muted = !video.muted; reveal(); update(); });
-    volume?.addEventListener("input", (event) => { video.volume = Number(event.target.value); video.muted = video.volume === 0; reveal(); });
+    const applyAudioPreference = () => {
+      $$(".apple-video-element").forEach((otherVideo) => {
+        otherVideo.volume = Math.max(0, Math.min(1, Number(state.mediaVolume ?? .55)));
+        otherVideo.muted = Boolean(state.mediaMuted) || otherVideo.volume === 0;
+      });
+    };
+    mute?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const isMuted = video.muted || video.volume === 0;
+      if (isMuted && Number(state.mediaVolume) === 0) state.mediaVolume = .55;
+      state.mediaMuted = !isMuted;
+      saveState(); applyAudioPreference(); reveal(); update();
+    });
+    volume?.addEventListener("input", (event) => {
+      state.mediaVolume = Math.max(0, Math.min(1, Number(event.target.value)));
+      state.mediaMuted = state.mediaVolume === 0;
+      saveState(); applyAudioPreference(); reveal(); update();
+    });
     progress?.addEventListener("input", (event) => { if (Number.isFinite(video.duration)) video.currentTime = (Number(event.target.value) / 1000) * video.duration; reveal(); });
     $$('[data-video-skip]', player).forEach((button) => button.addEventListener("click", (event) => { event.stopPropagation(); video.currentTime = Math.max(0, Math.min(video.duration || Infinity, video.currentTime + Number(button.dataset.videoSkip))); reveal(); }));
-    $("[data-video-fullscreen]", player)?.addEventListener("click", (event) => { event.stopPropagation(); (video.requestFullscreen ? video.requestFullscreen() : player.requestFullscreen?.()); });
     player.addEventListener("pointermove", reveal);
     player.addEventListener("pointerenter", reveal);
     player.addEventListener("pointerleave", () => { if (!video.paused) player.classList.remove("controls-visible"); });
@@ -1220,7 +1515,7 @@
 
   function wireMediaPlayback(root, media = null) {
     $$(".apple-video-player", root).forEach(wireAppleVideoPlayer);
-    $$('video', root).forEach((video) => {
+    $$(".media-viewer video, .photos-gallery-media video", root).forEach((video) => {
       video.addEventListener("error", () => {
         const errorPanel = video.closest(".media-viewer")?.querySelector(".media-playback-error");
         if (errorPanel) errorPanel.hidden = false;
@@ -1274,6 +1569,8 @@
           storagePath: row.storage_path,
           displayName: row.display_name || row.filename,
           filename: row.filename,
+          mimeType: row.mime_type || "",
+          sizeBytes: Number(row.size_bytes) || null,
           alt: row.alt_text || row.display_name || row.caption || row.filename,
           caption: row.caption || "",
           width: Number(row.width) || null,
@@ -1325,7 +1622,7 @@
         x: item.x ?? defaults[index % defaults.length].x,
         y: item.y ?? defaults[index % defaults.length].y,
         rotation: item.rotation || defaults[index % defaults.length].rotation,
-        width: 132,
+        desktopWidth: 132,
         monochrome: false
       }));
 
@@ -1389,7 +1686,7 @@
     if(action==="open-spotlight")openSpotlight();
     if(action==="cycle-wallpaper")cycleWallpaper();
     if(action==="sort-icons")sortIcons();
-    if(action==="desktop-info")showToast("Rizvisions Desktop · Version 10.7");
+    if(action==="desktop-info")showToast("Rizvisions Desktop · Version 10.8");
     if(action==="quick-look-photo"){const photo=(CONTENT.desktopPhotos||[]).find((item)=>item.id===(contextPhotoId||selectedPhotoId));if(photo)openMediaFile(photo);}
     if(action==="view-photo-library"){const photo=(CONTENT.desktopPhotos||[]).find((item)=>item.id===(contextPhotoId||selectedPhotoId));if(photo)openPhotosAtMedia(photo);}
     if(action==="bring-photo-front"){const file=desktopPhotosRoot.querySelector(`[data-photo-id="${CSS.escape(contextPhotoId||"")}"]`);if(file){file.style.zIndex=String(++photoZCounter);persistObjectPosition(file);saveState();}}
