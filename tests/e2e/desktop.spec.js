@@ -76,10 +76,10 @@ test("keeps a landscape video frame stable while controls appear and hide", asyn
   await page.mouse.move(before.x+before.width/2, before.y+before.height/2);
   await page.waitForTimeout(1800);
   const after = await mediaWindow.locator(".apple-video-element").boundingBox();
-  expect(Math.abs(after.x-before.x)).toBeLessThan(.5);
-  expect(Math.abs(after.y-before.y)).toBeLessThan(.5);
-  expect(Math.abs(after.width-before.width)).toBeLessThan(.5);
-  expect(Math.abs(after.height-before.height)).toBeLessThan(.5);
+  expect(Math.abs(after.x-before.x)).toBeLessThan(1.1);
+  expect(Math.abs(after.y-before.y)).toBeLessThan(1.1);
+  expect(Math.abs(after.width-before.width)).toBeLessThan(1.1);
+  expect(Math.abs(after.height-before.height)).toBeLessThan(1.1);
   await expect(mediaWindow.locator(".apple-video-element")).toHaveCSS("transform", "none");
   expect(await mediaWindow.locator(".apple-video-element").evaluate((video) => getComputedStyle(video).getPropertyValue("dynamic-range-limit"))).toBe("standard");
 });

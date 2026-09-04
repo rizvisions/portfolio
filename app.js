@@ -533,10 +533,8 @@
 
   function mediaWorkArea() {
     const gap = 16;
-    const desktopRect = desktop.getBoundingClientRect();
     const dockWrap = dock.closest(".dock-wrap");
-    const dockRect = dockWrap?.getBoundingClientRect();
-    const dockTop = dockRect?.height ? Math.floor(dockRect.top - desktopRect.top - gap) : desktop.clientHeight - 118;
+    const dockTop = dockWrap?.offsetHeight ? Math.floor(dockWrap.offsetTop - gap) : desktop.clientHeight - 118;
     return {
       left: gap,
       top: gap,
