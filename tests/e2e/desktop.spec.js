@@ -23,9 +23,9 @@ test("opens and closes every desktop app without a page error", async ({ page })
 test("renders mixed desktop photos and posterless videos together", async ({ page }) => {
   const files = page.locator("#desktopPhotos .photo-file");
   await expect(files).toHaveCount(2);
-  await expect(files.locator('[data-media-type="image"]')).toHaveCount(1);
-  await expect(files.locator('[data-media-type="video"]')).toHaveCount(1);
-  await expect(files.locator('[data-media-type="video"] video')).toHaveCount(1);
+  await expect(page.locator('#desktopPhotos .photo-file[data-media-type="image"]')).toHaveCount(1);
+  await expect(page.locator('#desktopPhotos .photo-file[data-media-type="video"]')).toHaveCount(1);
+  await expect(page.locator('#desktopPhotos .photo-file[data-media-type="video"] video')).toHaveCount(1);
 });
 
 test("keeps a minimized unpinned app in the Dock", async ({ page }) => {
@@ -49,4 +49,3 @@ test("shows the selection marquee while dragging on the desktop", async ({ page 
   await page.mouse.up();
   await expect(page.locator("#selectionRectangle")).toBeHidden();
 });
-

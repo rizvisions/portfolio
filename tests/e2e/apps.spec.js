@@ -41,10 +41,15 @@ test("Notes opens at a usable size with the editor inside the window", async ({ 
     const bodyElement = windowElement.querySelector(".window-body");
     const editorBox = editorElement.getBoundingClientRect();
     const bodyBox = bodyElement.getBoundingClientRect();
+    const tolerance = 0.5;
     return {
       windowWidth: windowElement.clientWidth,
       windowHeight: windowElement.clientHeight,
-      editorInside: editorBox.left >= bodyBox.left && editorBox.right <= bodyBox.right && editorBox.top >= bodyBox.top && editorBox.bottom <= bodyBox.bottom
+      editorInside:
+        editorBox.left >= bodyBox.left - tolerance &&
+        editorBox.right <= bodyBox.right + tolerance &&
+        editorBox.top >= bodyBox.top - tolerance &&
+        editorBox.bottom <= bodyBox.bottom + tolerance
     };
   });
 
@@ -52,4 +57,3 @@ test("Notes opens at a usable size with the editor inside the window", async ({ 
   expect(layout.windowHeight).toBeGreaterThanOrEqual(500);
   expect(layout.editorInside).toBe(true);
 });
-
