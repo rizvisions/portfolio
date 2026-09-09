@@ -7,7 +7,7 @@ V10.9 begins the app-by-app functionality audit with a complete rebuild of Notes
 - Centered the 12-app desktop grid and added Calendar, Notes, and Terminal to the third row.
 - Simplified Finder / Selected Work navigation to Recents and Applications.
 - Recents now surfaces the media and project files that actually exist; Applications shows every desktop app.
-- Rebuilt Notes as a functional local notebook with four starter notes, real selection and editing, new and delete actions, text styles, checklists, and a locked Easter egg.
+- Rebuilt Notes as a functional local notebook with four starter notes, real selection and editing, new-note creation, text styles, checklists, and a locked Easter egg.
 - Added a native-style Calendar month app.
 - Added smooth Gilly-like restore/sort animations instead of teleporting desktop objects.
 - Added the handwritten Apple-style `hello` first-load experience, followed by a local-time greeting.
