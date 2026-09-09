@@ -1250,7 +1250,11 @@
       event.preventDefault();
       unlockNote();
     });
-    const passcodeInput = $("[data-note-passcode]", unlockForm);
+    (unlockForm ? $("button[type=submit]", unlockForm) : null)?.addEventListener("click", (event) => {
+      event.preventDefault();
+      unlockNote();
+    });
+    const passcodeInput = unlockForm ? $("[data-note-passcode]", unlockForm) : null;
     passcodeInput?.addEventListener("input", () => {
       passcodeInput.value = passcodeInput.value.replace(/\D/g, "").slice(0, 4);
       const error = $(".notes-lock-error", unlockForm);
