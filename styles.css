@@ -2021,7 +2021,7 @@ body.desktop-ready .dock-wrap { transition-delay: .2s; }
 }
 .notes-format-menu button:hover { background: #0a84ff; color: #fff; }
 .notes-scroll { min-height: 0; overflow: auto; background: #fffefb; }
-.note-meta { display: grid; place-items: center; padding: 16px 20px 4px; color: #9a9a9e; font-size: 11px; }
+.note-meta { width: 100%; height: auto; box-sizing: border-box; display: grid; place-items: center; padding: 16px 20px 4px; border: 0; color: #9a9a9e; font-size: 11px; }
 .note-editor-content {
   width: 100%;
   min-height: calc(100% - 40px);
