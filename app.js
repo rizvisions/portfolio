@@ -45,6 +45,46 @@
     x: photo.x, y: photo.y, rotation: photo.rotation || 0, z: index + 1
   }]));
   const defaultWidget = { x: 55, y: 5.8, z: 40 };
+  const LEGACY_DEFAULT_NOTE = "Rizvisions is my permanent internet home.\n\nThings to add:\n• the real photo archive\n• Parker work\n• Blue Specs story\n• WAP / Whop era\n• more personal artifacts\n• an iOS version for mobile";
+  const NOTES_PASSCODE = "2020";
+
+  function createStarterNotes() {
+    const timestamp = new Date().toISOString();
+    return [
+      {
+        id:"rizvisions-todo",
+        title:"Rizvisions to-do list",
+        bodyHtml:'<h1>Rizvisions to-do list</h1><div class="notes-checklist-row checked" data-checklist><button type="button" data-check-toggle contenteditable="false" aria-pressed="true">✓</button><span>Build the desktop</span></div><div class="notes-checklist-row checked" data-checklist><button type="button" data-check-toggle contenteditable="false" aria-pressed="true">✓</button><span>Add the photo archive</span></div><div class="notes-checklist-row" data-checklist><button type="button" data-check-toggle contenteditable="false" aria-pressed="false"></button><span>Make every button do what it looks like it does</span></div><div class="notes-checklist-row" data-checklist><button type="button" data-check-toggle contenteditable="false" aria-pressed="false"></button><span>Build the mobile version</span></div>',
+        createdAt:timestamp,
+        updatedAt:timestamp,
+        locked:false
+      },
+      {
+        id:"photos-to-add",
+        title:"Photos to add",
+        bodyHtml:'<h1>Photos to add</h1><div class="notes-checklist-row" data-checklist><button type="button" data-check-toggle contenteditable="false" aria-pressed="false"></button><span>Chicago</span></div><div class="notes-checklist-row" data-checklist><button type="button" data-check-toggle contenteditable="false" aria-pressed="false"></button><span>Rome</span></div><div class="notes-checklist-row" data-checklist><button type="button" data-check-toggle contenteditable="false" aria-pressed="false"></button><span>New York</span></div><div class="notes-checklist-row" data-checklist><button type="button" data-check-toggle contenteditable="false" aria-pressed="false"></button><span>Everything still sitting on my camera roll</span></div>',
+        createdAt:timestamp,
+        updatedAt:timestamp,
+        locked:false
+      },
+      {
+        id:"internet-projects",
+        title:"Internet projects",
+        bodyHtml:"<h1>Internet projects</h1><div>Rizvisions</div><div>Blue Specs</div><div>Clip Curator</div><div>Whop / WAP</div><div>Windsurf</div><div>Parker</div>",
+        createdAt:timestamp,
+        updatedAt:timestamp,
+        locked:false
+      },
+      {
+        id:"do-not-open",
+        title:"Do Not Open",
+        bodyHtml:"<h1>You opened it.</h1><div>The password was 2020. Subtle.</div><div><br></div><div>There is no secret. I just wanted to see if you would try.</div>",
+        createdAt:timestamp,
+        updatedAt:timestamp,
+        locked:true
+      }
+    ];
+  }
 
   const DOCK_CATALOG = {
     finder: { label: "Finder", app: "work", icon: "assets/icons/macos/finder.png?v=106", fixed: true, running: true },
@@ -80,7 +120,8 @@
     widgetIndex: 0,
     windowPlacementVersion: 2,
     windows: {},
-    notes: "Rizvisions is my permanent internet home.\n\nThings to add:\n• the real photo archive\n• Parker work\n• Blue Specs story\n• WAP / Whop era\n• more personal artifacts\n• an iOS version for mobile"
+    noteDocuments: createStarterNotes(),
+    selectedNoteId: "rizvisions-todo"
   };
 
   let state = loadState();
@@ -147,6 +188,23 @@
       const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
       if (!parsed) return clone(DEFAULT_STATE);
       const windowPlacementVersion = Number(parsed.windowPlacementVersion) || 0;
+      const storedNotes = Array.isArray(parsed.noteDocuments) && parsed.noteDocuments.length
+        ? parsed.noteDocuments
+        : clone(DEFAULT_STATE.noteDocuments);
+      if (!Array.isArray(parsed.noteDocuments) && parsed.notes && parsed.notes !== LEGACY_DEFAULT_NOTE) {
+        const timestamp = new Date().toISOString();
+        storedNotes.unshift({
+          id:`previous-note-${Date.now()}`,
+          title:"Previous Note",
+          bodyHtml:`<div>${escapeHtml(parsed.notes).replace(/\n/g,"<br>")}</div>`,
+          createdAt:timestamp,
+          updatedAt:timestamp,
+          locked:false
+        });
+      }
+      const selectedNoteId = storedNotes.some((note) => note.id === parsed.selectedNoteId)
+        ? parsed.selectedNoteId
+        : storedNotes[0].id;
       return {
         ...clone(DEFAULT_STATE), ...parsed,
         icons: { ...clone(defaultIcons), ...(parsed.icons || {}) },
@@ -154,7 +212,9 @@
         widget: { ...clone(defaultWidget), ...(parsed.widget || {}) },
         windowPlacementVersion: 2,
         windows: windowPlacementVersion >= 2 ? (parsed.windows || {}) : {},
-        dock: normalizeDock(parsed.dock || DEFAULT_DOCK)
+        dock: normalizeDock(parsed.dock || DEFAULT_DOCK),
+        noteDocuments: storedNotes,
+        selectedNoteId
       };
     } catch { return clone(DEFAULT_STATE); }
   }
@@ -995,11 +1055,7 @@
   function wireAppSpecific(win, appId) {
     if (appId === "terminal") wireTerminal(win);
     if (appId === "work") wireFinderApp(win);
-    if (appId === "notes") {
-      const textarea = $("textarea", win);
-      textarea.value = state.notes;
-      textarea.addEventListener("input", () => { state.notes = textarea.value; saveState(); });
-    }
+    if (appId === "notes") wireNotesApp(win);
     if (appId === "photos") wirePhotosApp(win);
     if (appId.startsWith("project-")) {
       const projectId = appId.replace("project-", "");
@@ -1025,6 +1081,185 @@
       const media = (CONTENT.allMedia || []).find((item) => item.id === button.dataset.finderMediaId);
       if (media) openMediaFile(media);
     }));
+  }
+
+  function notePlainText(html) {
+    const container = document.createElement("div");
+    container.innerHTML = String(html || "");
+    return (container.innerText || container.textContent || "").replace(/\s+/g," ").trim();
+  }
+
+  function noteTitleFromHtml(html) {
+    const container = document.createElement("div");
+    container.innerHTML = String(html || "");
+    const firstBlock = container.querySelector("h1,h2,h3,div,p,pre,span")?.textContent?.trim();
+    const firstLine = (container.innerText || container.textContent || "").split(/\r?\n/).find((line) => line.trim())?.trim();
+    return (firstBlock || firstLine || "New Note").slice(0,80);
+  }
+
+  function noteDateLabel(note) {
+    const date = new Date(note?.updatedAt || Date.now());
+    const today = new Date();
+    return date.toDateString() === today.toDateString()
+      ? date.toLocaleTimeString([], { hour:"numeric", minute:"2-digit" })
+      : date.toLocaleDateString([], { month:"numeric", day:"numeric", year:"2-digit" });
+  }
+
+  function activeNoteDocument() {
+    return state.noteDocuments.find((note) => note.id === state.selectedNoteId) || state.noteDocuments[0] || null;
+  }
+
+  function refreshNotesWindow(win, { focusEditor = false, preserveSidebar = true } = {}) {
+    const sidebarHidden = preserveSidebar && $(".notes-app", win)?.classList.contains("sidebar-hidden");
+    $(".window-body", win).innerHTML = renderNotes();
+    if (sidebarHidden) $(".notes-app", win)?.classList.add("sidebar-hidden");
+    wireNotesApp(win);
+    if (focusEditor) {
+      requestAnimationFrame(() => {
+        const editor = $("[data-note-editor]", win);
+        if (!editor) return;
+        editor.focus();
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      });
+    }
+  }
+
+  function wireNotesApp(win) {
+    const shell = $(".notes-app", win);
+    if (!shell) return;
+
+    $$("[data-note-id]", shell).forEach((button) => button.addEventListener("click", () => {
+      state.selectedNoteId = button.dataset.noteId;
+      saveState();
+      refreshNotesWindow(win);
+    }));
+
+    $$("[data-notes-sidebar]", shell).forEach((button) => button.addEventListener("click", () => {
+      shell.classList.toggle("sidebar-hidden");
+    }));
+
+    $("[data-notes-new]", shell)?.addEventListener("click", () => {
+      const timestamp = new Date().toISOString();
+      const note = {
+        id:`note-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+        title:"New Note",
+        bodyHtml:"<div><br></div>",
+        createdAt:timestamp,
+        updatedAt:timestamp,
+        locked:false
+      };
+      state.noteDocuments.unshift(note);
+      state.selectedNoteId = note.id;
+      saveState();
+      refreshNotesWindow(win, { focusEditor:true });
+    });
+
+    $("[data-notes-delete]", shell)?.addEventListener("click", () => {
+      const note = activeNoteDocument();
+      if (!note || !window.confirm(`Delete “${note.title || "New Note"}”?`)) return;
+      const index = state.noteDocuments.findIndex((item) => item.id === note.id);
+      state.noteDocuments.splice(index,1);
+      if (!state.noteDocuments.length) {
+        const timestamp = new Date().toISOString();
+        state.noteDocuments.push({ id:`note-${Date.now()}`, title:"New Note", bodyHtml:"<div><br></div>", createdAt:timestamp, updatedAt:timestamp, locked:false });
+      }
+      state.selectedNoteId = state.noteDocuments[Math.min(index,state.noteDocuments.length-1)].id;
+      saveState();
+      refreshNotesWindow(win);
+    });
+
+    const editor = $("[data-note-editor]", shell);
+    const syncEditor = () => {
+      const note = activeNoteDocument();
+      if (!editor || !note || note.locked) return;
+      note.bodyHtml = editor.innerHTML;
+      note.title = noteTitleFromHtml(note.bodyHtml);
+      note.updatedAt = new Date().toISOString();
+      saveState();
+      const row = $(`[data-note-id="${CSS.escape(note.id)}"]`, shell);
+      if (row) {
+        $("strong", row).textContent = note.title;
+        $("small", row).textContent = notePlainText(note.bodyHtml).replace(note.title,"").trim() || "No additional text";
+        $("time", row).textContent = noteDateLabel(note);
+      }
+      const meta = $(".note-meta", shell);
+      if (meta) meta.textContent = new Date(note.updatedAt).toLocaleString([], { month:"long", day:"numeric", year:"numeric", hour:"numeric", minute:"2-digit" });
+    };
+
+    if (editor) {
+      editor.addEventListener("input", syncEditor);
+      editor.addEventListener("paste", (event) => {
+        event.preventDefault();
+        document.execCommand("insertText", false, event.clipboardData?.getData("text/plain") || "");
+      });
+      editor.addEventListener("click", (event) => {
+        const toggle = event.target.closest("[data-check-toggle]");
+        if (!toggle) return;
+        event.preventDefault();
+        const row = toggle.closest("[data-checklist]");
+        const checked = !row.classList.contains("checked");
+        row.classList.toggle("checked",checked);
+        toggle.textContent = checked ? "✓" : "";
+        toggle.setAttribute("aria-pressed",String(checked));
+        syncEditor();
+      });
+    }
+
+    const formatMenu = $(".notes-format-menu", shell);
+    const formatToggle = $("[data-notes-format-toggle]", shell);
+    formatToggle?.addEventListener("click", () => {
+      const open = formatMenu.hidden;
+      formatMenu.hidden = !open;
+      formatToggle.setAttribute("aria-expanded",String(open));
+    });
+    shell.addEventListener("click", (event) => {
+      if (formatMenu && !formatMenu.hidden && !event.target.closest(".notes-format-control")) {
+        formatMenu.hidden = true;
+        formatToggle?.setAttribute("aria-expanded","false");
+      }
+    });
+    $$("[data-note-format]", shell).forEach((button) => {
+      button.addEventListener("pointerdown", (event) => event.preventDefault());
+      button.addEventListener("click", () => {
+        if (!editor) return;
+        editor.focus();
+        document.execCommand("formatBlock", false, button.dataset.noteFormat);
+        formatMenu.hidden = true;
+        formatToggle?.setAttribute("aria-expanded","false");
+        syncEditor();
+      });
+    });
+
+    const checklistButton = $("[data-notes-checklist]", shell);
+    checklistButton?.addEventListener("pointerdown", (event) => event.preventDefault());
+    checklistButton?.addEventListener("click", () => {
+      if (!editor) return;
+      editor.focus();
+      document.execCommand("insertHTML", false, '<div class="notes-checklist-row" data-checklist><button type="button" data-check-toggle contenteditable="false" aria-pressed="false"></button><span>List item</span></div><div><br></div>');
+      syncEditor();
+    });
+
+    const unlockForm = $("[data-note-unlock-form]", shell);
+    unlockForm?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const input = $("[data-note-passcode]", unlockForm);
+      const error = $(".notes-lock-error", unlockForm);
+      if (input.value !== NOTES_PASSCODE) {
+        error.textContent = "That’s not it.";
+        input.select();
+        return;
+      }
+      const note = activeNoteDocument();
+      note.locked = false;
+      note.updatedAt = new Date().toISOString();
+      saveState();
+      refreshNotesWindow(win, { focusEditor:true });
+    });
   }
 
   function wireMediaThumbnails(root) {
@@ -1283,7 +1518,7 @@
 
   function renderAbout(){return `<div class="about-app"><aside class="about-rail"><img class="about-eye" src="assets/icons/macos/rizvisions.png?v=106" alt=""><span>RIZVISIONS</span><nav><button class="active">Overview</button><button data-app="work">Work</button><button data-app="photos">Photos</button></nav></aside><main class="about-content"><header><span class="eyebrow">RIZ ZAHEER</span><h1>I build things on the internet and document the rest.</h1><p>Creator and operator in Chicago. I work at Parker, make photos and videos, and have used Rizvisions as a creative identity since middle school.</p></header><section class="about-stats"><div><small>Currently</small><strong>Parker</strong><button data-app="parker">Open app</button></div><div><small>Based</small><strong>Chicago</strong><span>Gold Coast / Oak Brook orbit</span></div><div><small>Internet</small><strong>30M+</strong><span>lifetime short-form views</span></div></section><section class="about-links"><button data-external="https://www.linkedin.com/in/riz-zaheer/">LinkedIn ↗</button><button data-app="instagram">Instagram</button><button data-external="https://x.com/rizvisions">X ↗</button><button data-app="spotify">Spotify</button></section><section class="about-now"><div><small>What this site is</small><p>A catch-all for work, personal stuff, photography, old businesses, current obsessions, and whatever else becomes part of my life.</p></div><div class="about-quote">“Permanent internet home” &gt; polished corporate portfolio.</div></section></main></div>`;}
 
-  function renderSettings(){return `<div class="settings-shell"><aside class="settings-sidebar"><input class="settings-search" placeholder="Search"><div class="settings-profile-mini"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions</strong><small>Desktop preferences</small></span></div><div class="settings-list"><div class="settings-row active"><span class="settings-row-icon">◐</span>Appearance</div><div class="settings-row"><span class="settings-row-icon">⌘</span>Desktop & Dock</div><div class="settings-row"><span class="settings-row-icon">♪</span>Sound</div><div class="settings-row"><span class="settings-row-icon">◉</span>About</div></div></aside><main class="settings-main"><h1>Appearance</h1><section class="settings-card"><h2>Wallpaper</h2><p>Choose the grid appearance used across the desktop and interface.</p><div class="settings-theme-grid">${[["grid","Light"],["dark","Dark"],["maroon","Maroon"],["forest","Forest"]].map(([id,label])=>`<button data-settings-wallpaper="${id}" class="theme-choice ${id}"><span></span><strong>${label}</strong></button>`).join("")}</div></section><section class="settings-card"><h2>Desktop & Dock</h2><div class="settings-info-row"><span><strong>Customize the Dock naturally</strong><small>Drag an app from the desktop onto the Dock. Drag Dock apps left or right to reorder, or drag one away to remove it.</small></span></div><button class="mac-button" data-settings-reset>Restore Desktop Layout</button></section><section class="settings-card"><h2>About this build</h2><div class="settings-info-row"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions OS 10.8.1</strong><small>A personal website pretending to be a Mac.</small></span></div></section></main></div>`;}
+  function renderSettings(){return `<div class="settings-shell"><aside class="settings-sidebar"><input class="settings-search" placeholder="Search"><div class="settings-profile-mini"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions</strong><small>Desktop preferences</small></span></div><div class="settings-list"><div class="settings-row active"><span class="settings-row-icon">◐</span>Appearance</div><div class="settings-row"><span class="settings-row-icon">⌘</span>Desktop & Dock</div><div class="settings-row"><span class="settings-row-icon">♪</span>Sound</div><div class="settings-row"><span class="settings-row-icon">◉</span>About</div></div></aside><main class="settings-main"><h1>Appearance</h1><section class="settings-card"><h2>Wallpaper</h2><p>Choose the grid appearance used across the desktop and interface.</p><div class="settings-theme-grid">${[["grid","Light"],["dark","Dark"],["maroon","Maroon"],["forest","Forest"]].map(([id,label])=>`<button data-settings-wallpaper="${id}" class="theme-choice ${id}"><span></span><strong>${label}</strong></button>`).join("")}</div></section><section class="settings-card"><h2>Desktop & Dock</h2><div class="settings-info-row"><span><strong>Customize the Dock naturally</strong><small>Drag an app from the desktop onto the Dock. Drag Dock apps left or right to reorder, or drag one away to remove it.</small></span></div><button class="mac-button" data-settings-reset>Restore Desktop Layout</button></section><section class="settings-card"><h2>About this build</h2><div class="settings-info-row"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions OS 10.9</strong><small>A personal website pretending to be a Mac.</small></span></div></section></main></div>`;}
 
   function renderVideoElement(media, { className = "", autoplay = false, muted = true } = {}) {
     const poster = media.poster ? ` poster="${escapeHtml(media.poster)}"` : "";
@@ -1426,12 +1661,19 @@
   }
 
   function renderNotes(){
-    const now = new Date();
-    const dateLabel = now.toLocaleDateString("en-US", { month:"long", day:"numeric", year:"numeric" });
-    const timeLabel = now.toLocaleTimeString([], { hour:"numeric", minute:"2-digit" });
-    return `<div class="notes-app"><aside class="notes-folders"><div class="notes-sidebar-top"><span></span></div><div class="notes-group"><button><span class="notes-quick-icon">⌁</span><strong>Quick Notes</strong><em>2</em></button></div><div class="notes-sidebar-label">On My Mac</div><div class="notes-group"><button class="active"><span class="notes-folder-icon">▭</span><strong>Notes</strong><em>4</em></button></div></aside><section class="notes-browser"><header class="notes-browser-toolbar"><div><strong>Notes</strong><small>4 notes</small></div><div class="notes-toolbar-actions"><button>•••</button><button class="notes-compose">□</button></div></header><div class="notes-note-list"><h3>Today</h3><button class="active"><strong>New Note</strong><span>${timeLabel}</span><small>${escapeHtml(state.notes.slice(0,42) || "No additional text")}</small></button><h3>Previous 7 Days</h3><button><strong>Supabase Database Setup</strong><span>Thursday</span><small>Media archive, placements, and upload system…</small></button><h3>Previous 30 Days</h3><button><strong>Alright, we're creating...</strong><span>7/24/26</span><small>Ideas for Rizvisions and the permanent internet home.</small></button><h3>2025</h3><button><strong>Hi, this is Riz from...</strong><span>4/24/25</span><small>I can speak to what I was building then.</small></button></div></section><main class="note-editor apple-note-editor"><div class="notes-editor-toolbar"><button>Aa</button><button>☑</button><button>▦</button><button>⌕</button><button>↯</button><span></span><button>≫</button><button>⌕</button></div><div class="note-meta">${dateLabel} at ${timeLabel}</div><textarea class="note-editor-textarea" aria-label="Note" placeholder="Start typing…"></textarea></main></div>`;
+    const notes = state.noteDocuments || [];
+    const active = activeNoteDocument();
+    const noteRows = notes.map((note) => {
+      const preview = note.locked ? "This note is locked" : notePlainText(note.bodyHtml).replace(note.title,"").trim() || "No additional text";
+      return `<button type="button" data-note-id="${escapeHtml(note.id)}" class="${note.id === active?.id ? "active" : ""}" aria-current="${note.id === active?.id ? "true" : "false"}"><strong>${escapeHtml(note.title || "New Note")}${note.locked ? '<i class="notes-lock-mark" aria-label="Locked"></i>' : ""}</strong><time>${escapeHtml(noteDateLabel(note))}</time><small>${escapeHtml(preview)}</small></button>`;
+    }).join("");
+    const editorBody = !active ? '<div class="notes-empty-editor">Create a note to start writing.</div>'
+      : active.locked
+        ? `<div class="notes-locked-editor"><div class="notes-lock-icon" aria-hidden="true"></div><h2>${escapeHtml(active.title)}</h2><p>Enter the four-digit passcode.</p><form data-note-unlock-form><input data-note-passcode inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="Four-digit passcode" placeholder="••••"><button type="submit">Unlock</button><small class="notes-lock-hint">Hint: the year Blue Specs started.</small><strong class="notes-lock-error" role="status"></strong></form></div>`
+        : `<div class="notes-editor-toolbar"><div class="notes-format-control"><button type="button" data-notes-format-toggle aria-label="Text style" aria-expanded="false">Aa</button><div class="notes-format-menu" hidden><button type="button" data-note-format="h1">Title</button><button type="button" data-note-format="h2">Heading</button><button type="button" data-note-format="div">Body</button><button type="button" data-note-format="pre">Monospaced</button></div></div><button type="button" data-notes-checklist aria-label="Make a checklist">☑</button><span></span><button type="button" class="notes-delete" data-notes-delete aria-label="Delete note"><i class="notes-trash-icon" aria-hidden="true"></i></button></div><div class="note-meta">${new Date(active.updatedAt).toLocaleString([], { month:"long", day:"numeric", year:"numeric", hour:"numeric", minute:"2-digit" })}</div><div class="note-editor-content" data-note-editor contenteditable="true" role="textbox" aria-multiline="true" aria-label="Note">${active.bodyHtml}</div>`;
+    return `<div class="notes-app"><aside class="notes-folders"><div class="notes-sidebar-top"><button type="button" data-notes-sidebar aria-label="Hide sidebar">▥</button></div><div class="notes-sidebar-label">On My Mac</div><div class="notes-group"><button type="button" class="active"><span class="notes-folder-icon">▭</span><strong>Notes</strong><em>${notes.length}</em></button></div></aside><section class="notes-browser"><header class="notes-browser-toolbar"><button type="button" class="notes-sidebar-reveal" data-notes-sidebar aria-label="Show sidebar">▥</button><div><strong>Notes</strong><small>${notes.length} ${notes.length === 1 ? "note" : "notes"}</small></div><div class="notes-toolbar-actions"><button type="button" class="notes-compose" data-notes-new aria-label="New note">✎</button></div></header><div class="notes-note-list"><h3>Notes</h3>${noteRows}</div></section><main class="note-editor apple-note-editor">${editorBody}</main></div>`;
   }
-  function renderTerminal(){return `<div class="terminal-shell"><div class="terminal-output">Last login: ${new Date().toLocaleDateString()} on ttys001\n\nRizvisions OS 10.8.1\nType <span class="terminal-link">help</span> to see available commands.\n</div><div class="terminal-input-row"><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" spellcheck="false"></div></div>`;}
+  function renderTerminal(){return `<div class="terminal-shell"><div class="terminal-output">Last login: ${new Date().toLocaleDateString()} on ttys001\n\nRizvisions OS 10.9\nType <span class="terminal-link">help</span> to see available commands.\n</div><div class="terminal-input-row"><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" spellcheck="false"></div></div>`;}
   function renderTrash(){return `<div class="empty-state"><div><img src="assets/icons/macos/trash.png?v=106" alt="Trash"><h2>Trash is Empty</h2><p>Old domains, failed ideas, embarrassing drafts, and abandoned businesses will eventually live here.</p></div></div>`;}
 
   function renderProject(project, projectId) {
@@ -1683,7 +1925,7 @@
     if(action==="open-spotlight")openSpotlight();
     if(action==="cycle-wallpaper")cycleWallpaper();
     if(action==="sort-icons")sortIcons();
-    if(action==="desktop-info")showToast("Rizvisions Desktop · Version 10.8");
+    if(action==="desktop-info")showToast("Rizvisions Desktop · Version 10.9");
     if(action==="quick-look-photo"){const photo=(CONTENT.desktopPhotos||[]).find((item)=>item.id===(contextPhotoId||selectedPhotoId));if(photo)openMediaFile(photo);}
     if(action==="view-photo-library"){const photo=(CONTENT.desktopPhotos||[]).find((item)=>item.id===(contextPhotoId||selectedPhotoId));if(photo)openPhotosAtMedia(photo);}
     if(action==="bring-photo-front"){const file=desktopPhotosRoot.querySelector(`[data-photo-id="${CSS.escape(contextPhotoId||"")}"]`);if(file){file.style.zIndex=String(++photoZCounter);persistObjectPosition(file);saveState();}}
