@@ -62,6 +62,19 @@ test("opens and closes every desktop app without a page error", async ({ page })
     await page.mouse.down();
     await page.mouse.move(drag.x, moved.y+28-dragDistance, { steps:5 });
     await page.mouse.up();
+
+    const trafficGap = await window.locator(".traffic-lights").evaluate((controls) => {
+      const rect = controls.getBoundingClientRect();
+      return { x:rect.right-8, y:rect.top+rect.height/2 };
+    });
+    const beforeTrafficDrag = await window.boundingBox();
+    await page.mouse.move(trafficGap.x, trafficGap.y);
+    await page.mouse.down();
+    await page.mouse.move(trafficGap.x+52, trafficGap.y+24, { steps:5 });
+    await page.mouse.up();
+    const afterTrafficDrag = await window.boundingBox();
+    expect(afterTrafficDrag.x, `${appId} drags from blank space beside its traffic lights`).toBeGreaterThan(beforeTrafficDrag.x+35);
+    expect(afterTrafficDrag.y, `${appId} drags vertically from its traffic-light lane`).toBeGreaterThan(beforeTrafficDrag.y+12);
     await window.locator('[data-window-action="close"]').click();
     await expect(window).toHaveCount(0);
   }

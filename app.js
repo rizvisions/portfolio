@@ -720,7 +720,7 @@
       if (event.defaultPrevented || win.classList.contains("maximized")) return;
       const rect = win.getBoundingClientRect();
       const inTopBand = event.clientY >= rect.top && event.clientY <= rect.top + 56;
-      const isControl = event.target.closest?.(".traffic-lights,button,input,textarea,a,iframe,[contenteditable='true']");
+      const isControl = event.target.closest?.("button,input,textarea,a,iframe,[contenteditable='true']");
       if (inTopBand && !isControl) beginWindowDrag(event, win);
     });
     $$("[data-window-action]", win).forEach((button) => button.addEventListener("click", (event) => {
@@ -753,7 +753,7 @@
   }
 
   function beginWindowDrag(event, win) {
-    if (event.button !== 0 || event.target.closest?.(".traffic-lights,button,input,textarea,a,iframe,[contenteditable='true']") || win.classList.contains("maximized")) return;
+    if (event.button !== 0 || event.target.closest?.("button,input,textarea,a,iframe,[contenteditable='true']") || win.classList.contains("maximized")) return;
     event.preventDefault(); focusWindow(win);
     const startX = event.clientX, startY = event.clientY, startLeft = win.offsetLeft, startTop = win.offsetTop;
     const move = (moveEvent) => { const clamped = clampDraggedWindowRect({ left:startLeft+moveEvent.clientX-startX, top:startTop+moveEvent.clientY-startY, width:win.offsetWidth, height:win.offsetHeight }); win.style.left=`${clamped.left}px`; win.style.top=`${clamped.top}px`; };
@@ -1076,21 +1076,22 @@
     $(`[data-gallery-prev]`, win)?.addEventListener("click", () => stepPhotosGallery(win, -1));
     $(`[data-gallery-next]`, win)?.addEventListener("click", () => stepPhotosGallery(win, 1));
     $(`[data-gallery-info]`, win)?.addEventListener("click", () => {
+      const gallery = $(".photos-gallery", win);
       const panel = $(".photos-gallery-info", win);
       const button = $("[data-gallery-info]", win);
       if (panel) {
         const willOpen = panel.hidden;
         panel.hidden = !willOpen;
-        panel.removeAttribute("style");
+        gallery?.classList.toggle("info-open", willOpen);
         button?.setAttribute("aria-pressed", String(willOpen));
       }
     });
     $(`[data-info-close]`, win)?.addEventListener("click", () => {
       const panel = $(".photos-gallery-info", win);
       if (panel) panel.hidden = true;
+      $(".photos-gallery", win)?.classList.remove("info-open");
       $("[data-gallery-info]", win)?.setAttribute("aria-pressed", "false");
     });
-    wirePhotosInfoPanel(win);
     $(".photos-gallery-filmstrip", win)?.addEventListener("click", (event) => {
       const thumb = event.target.closest("[data-gallery-thumb]");
       if (thumb) showPhotosGalleryItem(win, Number(thumb.dataset.galleryThumb));
@@ -1129,7 +1130,8 @@
     gallery.hidden = false;
     const info = $(".photos-gallery-info", win);
     const infoButton = $("[data-gallery-info]", win);
-    if (info) { info.hidden = true; info.removeAttribute("style"); }
+    if (info) info.hidden = true;
+    gallery.classList.remove("info-open");
     infoButton?.setAttribute("aria-pressed", "false");
     showPhotosGalleryItem(win, win._galleryIndex);
     gallery.focus({ preventScroll: true });
@@ -1140,6 +1142,7 @@
     if (!gallery) return;
     gallery.hidden = true;
     const info = $(".photos-gallery-info", win); if (info) info.hidden = true;
+    gallery.classList.remove("info-open");
     $("[data-gallery-info]", win)?.setAttribute("aria-pressed", "false");
     const video = gallery.querySelector("video");
     if (video) video.pause();
@@ -1150,32 +1153,6 @@
     if (!items.length) return;
     const next = ((Number(win._galleryIndex) || 0) + delta + items.length) % items.length;
     showPhotosGalleryItem(win, next);
-  }
-
-  function wirePhotosInfoPanel(win) {
-    const panel = $(".photos-gallery-info", win);
-    const handle = $("[data-info-drag]", panel);
-    if (!panel || !handle || handle.dataset.dragWired === "true") return;
-    handle.dataset.dragWired = "true";
-    handle.addEventListener("pointerdown", (event) => {
-      if (event.button !== 0 || event.target.closest("button")) return;
-      event.preventDefault();
-      const gallery = $(".photos-gallery", win);
-      const galleryRect = gallery.getBoundingClientRect();
-      const panelRect = panel.getBoundingClientRect();
-      const start = { x:event.clientX, y:event.clientY, left:panelRect.left-galleryRect.left, top:panelRect.top-galleryRect.top };
-      const move = (moveEvent) => {
-        const left = Math.max(12, Math.min(gallery.clientWidth-panel.offsetWidth-12, start.left+moveEvent.clientX-start.x));
-        const top = Math.max(66, Math.min(gallery.clientHeight-panel.offsetHeight-12, start.top+moveEvent.clientY-start.y));
-        Object.assign(panel.style, { left:`${left}px`, top:`${top}px`, right:"auto", bottom:"auto" });
-      };
-      const finish = () => {
-        window.removeEventListener("pointermove", move);
-        window.removeEventListener("pointerup", finish);
-      };
-      window.addEventListener("pointermove", move);
-      window.addEventListener("pointerup", finish, { once:true });
-    });
   }
 
   function formatMediaBytes(bytes) {
@@ -1401,7 +1378,7 @@
       body = `${featuredBlock}<section class="photos-library-feed">${renderChronology(photos, viewMode)}</section>`;
     }
 
-    return `<div class="photos-app"><aside class="photos-nav"><div class="photos-nav-title"><img src="assets/icons/macos/photos.png?v=106" alt=""><strong>Photos</strong></div><div class="sidebar-title">Library</div><button data-photo-collection="all" class="${activeCollection === "all" ? "active" : ""}"><span>▦</span>All Photos</button><button data-photo-collection="photos" class="${activeCollection === "photos" ? "active" : ""}"><span>▧</span>Photos</button><button data-photo-collection="videos" class="${activeCollection === "videos" ? "active" : ""}"><span>▶</span>Videos</button>${collectionButtons ? `<div class="sidebar-title collections-label">Collections</div>${collectionButtons}` : ""}</aside><main class="photos-library"><div class="photos-topbar"><div><h1>${escapeHtml(title)}</h1><small>${photos.length} ${photos.length === 1 ? "item" : "items"}${photos.length ? ` · newest first` : ""}</small></div><div class="photos-segmented" aria-label="Group photos by"><button data-photo-view="years" class="${viewMode === "years" ? "active" : ""}">Years</button><button data-photo-view="months" class="${viewMode === "months" ? "active" : ""}">Months</button><button data-photo-view="all" class="${viewMode === "all" ? "active" : ""}">All Photos</button></div></div><div class="photos-scroll-content">${body}</div><section class="photos-gallery" tabindex="-1" hidden><header class="photos-viewer-toolbar"><button data-gallery-close class="photos-viewer-back" aria-label="Back to library">‹</button><div class="photos-viewer-copy"><strong class="photos-gallery-title"></strong><span><small class="photos-gallery-context"></small><small class="photos-gallery-counter"></small></span></div><button data-gallery-info aria-label="Show information" aria-pressed="false">i</button></header><div class="photos-gallery-stage"><button class="gallery-arrow gallery-prev" data-gallery-prev aria-label="Previous item">‹</button><div class="photos-gallery-media"></div><button class="gallery-arrow gallery-next" data-gallery-next aria-label="Next item">›</button></div><footer><div class="photos-gallery-filmstrip"></div></footer><aside class="photos-gallery-info" role="dialog" aria-label="Media information" hidden><header class="photos-info-windowbar" data-info-drag><i></i><span>Info</span><button type="button" data-info-close aria-label="Close information">×</button></header><div class="photos-info-content"></div></aside></section></main></div>`;
+    return `<div class="photos-app"><aside class="photos-nav"><div class="photos-nav-title"><img src="assets/icons/macos/photos.png?v=106" alt=""><strong>Photos</strong></div><div class="sidebar-title">Library</div><button data-photo-collection="all" class="${activeCollection === "all" ? "active" : ""}"><span>▦</span>All Photos</button><button data-photo-collection="photos" class="${activeCollection === "photos" ? "active" : ""}"><span>▧</span>Photos</button><button data-photo-collection="videos" class="${activeCollection === "videos" ? "active" : ""}"><span>▶</span>Videos</button>${collectionButtons ? `<div class="sidebar-title collections-label">Collections</div>${collectionButtons}` : ""}</aside><main class="photos-library"><div class="photos-topbar"><div><h1>${escapeHtml(title)}</h1><small>${photos.length} ${photos.length === 1 ? "item" : "items"}${photos.length ? ` · newest first` : ""}</small></div><div class="photos-segmented" aria-label="Group photos by"><button data-photo-view="years" class="${viewMode === "years" ? "active" : ""}">Years</button><button data-photo-view="months" class="${viewMode === "months" ? "active" : ""}">Months</button><button data-photo-view="all" class="${viewMode === "all" ? "active" : ""}">All Photos</button></div></div><div class="photos-scroll-content">${body}</div><section class="photos-gallery" tabindex="-1" hidden><header class="photos-viewer-toolbar"><button data-gallery-close class="photos-viewer-back" aria-label="Back to library">‹</button><div class="photos-viewer-copy"><strong class="photos-gallery-title"></strong><span><small class="photos-gallery-context"></small><small class="photos-gallery-counter"></small></span></div><button data-gallery-info aria-label="Show information" aria-pressed="false">i</button></header><div class="photos-gallery-stage"><button class="gallery-arrow gallery-prev" data-gallery-prev aria-label="Previous item">‹</button><div class="photos-gallery-media"></div><button class="gallery-arrow gallery-next" data-gallery-next aria-label="Next item">›</button></div><footer><div class="photos-gallery-filmstrip"></div></footer><aside class="photos-gallery-info" role="complementary" aria-label="Media information" hidden><header class="photos-info-windowbar"><strong>Info</strong><button type="button" data-info-close aria-label="Close information">×</button></header><div class="photos-info-content"></div></aside></section></main></div>`;
   }
 
   function mediaTimestamp(media) {

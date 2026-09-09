@@ -3390,3 +3390,80 @@ body.desktop-ready .dock-wrap { transform: translateX(-50%) translateY(0); }
   .mac-window:not(.media-window) .notes-editor-toolbar { padding-left: 132px; }
   .photos-viewer-copy { width: min(55%,360px); }
 }
+
+/* ========================================================================== */
+/* V10.8.2 — forgiving window drag targets and an integrated Photos inspector */
+/* ========================================================================== */
+
+/* Blank space surrounding the three controls is part of the draggable chrome. */
+.mac-window:not(.media-window) > .window-titlebar .traffic-lights {
+  width: 100%;
+  box-sizing: border-box;
+}
+.mac-window:not(.media-window) > .window-titlebar .traffic-lights:not(:has(.traffic:hover)) {
+  cursor: grab;
+}
+
+/* Info is a structural sidebar, not a floating window over the media. */
+.photos-gallery.info-open {
+  grid-template-columns: minmax(0,1fr) clamp(260px,28%,300px) !important;
+}
+.photos-gallery.info-open > header,
+.photos-gallery.info-open > .photos-gallery-stage,
+.photos-gallery.info-open > footer { grid-column: 1; }
+.photos-gallery-info {
+  position: relative !important;
+  z-index: 2;
+  inset: auto !important;
+  grid-column: 2 !important;
+  grid-row: 1 / 4 !important;
+  width: auto !important;
+  max-height: none !important;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 !important;
+  overflow: hidden;
+  border: 0 !important;
+  border-left: 1px solid rgba(0,0,0,.1) !important;
+  border-radius: 0 !important;
+  background: #f5f5f7 !important;
+  color: #1d1d1f !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.photos-info-windowbar {
+  flex: 0 0 56px;
+  height: 56px;
+  display: grid;
+  grid-template-columns: 1fr 28px;
+  align-items: center;
+  padding: 0 14px 0 18px;
+  border-bottom: 1px solid rgba(0,0,0,.08);
+  background: rgba(250,250,252,.96);
+  color: #1d1d1f;
+  cursor: default;
+  touch-action: auto;
+}
+.photos-info-windowbar strong { font-size: 14px; font-weight: 650; }
+.photos-info-windowbar button {
+  width: 24px;
+  height: 24px;
+  justify-self: end;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #e5e5e8;
+  color: #55555a;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.photos-info-content { flex: 1; min-height: 0; overflow: auto; }
+
+@media (max-width: 900px) {
+  .photos-gallery.info-open {
+    grid-template-columns: minmax(0,1fr) minmax(240px,36%) !important;
+  }
+}

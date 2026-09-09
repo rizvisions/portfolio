@@ -69,13 +69,32 @@ test("Photos opens to a clean square All Photos grid and a contained white viewe
   await photosWindow.locator('[data-gallery-info]').click();
   await expect(photosWindow.locator('[data-gallery-info]')).toHaveAttribute("aria-pressed", "true");
   await expect(photosWindow.locator(".photos-gallery-info")).toBeVisible();
+  await expect(photosWindow.locator(".photos-gallery")).toHaveClass(/info-open/);
   await expect(photosWindow.locator(".photos-gallery-info")).toContainText("Dimensions");
   await expect(photosWindow.locator(".photos-gallery-info")).toContainText("1920 × 1080");
   await expect(photosWindow.locator(".photos-gallery-info")).toContainText("30 FPS");
   await expect(photosWindow.locator(".photos-gallery-info")).toContainText("Library");
   await expect(photosWindow.locator(".photos-gallery-info iframe")).toHaveAttribute("src", /openstreetmap\.org/);
   const mediaWidthAfterInfo = await photosWindow.locator(".photos-gallery-media").evaluate((node) => node.getBoundingClientRect().width);
-  expect(Math.abs(mediaWidthAfterInfo-mediaWidthBeforeInfo)).toBeLessThan(1);
+  expect(mediaWidthBeforeInfo-mediaWidthAfterInfo).toBeGreaterThan(220);
+  const inspectorLayout = await photosWindow.evaluate((windowElement) => {
+    const gallery = windowElement.querySelector(".photos-gallery").getBoundingClientRect();
+    const stage = windowElement.querySelector(".photos-gallery-stage").getBoundingClientRect();
+    const inspector = windowElement.querySelector(".photos-gallery-info");
+    const panel = inspector.getBoundingClientRect();
+    return {
+      position:getComputedStyle(inspector).position,
+      spansHeight:Math.abs(panel.top-gallery.top) < 1 && Math.abs(panel.bottom-gallery.bottom) < 1,
+      followsMedia:Math.abs(stage.right-panel.left) < 1,
+      flushRight:Math.abs(panel.right-gallery.right) < 1
+    };
+  });
+  expect(inspectorLayout).toEqual({ position:"relative", spansHeight:true, followsMedia:true, flushRight:true });
+  await photosWindow.locator('[data-info-close]').click();
+  await expect(photosWindow.locator(".photos-gallery-info")).toBeHidden();
+  await expect(photosWindow.locator(".photos-gallery")).not.toHaveClass(/info-open/);
+  const mediaWidthAfterClose = await photosWindow.locator(".photos-gallery-media").evaluate((node) => node.getBoundingClientRect().width);
+  expect(Math.abs(mediaWidthAfterClose-mediaWidthBeforeInfo)).toBeLessThan(1);
 
   await photosWindow.locator('[data-gallery-close]').click();
   await photosWindow.locator('.photo-natural-tile[data-media-id="photo-old"]').click();
