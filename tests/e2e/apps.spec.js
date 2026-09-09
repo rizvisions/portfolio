@@ -35,15 +35,29 @@ test("Photos opens to a clean square All Photos grid and a contained white viewe
   const viewerChrome = await photosWindow.evaluate((windowElement) => {
     const header = windowElement.querySelector(".photos-viewer-toolbar").getBoundingClientRect();
     const copy = windowElement.querySelector(".photos-viewer-copy").getBoundingClientRect();
+    const title = windowElement.querySelector(".photos-gallery-title").getBoundingClientRect();
+    const date = windowElement.querySelector(".photos-gallery-context").getBoundingClientRect();
     const footer = windowElement.querySelector(".photos-gallery > footer").getBoundingClientRect();
+    const filmstrip = windowElement.querySelector(".photos-gallery-filmstrip");
+    const thumbs = [...windowElement.querySelectorAll("[data-gallery-thumb]")];
     const dock = document.querySelector(".dock-wrap").getBoundingClientRect();
     return {
       centeredTitle:Math.abs((copy.left+copy.width/2)-(header.left+header.width/2)) < 1,
+      titleDateAligned:Math.abs((title.left+title.width/2)-(date.left+date.width/2)) < 1,
       filmstripClearsDock:footer.bottom <= dock.top-15,
-      thumbnailCount:windowElement.querySelectorAll("[data-gallery-thumb]").length
+      filmstripLayout:getComputedStyle(filmstrip).display,
+      distinctThumbnailPositions:new Set(thumbs.map((thumb) => Math.round(thumb.getBoundingClientRect().left))).size,
+      thumbnailCount:thumbs.length
     };
   });
-  expect(viewerChrome).toEqual({ centeredTitle:true, filmstripClearsDock:true, thumbnailCount:3 });
+  expect(viewerChrome).toEqual({
+    centeredTitle:true,
+    titleDateAligned:true,
+    filmstripClearsDock:true,
+    filmstripLayout:"flex",
+    distinctThumbnailPositions:3,
+    thumbnailCount:3
+  });
   await expect(photosWindow.locator("[data-gallery-thumb]")).toHaveCount(3);
   await photosWindow.locator('[data-gallery-thumb="1"]').click();
   await expect(photosWindow.locator(".photos-gallery-counter")).toHaveText("2 of 3");

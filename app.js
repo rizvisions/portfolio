@@ -495,6 +495,19 @@
     };
   }
 
+  function clampDraggedWindowRect(rect) {
+    const width = Number(rect.width) || 560;
+    const height = Number(rect.height) || 390;
+    const horizontalGrip = Math.min(96, width);
+    const verticalGrip = Math.min(56, height);
+    return {
+      width,
+      height,
+      left:Math.min(Math.max(horizontalGrip-width, Number(rect.left) || 0), desktop.clientWidth-horizontalGrip),
+      top:Math.min(Math.max(0, Number(rect.top) || 0), desktop.clientHeight-verticalGrip)
+    };
+  }
+
   function createWindow(appId, definition = appDefinitions[appId]) {
     if (!definition) return null;
     const fragment = windowTemplate.content.cloneNode(true);
@@ -702,7 +715,14 @@
   }
 
   function wireWindow(win, definition) {
-    win.addEventListener("pointerdown", () => focusWindow(win));
+    win.addEventListener("pointerdown", (event) => {
+      focusWindow(win);
+      if (event.defaultPrevented || win.classList.contains("maximized")) return;
+      const rect = win.getBoundingClientRect();
+      const inTopBand = event.clientY >= rect.top && event.clientY <= rect.top + 56;
+      const isControl = event.target.closest?.(".traffic-lights,button,input,textarea,a,iframe,[contenteditable='true']");
+      if (inTopBand && !isControl) beginWindowDrag(event, win);
+    });
     $$("[data-window-action]", win).forEach((button) => button.addEventListener("click", (event) => {
       event.stopPropagation(); const action = button.dataset.windowAction;
       if (action === "close") closeWindow(win);
@@ -733,10 +753,10 @@
   }
 
   function beginWindowDrag(event, win) {
-    if (event.button !== 0 || event.target.closest(".traffic-lights,button,input,textarea,a,[contenteditable='true']") || win.classList.contains("maximized")) return;
+    if (event.button !== 0 || event.target.closest?.(".traffic-lights,button,input,textarea,a,iframe,[contenteditable='true']") || win.classList.contains("maximized")) return;
     event.preventDefault(); focusWindow(win);
     const startX = event.clientX, startY = event.clientY, startLeft = win.offsetLeft, startTop = win.offsetTop;
-    const move = (moveEvent) => { const clamped = clampWindowRect({ left:startLeft+moveEvent.clientX-startX, top:startTop+moveEvent.clientY-startY, width:win.offsetWidth, height:win.offsetHeight }, { min:[320,220] }); win.style.left=`${clamped.left}px`; win.style.top=`${clamped.top}px`; };
+    const move = (moveEvent) => { const clamped = clampDraggedWindowRect({ left:startLeft+moveEvent.clientX-startX, top:startTop+moveEvent.clientY-startY, width:win.offsetWidth, height:win.offsetHeight }); win.style.left=`${clamped.left}px`; win.style.top=`${clamped.top}px`; };
     const finish = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", finish); saveWindowRect(win); };
     window.addEventListener("pointermove", move); window.addEventListener("pointerup", finish, { once:true });
   }

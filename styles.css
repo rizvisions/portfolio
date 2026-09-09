@@ -3292,6 +3292,13 @@ body.desktop-ready .dock-wrap { transform: translateX(-50%) translateY(0); }
 .photos-viewer-copy > span { width: 100%; justify-content: center; }
 .photos-viewer-copy > strong,
 .photos-viewer-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.photos-viewer-copy > span {
+  display: grid !important;
+  grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+  align-items: baseline;
+}
+.photos-gallery-context { grid-column: 2; justify-self: center; }
+.photos-gallery-counter { grid-column: 3; justify-self: start; margin-left: 8px; }
 .photos-viewer-toolbar > button { position: relative; z-index: 2; }
 
 /* A real filmstrip: every item remains visible, the selected item is centered,
@@ -3302,16 +3309,17 @@ body.desktop-ready .dock-wrap { transform: translateX(-50%) translateY(0); }
   overflow: hidden;
 }
 .photos-gallery-filmstrip {
+  display: flex !important;
   width: min(100%,760px);
   height: 100%;
   margin: 0 auto;
-  padding: 0 calc(50% - 28px);
+  padding: 0 10px;
   box-sizing: border-box;
-  justify-content: flex-start;
+  justify-content: safe center;
   gap: 8px;
   overflow-x: auto;
   overflow-y: hidden;
-  scroll-padding-inline: calc(50% - 28px);
+  scroll-padding-inline: 50%;
   scroll-snap-type: x proximity;
   overscroll-behavior-x: contain;
 }

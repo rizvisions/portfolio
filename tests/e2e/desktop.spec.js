@@ -7,6 +7,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("opens and closes every desktop app without a page error", async ({ page }) => {
+  test.setTimeout(60_000);
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   const appIds = ["about", "work", "settings", "messages", "photos", "instagram", "safari", "parker", "calendar", "notes", "terminal", "spotify"];
@@ -32,11 +33,55 @@ test("opens and closes every desktop app without a page error", async ({ page })
     expect(geometry.clearsDock).toBe(true);
     expect(geometry.fullHeightBody).toBe(true);
     expect(geometry.hiddenLegacyTitle).toBe(true);
+
+    const drag = await window.evaluate((windowElement) => {
+      const rect = windowElement.getBoundingClientRect();
+      const dock = document.querySelector(".dock-wrap").getBoundingClientRect();
+      const y = rect.top+28;
+      let x = null;
+      for (let candidate = rect.right-18; candidate >= rect.left+140; candidate -= 12) {
+        const target = document.elementFromPoint(candidate, y);
+        if (!target?.closest(".traffic-lights,button,input,textarea,a,iframe,[contenteditable='true']")) {
+          x = candidate;
+          break;
+        }
+      }
+      return { x, y, top:rect.top, bottom:rect.bottom, dockTop:dock.top };
+    });
+    expect(drag.x, `${appId} has a draggable point in its full-width top band`).not.toBeNull();
+    const dragDistance = Math.max(70, drag.dockTop-drag.bottom+40);
+    await page.mouse.move(drag.x, drag.y);
+    await page.mouse.down();
+    await page.mouse.move(drag.x, drag.y+dragDistance, { steps:5 });
+    await page.mouse.up();
+    const moved = await window.boundingBox();
+    expect(moved.y, `${appId} moves from its top band`).toBeGreaterThan(drag.top+40);
+    expect(moved.y+moved.height, `${appId} can move behind the Dock`).toBeGreaterThan(drag.dockTop+20);
+
+    await page.mouse.move(drag.x, moved.y+28);
+    await page.mouse.down();
+    await page.mouse.move(drag.x, moved.y+28-dragDistance, { steps:5 });
+    await page.mouse.up();
     await window.locator('[data-window-action="close"]').click();
     await expect(window).toHaveCount(0);
   }
 
   expect(pageErrors).toEqual([]);
+});
+
+test("lets a window move mostly offscreen while keeping a recovery grip", async ({ page }) => {
+  const instagramWindow = await openDesktopApp(page, "instagram");
+  const initial = await instagramWindow.boundingBox();
+  const start = { x:initial.x+initial.width-24, y:initial.y+28 };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(36, start.y, { steps:8 });
+  await page.mouse.up();
+
+  const moved = await instagramWindow.boundingBox();
+  expect(moved.x).toBeLessThan(0);
+  expect(moved.x+moved.width).toBeGreaterThanOrEqual(95);
+  expect(moved.x+moved.width).toBeLessThanOrEqual(97);
 });
 
 test("renders mixed desktop photos and posterless videos together", async ({ page }) => {
