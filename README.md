@@ -1,13 +1,13 @@
-# Rizvisions macOS V10.8.1
+# Rizvisions macOS V10.9
 
-V10.8.1 refines Photos, individual media windows, and the shared window system while preserving the safe branch, test, review, and preview workflow introduced in V10.7.
+V10.9 begins the app-by-app functionality audit with a complete rebuild of Notes while preserving the Photos and window-system work from V10.8.
 
 ## Product baseline
 
 - Centered the 12-app desktop grid and added Calendar, Notes, and Terminal to the third row.
 - Simplified Finder / Selected Work navigation to Recents and Applications.
 - Recents now surfaces the media and project files that actually exist; Applications shows every desktop app.
-- Rebuilt Notes around the native three-column macOS Notes hierarchy.
+- Rebuilt Notes as a functional local notebook with four starter notes, real selection and editing, new and delete actions, text styles, checklists, and a locked Easter egg.
 - Added a native-style Calendar month app.
 - Added smooth Gilly-like restore/sort animations instead of teleporting desktop objects.
 - Added the handwritten Apple-style `hello` first-load experience, followed by a local-time greeting.
@@ -59,4 +59,4 @@ New image uploads attempt to read embedded capture metadata in the browser befor
 4. Merge the approved pull request into `main`.
 5. GitHub Pages deploys the canonical `rizvisions.com` site.
 
-V10.8.1 does not require a Supabase migration.
+V10.9 does not require a Supabase migration. Notes stay private to each browser through local storage.
