@@ -127,13 +127,52 @@ test("Terminal input stays visible and accepts commands", async ({ page }) => {
   expect(color).not.toBe("rgba(0, 0, 0, 0)");
 });
 
-test("Notes opens at a usable size with the editor inside the window", async ({ page }) => {
+test("Notes is a functional local notebook with starter notes and a locked Easter egg", async ({ page }) => {
   const notesWindow = await openDesktopApp(page, "notes");
-  const editor = notesWindow.locator("textarea");
+  const noteRows = notesWindow.locator("[data-note-id]");
+  const editor = notesWindow.locator("[data-note-editor]");
 
+  await expect(noteRows).toHaveCount(4);
+  await expect(notesWindow.getByText("Quick Notes")).toHaveCount(0);
+  await expect(notesWindow.getByPlaceholder("Search")).toHaveCount(0);
   await expect(editor).toBeVisible();
+  await expect(editor).toContainText("Rizvisions to-do list");
+  await expect(notesWindow.locator("[data-notes-new]")).toBeVisible();
+  await expect(notesWindow.locator("[data-notes-format-toggle]")).toBeVisible();
+  await expect(notesWindow.locator("[data-notes-checklist]")).toBeVisible();
+
+  await notesWindow.locator('[data-note-id="internet-projects"]').click();
+  await expect(notesWindow.locator("[data-note-editor]")).toContainText("Blue Specs");
+
+  await notesWindow.locator('[data-note-id="do-not-open"]').click();
+  await expect(notesWindow.locator("[data-note-unlock-form]")).toBeVisible();
+  await notesWindow.locator("[data-note-passcode]").fill("1111");
+  await notesWindow.getByRole("button", { name:"Unlock" }).click();
+  await expect(notesWindow.locator(".notes-lock-error")).toHaveText("That’s not it.");
+  await notesWindow.locator("[data-note-passcode]").fill("2020");
+  await notesWindow.getByRole("button", { name:"Unlock" }).click();
+  await expect(notesWindow.locator("[data-note-editor]")).toContainText("You opened it.");
+
+  await notesWindow.locator("[data-notes-new]").click();
+  const newEditor = notesWindow.locator("[data-note-editor]");
+  await newEditor.fill("My note");
+  await expect(notesWindow.locator("[data-note-id]").first().locator("strong")).toHaveText("My note");
+  await newEditor.click();
+  await notesWindow.locator("[data-notes-checklist]").click();
+  await expect(newEditor.locator("[data-checklist]")).toHaveCount(1);
+  await newEditor.locator("[data-check-toggle]").click();
+  await expect(newEditor.locator("[data-checklist]")).toHaveClass(/checked/);
+
+  const savedState = await page.evaluate(() => JSON.parse(localStorage.getItem("rizvisions-os-v10.6")));
+  expect(savedState.noteDocuments[0].title).toBe("My note");
+  expect(savedState.noteDocuments[0].bodyHtml).toContain("data-checklist");
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await notesWindow.locator("[data-notes-delete]").click();
+  await expect(notesWindow.locator("[data-note-id]")).toHaveCount(4);
+
   const layout = await notesWindow.evaluate((windowElement) => {
-    const editorElement = windowElement.querySelector("textarea");
+    const editorElement = windowElement.querySelector("[data-note-editor]");
     const bodyElement = windowElement.querySelector(".window-body");
     const editorBox = editorElement.getBoundingClientRect();
     const bodyBox = bodyElement.getBoundingClientRect();
