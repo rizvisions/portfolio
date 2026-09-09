@@ -140,17 +140,21 @@ test("Notes is a functional local notebook with starter notes and a locked Easte
   await expect(notesWindow.locator("[data-notes-new]")).toBeVisible();
   await expect(notesWindow.locator("[data-notes-format-toggle]")).toBeVisible();
   await expect(notesWindow.locator("[data-notes-checklist]")).toBeVisible();
+  await expect(notesWindow.locator(".notes-note-list > h3")).toHaveCount(0);
+  await expect(notesWindow.locator("[data-notes-sidebar]")).toHaveCount(0);
+  await expect(notesWindow.locator("[data-notes-delete]")).toHaveCount(0);
 
   await notesWindow.locator('[data-note-id="internet-projects"]').click();
   await expect(notesWindow.locator("[data-note-editor]")).toContainText("Blue Specs");
 
   await notesWindow.locator('[data-note-id="do-not-open"]').click();
   await expect(notesWindow.locator("[data-note-unlock-form]")).toBeVisible();
-  await notesWindow.locator("[data-note-passcode]").fill("1111");
+  await notesWindow.locator("[data-note-passcode]").fill("20");
   await notesWindow.getByRole("button", { name:"Unlock" }).click();
+  await expect(notesWindow.locator(".notes-lock-error")).toHaveText("Enter all four digits.");
+  await notesWindow.locator("[data-note-passcode]").fill("1111");
   await expect(notesWindow.locator(".notes-lock-error")).toHaveText("That’s not it.");
   await notesWindow.locator("[data-note-passcode]").fill("2020");
-  await notesWindow.getByRole("button", { name:"Unlock" }).click();
   await expect(notesWindow.locator("[data-note-editor]")).toContainText("You opened it.");
 
   await notesWindow.locator("[data-notes-new]").click();
@@ -167,19 +171,23 @@ test("Notes is a functional local notebook with starter notes and a locked Easte
   expect(savedState.noteDocuments[0].title).toBe("My note");
   expect(savedState.noteDocuments[0].bodyHtml).toContain("data-checklist");
 
-  page.once("dialog", (dialog) => dialog.accept());
-  await notesWindow.locator("[data-notes-delete]").click();
-  await expect(notesWindow.locator("[data-note-id]")).toHaveCount(4);
+  await expect(notesWindow.locator("[data-note-id]")).toHaveCount(5);
 
   const layout = await notesWindow.evaluate((windowElement) => {
     const editorElement = windowElement.querySelector("[data-note-editor]");
     const bodyElement = windowElement.querySelector(".window-body");
+    const sidebarTop = windowElement.querySelector(".notes-sidebar-top").getBoundingClientRect();
+    const browserToolbar = windowElement.querySelector(".notes-browser-toolbar").getBoundingClientRect();
+    const editorToolbar = windowElement.querySelector(".notes-editor-toolbar").getBoundingClientRect();
+    const noteMeta = windowElement.querySelector(".note-meta");
     const editorBox = editorElement.getBoundingClientRect();
     const bodyBox = bodyElement.getBoundingClientRect();
     const tolerance = 0.5;
     return {
       windowWidth: windowElement.clientWidth,
       windowHeight: windowElement.clientHeight,
+      headerAlignment: Math.max(sidebarTop.bottom,browserToolbar.bottom,editorToolbar.bottom) - Math.min(sidebarTop.bottom,browserToolbar.bottom,editorToolbar.bottom),
+      dateSharesNotePage: noteMeta.parentElement.classList.contains("notes-scroll") && getComputedStyle(noteMeta).borderBottomWidth === "0px",
       editorInside:
         editorBox.left >= bodyBox.left - tolerance &&
         editorBox.right <= bodyBox.right + tolerance &&
@@ -190,5 +198,7 @@ test("Notes is a functional local notebook with starter notes and a locked Easte
 
   expect(layout.windowWidth).toBeGreaterThanOrEqual(760);
   expect(layout.windowHeight).toBeGreaterThanOrEqual(500);
+  expect(layout.headerAlignment).toBeLessThan(1);
+  expect(layout.dateSharesNotePage).toBe(true);
   expect(layout.editorInside).toBe(true);
 });
