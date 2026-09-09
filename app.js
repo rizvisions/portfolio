@@ -1109,10 +1109,8 @@
     return state.noteDocuments.find((note) => note.id === state.selectedNoteId) || state.noteDocuments[0] || null;
   }
 
-  function refreshNotesWindow(win, { focusEditor = false, preserveSidebar = true } = {}) {
-    const sidebarHidden = preserveSidebar && $(".notes-app", win)?.classList.contains("sidebar-hidden");
+  function refreshNotesWindow(win, { focusEditor = false } = {}) {
     $(".window-body", win).innerHTML = renderNotes();
-    if (sidebarHidden) $(".notes-app", win)?.classList.add("sidebar-hidden");
     wireNotesApp(win);
     if (focusEditor) {
       requestAnimationFrame(() => {
@@ -1139,10 +1137,6 @@
       refreshNotesWindow(win);
     }));
 
-    $$("[data-notes-sidebar]", shell).forEach((button) => button.addEventListener("click", () => {
-      shell.classList.toggle("sidebar-hidden");
-    }));
-
     $("[data-notes-new]", shell)?.addEventListener("click", () => {
       const timestamp = new Date().toISOString();
       const note = {
@@ -1157,20 +1151,6 @@
       state.selectedNoteId = note.id;
       saveState();
       refreshNotesWindow(win, { focusEditor:true });
-    });
-
-    $("[data-notes-delete]", shell)?.addEventListener("click", () => {
-      const note = activeNoteDocument();
-      if (!note || !window.confirm(`Delete “${note.title || "New Note"}”?`)) return;
-      const index = state.noteDocuments.findIndex((item) => item.id === note.id);
-      state.noteDocuments.splice(index,1);
-      if (!state.noteDocuments.length) {
-        const timestamp = new Date().toISOString();
-        state.noteDocuments.push({ id:`note-${Date.now()}`, title:"New Note", bodyHtml:"<div><br></div>", createdAt:timestamp, updatedAt:timestamp, locked:false });
-      }
-      state.selectedNoteId = state.noteDocuments[Math.min(index,state.noteDocuments.length-1)].id;
-      saveState();
-      refreshNotesWindow(win);
     });
 
     const editor = $("[data-note-editor]", shell);
@@ -1245,20 +1225,37 @@
     });
 
     const unlockForm = $("[data-note-unlock-form]", shell);
-    unlockForm?.addEventListener("submit", (event) => {
-      event.preventDefault();
+    const unlockNote = () => {
       const input = $("[data-note-passcode]", unlockForm);
       const error = $(".notes-lock-error", unlockForm);
-      if (input.value !== NOTES_PASSCODE) {
+      const digits = input.value.replace(/\D/g, "").slice(0, 4);
+      input.value = digits;
+      if (digits.length < 4) {
+        error.textContent = "Enter all four digits.";
+        return false;
+      }
+      if (digits !== NOTES_PASSCODE) {
         error.textContent = "That’s not it.";
         input.select();
-        return;
+        return false;
       }
       const note = activeNoteDocument();
       note.locked = false;
       note.updatedAt = new Date().toISOString();
       saveState();
       refreshNotesWindow(win, { focusEditor:true });
+      return true;
+    };
+    unlockForm?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      unlockNote();
+    });
+    const passcodeInput = $("[data-note-passcode]", unlockForm);
+    passcodeInput?.addEventListener("input", () => {
+      passcodeInput.value = passcodeInput.value.replace(/\D/g, "").slice(0, 4);
+      const error = $(".notes-lock-error", unlockForm);
+      if (error) error.textContent = "";
+      if (passcodeInput.value.length === 4) unlockNote();
     });
   }
 
@@ -1663,15 +1660,16 @@
   function renderNotes(){
     const notes = state.noteDocuments || [];
     const active = activeNoteDocument();
+    const lockIcon = (className) => `<svg class="${className}" viewBox="0 0 24 24" aria-hidden="true" fill="none"><rect x="5" y="10" width="14" height="10" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
     const noteRows = notes.map((note) => {
       const preview = note.locked ? "This note is locked" : notePlainText(note.bodyHtml).replace(note.title,"").trim() || "No additional text";
-      return `<button type="button" data-note-id="${escapeHtml(note.id)}" class="${note.id === active?.id ? "active" : ""}" aria-current="${note.id === active?.id ? "true" : "false"}"><strong>${escapeHtml(note.title || "New Note")}${note.locked ? '<i class="notes-lock-mark" aria-label="Locked"></i>' : ""}</strong><time>${escapeHtml(noteDateLabel(note))}</time><small>${escapeHtml(preview)}</small></button>`;
+      return `<button type="button" data-note-id="${escapeHtml(note.id)}" class="${note.id === active?.id ? "active" : ""}" aria-current="${note.id === active?.id ? "true" : "false"}"><strong>${escapeHtml(note.title || "New Note")}${note.locked ? lockIcon("notes-lock-mark") : ""}</strong><time>${escapeHtml(noteDateLabel(note))}</time><small>${escapeHtml(preview)}</small></button>`;
     }).join("");
     const editorBody = !active ? '<div class="notes-empty-editor">Create a note to start writing.</div>'
       : active.locked
-        ? `<div class="notes-locked-editor"><div class="notes-lock-icon" aria-hidden="true"></div><h2>${escapeHtml(active.title)}</h2><p>Enter the four-digit passcode.</p><form data-note-unlock-form><input data-note-passcode inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="Four-digit passcode" placeholder="••••"><button type="submit">Unlock</button><small class="notes-lock-hint">Hint: the year Blue Specs started.</small><strong class="notes-lock-error" role="status"></strong></form></div>`
-        : `<div class="notes-editor-toolbar"><div class="notes-format-control"><button type="button" data-notes-format-toggle aria-label="Text style" aria-expanded="false">Aa</button><div class="notes-format-menu" hidden><button type="button" data-note-format="h1">Title</button><button type="button" data-note-format="h2">Heading</button><button type="button" data-note-format="div">Body</button><button type="button" data-note-format="pre">Monospaced</button></div></div><button type="button" data-notes-checklist aria-label="Make a checklist">☑</button><span></span><button type="button" class="notes-delete" data-notes-delete aria-label="Delete note"><i class="notes-trash-icon" aria-hidden="true"></i></button></div><div class="note-meta">${new Date(active.updatedAt).toLocaleString([], { month:"long", day:"numeric", year:"numeric", hour:"numeric", minute:"2-digit" })}</div><div class="note-editor-content" data-note-editor contenteditable="true" role="textbox" aria-multiline="true" aria-label="Note">${active.bodyHtml}</div>`;
-    return `<div class="notes-app"><aside class="notes-folders"><div class="notes-sidebar-top"><button type="button" data-notes-sidebar aria-label="Hide sidebar">▥</button></div><div class="notes-sidebar-label">On My Mac</div><div class="notes-group"><button type="button" class="active"><span class="notes-folder-icon">▭</span><strong>Notes</strong><em>${notes.length}</em></button></div></aside><section class="notes-browser"><header class="notes-browser-toolbar"><button type="button" class="notes-sidebar-reveal" data-notes-sidebar aria-label="Show sidebar">▥</button><div><strong>Notes</strong><small>${notes.length} ${notes.length === 1 ? "note" : "notes"}</small></div><div class="notes-toolbar-actions"><button type="button" class="notes-compose" data-notes-new aria-label="New note">✎</button></div></header><div class="notes-note-list"><h3>Notes</h3>${noteRows}</div></section><main class="note-editor apple-note-editor">${editorBody}</main></div>`;
+        ? `<div class="notes-editor-toolbar notes-editor-toolbar-locked" aria-hidden="true"></div><div class="notes-locked-editor"><div class="notes-lock-card">${lockIcon("notes-lock-icon")}<h2>${escapeHtml(active.title)}</h2><p>Enter the four-digit passcode.</p><form data-note-unlock-form><input data-note-passcode inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="Four-digit passcode" placeholder="••••"><button type="submit">Unlock</button><small class="notes-lock-hint">Hint: the year Blue Specs started.</small><strong class="notes-lock-error" role="status"></strong></form></div></div>`
+        : `<div class="notes-editor-toolbar"><div class="notes-format-control"><button type="button" data-notes-format-toggle aria-label="Text style" aria-expanded="false">Aa</button><div class="notes-format-menu" hidden><button type="button" data-note-format="h1">Title</button><button type="button" data-note-format="h2">Heading</button><button type="button" data-note-format="div">Body</button><button type="button" data-note-format="pre">Monospaced</button></div></div><button type="button" data-notes-checklist aria-label="Make a checklist">☑</button><span></span></div><div class="notes-scroll"><div class="note-meta">${new Date(active.updatedAt).toLocaleString([], { month:"long", day:"numeric", year:"numeric", hour:"numeric", minute:"2-digit" })}</div><div class="note-editor-content" data-note-editor contenteditable="true" role="textbox" aria-multiline="true" aria-label="Note">${active.bodyHtml}</div></div>`;
+    return `<div class="notes-app"><aside class="notes-folders"><div class="notes-sidebar-top" aria-hidden="true"></div><div class="notes-sidebar-label">On My Mac</div><div class="notes-group"><button type="button" class="active"><span class="notes-folder-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3.5 7.5h6l1.7 2H20.5v9.2a1.8 1.8 0 0 1-1.8 1.8H5.3a1.8 1.8 0 0 1-1.8-1.8V7.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M3.5 7.5V5.3c0-1 .8-1.8 1.8-1.8h4.1l1.8 2h7.5c1 0 1.8.8 1.8 1.8v2.2" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span><strong>Notes</strong><em>${notes.length}</em></button></div></aside><section class="notes-browser"><header class="notes-browser-toolbar"><div><strong>Notes</strong><small>${notes.length} ${notes.length === 1 ? "note" : "notes"}</small></div><div class="notes-toolbar-actions"><button type="button" class="notes-compose" data-notes-new aria-label="New note">✎</button></div></header><div class="notes-note-list">${noteRows}</div></section><main class="note-editor apple-note-editor">${editorBody}</main></div>`;
   }
   function renderTerminal(){return `<div class="terminal-shell"><div class="terminal-output">Last login: ${new Date().toLocaleDateString()} on ttys001\n\nRizvisions OS 10.9\nType <span class="terminal-link">help</span> to see available commands.\n</div><div class="terminal-input-row"><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" spellcheck="false"></div></div>`;}
   function renderTrash(){return `<div class="empty-state"><div><img src="assets/icons/macos/trash.png?v=106" alt="Trash"><h2>Trash is Empty</h2><p>Old domains, failed ideas, embarrassing drafts, and abandoned businesses will eventually live here.</p></div></div>`;}
