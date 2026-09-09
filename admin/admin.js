@@ -291,6 +291,12 @@
     $("#displayNameInput").value = itemTitle(editingItem);
     $("#captionInput").value = editingItem.caption || "";
     $("#altInput").value = editingItem.alt_text || "";
+    const metadata = editingItem.metadata || {};
+    $("#locationNameInput").value = metadata.locationName || metadata.location || "";
+    $("#latitudeInput").value = metadata.latitude ?? metadata.lat ?? "";
+    $("#longitudeInput").value = metadata.longitude ?? metadata.lng ?? metadata.lon ?? "";
+    $("#frameRateInput").value = metadata.frameRate ?? metadata.fps ?? "";
+    $("#codecInput").value = metadata.codec || "";
     $("#publishedInput").checked = Boolean(editingItem.is_published);
     $("#photosInput").checked = Boolean(photos);
     $("#collectionInput").value = photos?.container || "Library";
@@ -341,7 +347,15 @@
       display_name: $("#displayNameInput").value.trim(),
       caption: $("#captionInput").value.trim(),
       alt_text: $("#altInput").value.trim(),
-      is_published: $("#publishedInput").checked
+      is_published: $("#publishedInput").checked,
+      metadata: {
+        ...(editingItem.metadata || {}),
+        locationName: $("#locationNameInput").value.trim() || null,
+        latitude: numberOrNull($("#latitudeInput").value),
+        longitude: numberOrNull($("#longitudeInput").value),
+        frameRate: numberOrNull($("#frameRateInput").value),
+        codec: $("#codecInput").value.trim() || null
+      }
     };
     $("#saveButton").disabled = true;
     try {
