@@ -24,11 +24,11 @@ test("frontend files do not contain Supabase service-role credentials", async ()
   frontend.forEach((source) => assert.doesNotMatch(source, forbidden));
 });
 
-test("public version labels agree on V10.9", async () => {
+test("public version labels agree on V10.10", async () => {
   const [readme, app] = await Promise.all([read("README.md"), read("app.js")]);
-  assert.match(readme, /V10\.9/);
-  assert.match(app, /Rizvisions OS 10\.9/);
-  assert.match(app, /Version 10\.9/);
+  assert.match(readme, /V10\.10/);
+  assert.match(app, /Rizvisions OS 10\.10/);
+  assert.match(app, /Version 10\.10/);
 });
 
 test("Notes ships only real local-notebook controls", async () => {
