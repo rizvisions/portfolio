@@ -15,7 +15,6 @@
   const toast = $("#toast");
   const dock = $("#dock");
   const desktopPhotosRoot = $("#desktopPhotos");
-  const currentWidget = $("#currentWidget");
   const selectionRectangle = $("#selectionRectangle");
   const contextMenu = $("#desktopContextMenu");
   const photoContextMenu = $("#photoContextMenu");
@@ -32,7 +31,6 @@
   const ccFocus = $("#ccFocus");
   const bootIntro = $("#bootIntro");
   const bootGreeting = $("#bootGreeting");
-  const bootSkip = $("#bootSkip");
 
   const CONTENT = window.RIZVISIONS_CONTENT || { mediaLoading: true, allMedia: [], desktopPhotos: [], photoLibrary: [], projectMedia: {}, currentCards: [] };
   CONTENT.projectMedia ||= {};
@@ -44,7 +42,6 @@
   const defaultPhotos = Object.fromEntries((CONTENT.desktopPhotos || []).map((photo, index) => [photo.id, {
     x: photo.x, y: photo.y, rotation: photo.rotation || 0, z: index + 1
   }]));
-  const defaultWidget = { x: 55, y: 5.8, z: 40 };
   const LEGACY_DEFAULT_NOTE = "Rizvisions is my permanent internet home.\n\nThings to add:\n• the real photo archive\n• Parker work\n• Blue Specs story\n• WAP / Whop era\n• more personal artifacts\n• an iOS version for mobile";
   const NOTES_PASSCODE = "2020";
 
@@ -116,8 +113,6 @@
     dock: [...DEFAULT_DOCK],
     icons: clone(defaultIcons),
     photos: clone(defaultPhotos),
-    widget: clone(defaultWidget),
-    widgetIndex: 0,
     windowPlacementVersion: 2,
     windows: {},
     noteDocuments: createStarterNotes(),
@@ -142,13 +137,6 @@
     windsurf: { title: "Windsurf", eyebrow: "CAMPAIGN", color: "#21a89b", description: "A creator campaign built around short-form distribution and rewards. The program generated millions of views while exposing exactly where open creator systems break.", facts: ["3.6M views", "$5.75 RPM", "$20K spend", "fraud controls + content rules"] },
     creator: { title: "Rizvisions", eyebrow: "CREATOR", color: "#242426", description: "Photography, video, short-form experiments, internet projects, and the visual identity I have carried since middle school.", facts: ["TikTok @riz.com", "Instagram @rizvisions", "30M+ lifetime views", "Chicago"] }
   };
-
-  const currentCards = (CONTENT.currentCards?.length ? CONTENT.currentCards : [
-    { eyebrow: "CURRENTLY", title: "Parker", subtitle: "AI creative strategy", kind: "app", target: "parker" },
-    { eyebrow: "CREATOR", title: "30M+ views", subtitle: "short-form videos and internet experiments", kind: "external", target: "https://www.tiktok.com/@riz.com" },
-    { eyebrow: "BUILT AT 18", title: "Blue Specs", subtitle: "$40K+ ecommerce story", kind: "project", target: "bluespecs" },
-    { eyebrow: "CREATOR ECONOMY", title: "Whop + WAP", subtitle: "$20K+ earned building reward systems", kind: "project", target: "whop" }
-  ]).map((card) => ({ ...card }));
 
   const appDefinitions = {
     work: { name: "Finder", title: "Selected Work", size: [1000, 650], min: [680, 440], render: renderFinder },
@@ -284,16 +272,6 @@
       node.style.setProperty("--y", `${pos.y}%`);
       node.style.left = "var(--x)"; node.style.top = "var(--y)";
     });
-  }
-
-  function applyWidgetLayout() {
-    if (!currentWidget) return;
-    const pos = state.widget || defaultWidget;
-    currentWidget.style.setProperty("--widget-x", `${pos.x}%`);
-    currentWidget.style.setProperty("--widget-y", `${pos.y}%`);
-    currentWidget.style.left = "var(--widget-x)";
-    currentWidget.style.top = "var(--widget-y)";
-    currentWidget.style.zIndex = String(pos.z || 40);
   }
 
   function renderDesktopPhotos() {
@@ -463,7 +441,7 @@
 
   function beginMarqueeSelection(event) {
     if (event.button !== 0 || !(event.target === desktop || event.target.classList.contains("wallpaper"))) return;
-    if (event.target.closest(".mac-window,.dock,.now-widget,.photo-file,.desktop-item,.menu-bar")) return;
+    if (event.target.closest(".mac-window,.dock,.photo-file,.desktop-item,.menu-bar")) return;
     event.preventDefault(); closeMenus();
     const desktopRect = desktop.getBoundingClientRect();
     const startX = event.clientX - desktopRect.left, startY = event.clientY - desktopRect.top;
@@ -488,35 +466,6 @@
       selectionRectangle.classList.remove("active");
       Object.assign(selectionRectangle.style, { width:"0", height:"0" });
       const selectedPhoto = $$(".photo-file.selected", desktopPhotosRoot)[0]; selectedPhotoId = selectedPhoto?.dataset.photoId || null;
-    };
-    window.addEventListener("pointermove", move); window.addEventListener("pointerup", finish, { once:true });
-  }
-
-  function beginWidgetDrag(event) {
-    if (event.button !== 0 || event.target.closest("button")) return;
-    event.preventDefault(); event.stopPropagation();
-    const desktopRect = desktop.getBoundingClientRect(); const rect = currentWidget.getBoundingClientRect();
-    const startX = event.clientX, startY = event.clientY;
-    const startLeft = rect.left - desktopRect.left + rect.width / 2, startTop = rect.top - desktopRect.top;
-    let moved = false;
-    const move = (moveEvent) => {
-      const dx = moveEvent.clientX - startX, dy = moveEvent.clientY - startY;
-      if (!moved && Math.hypot(dx,dy) < 4) return;
-      moved = true; currentWidget.classList.add("dragging");
-      const left = Math.min(desktop.clientWidth - rect.width / 2 - 8, Math.max(rect.width / 2 + 8, startLeft + dx));
-      const top = Math.min(desktop.clientHeight - rect.height - 105, Math.max(8, startTop + dy));
-      currentWidget.style.left = `${left}px`; currentWidget.style.top = `${top}px`;
-    };
-    const finish = () => {
-      window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", finish);
-      currentWidget.classList.remove("dragging");
-      if (moved) {
-        const x = parseFloat(currentWidget.style.left) / desktop.clientWidth * 100;
-        const y = parseFloat(currentWidget.style.top) / desktop.clientHeight * 100;
-        state.widget = { x:+x.toFixed(3), y:+y.toFixed(3), z:40 };
-        currentWidget.style.setProperty("--widget-x", `${x}%`); currentWidget.style.setProperty("--widget-y", `${y}%`);
-        currentWidget.style.left = "var(--widget-x)"; currentWidget.style.top = "var(--widget-y)"; saveState();
-      }
     };
     window.addEventListener("pointermove", move); window.addEventListener("pointerup", finish, { once:true });
   }
@@ -630,7 +579,9 @@
   function mediaWorkArea() {
     const gap = 16;
     const dockWrap = dock.closest(".dock-wrap");
-    const dockTop = dockWrap?.offsetHeight ? Math.floor(dockWrap.offsetTop - gap) : desktop.clientHeight - 118;
+    const desktopRect = desktop.getBoundingClientRect();
+    const dockRect = dockWrap?.getBoundingClientRect();
+    const dockTop = dockRect?.height ? Math.floor(dockRect.top - desktopRect.top - gap) : desktop.clientHeight - 118;
     return {
       left: gap,
       top: gap,
@@ -686,7 +637,8 @@
       win._windowDefinition.lockAspect = ratio;
       win._windowDefinition.min = [minWidth, Math.round(minWidth / ratio)];
       win.style.setProperty("--media-aspect", String(ratio));
-      applyMediaWindowRect(win, fitMediaRectToWorkArea(ratio, current, true));
+      const currentRatio = current.height > 0 ? current.width / current.height : 0;
+      if (Math.abs(currentRatio - ratio) > .002) applyMediaWindowRect(win, fitMediaRectToWorkArea(ratio, current, true));
       saveWindowRect(win);
     };
     if ((type === "video" && element.readyState >= 1) || (type !== "video" && element.complete)) sync();
@@ -976,14 +928,12 @@
     os.classList.add("layout-resetting");
     state.icons = clone(defaultIcons);
     state.photos = clone(defaultPhotos);
-    state.widget = clone(defaultWidget);
     state.windows = {};
-    state.widgetIndex = 0;
     $$(".mac-window",windowsRoot).forEach((win)=>win.remove());
     activeWindow = null;
     activeAppName.textContent = "Rizvisions";
     requestAnimationFrame(() => {
-      applyIconLayout(); applyPhotoLayout(); applyWidgetLayout(); updateCurrentWidget(); saveState(); renderDock();
+      applyIconLayout(); applyPhotoLayout(); saveState(); renderDock();
       setTimeout(() => os.classList.remove("layout-resetting"), 760);
     });
     showToast("Desktop layout restored");
@@ -993,7 +943,7 @@
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
     state = clone(DEFAULT_STATE);
     setWallpaper(state.wallpaper,false);
-    renderDesktopPhotos(); applyIconLayout(); applyWidgetLayout(); applyDisplayState(); resetLayout(); renderDock(); saveState();
+    renderDesktopPhotos(); applyIconLayout(); applyDisplayState(); resetLayout(); renderDock(); saveState();
     showToast("Rizvisions reset");
   }
 
@@ -1004,15 +954,6 @@
     requestAnimationFrame(()=>{applyIconLayout();saveState();setTimeout(()=>os.classList.remove("layout-resetting"),700);});
     showToast("Icons sorted");
   }
-
-  function updateCurrentWidget(animate=false) {
-    const index=((Number(state.widgetIndex)||0)%currentCards.length+currentCards.length)%currentCards.length;state.widgetIndex=index;const card=currentCards[index];if(!card)return;
-    currentWidget.classList.toggle("changing",animate);$("#widgetEyebrow").textContent=card.eyebrow;$("#widgetTitle").textContent=card.title;$("#widgetSubtitle").textContent=card.subtitle;
-    const ncTitle=$("#ncCurrentTitle"),ncSub=$("#ncCurrentSubtitle");if(ncTitle)ncTitle.textContent=card.title;if(ncSub)ncSub.textContent=card.subtitle;
-    $("#widgetProgress").innerHTML=currentCards.map((_,i)=>`<i class="${i===index?"active":""}"></i>`).join("");if(animate)setTimeout(()=>currentWidget.classList.remove("changing"),220);
-  }
-
-  function showCurrentCard() { const card=currentCards[state.widgetIndex%currentCards.length]; if(!card)return; if(card.kind==="app")openApp(card.target);else if(card.kind==="project")openProject(card.target);else if(card.kind==="external")window.open(card.target,"_blank","noopener"); }
 
   function closeMenus() {
     $$(".menu-popover.open,.context-menu.open").forEach((node)=>node.classList.remove("open"));
@@ -1045,6 +986,7 @@
     if($("#ncDay")) $("#ncDay").textContent=day;
     if($("#ncMonth")) $("#ncMonth").textContent=`${month} ${year}`;
     if($("#ncLargeTime")) $("#ncLargeTime").textContent=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",hour:"numeric",minute:"2-digit"}).format(now);
+    if($("#ncGreeting")) $("#ncGreeting").textContent=greetingForNow();
     $$(".calendar-icon .calendar-weekday").forEach((node)=>node.textContent=now.toLocaleDateString("en-US",{weekday:"short"}).toUpperCase());
     $$(".calendar-icon .calendar-day").forEach((node)=>node.textContent=String(now.getDate()));
   }
@@ -1054,6 +996,7 @@
 
   function wireAppSpecific(win, appId) {
     if (appId === "terminal") wireTerminal(win);
+    if (appId === "messages") wireMessages(win);
     if (appId === "work") wireFinderApp(win);
     if (appId === "notes") wireNotesApp(win);
     if (appId === "photos") wirePhotosApp(win);
@@ -1519,7 +1462,7 @@
 
   function renderAbout(){return `<div class="about-app"><aside class="about-rail"><img class="about-eye" src="assets/icons/macos/rizvisions.png?v=106" alt=""><span>RIZVISIONS</span><nav><button class="active">Overview</button><button data-app="work">Work</button><button data-app="photos">Photos</button></nav></aside><main class="about-content"><header><span class="eyebrow">RIZ ZAHEER</span><h1>I build things on the internet and document the rest.</h1><p>Creator and operator in Chicago. I work at Parker, make photos and videos, and have used Rizvisions as a creative identity since middle school.</p></header><section class="about-stats"><div><small>Currently</small><strong>Parker</strong><button data-app="parker">Open app</button></div><div><small>Based</small><strong>Chicago</strong><span>Gold Coast / Oak Brook orbit</span></div><div><small>Internet</small><strong>30M+</strong><span>lifetime short-form views</span></div></section><section class="about-links"><button data-external="https://www.linkedin.com/in/riz-zaheer/">LinkedIn ↗</button><button data-app="instagram">Instagram</button><button data-external="https://x.com/rizvisions">X ↗</button><button data-app="spotify">Spotify</button></section><section class="about-now"><div><small>What this site is</small><p>A catch-all for work, personal stuff, photography, old businesses, current obsessions, and whatever else becomes part of my life.</p></div><div class="about-quote">“Permanent internet home” &gt; polished corporate portfolio.</div></section></main></div>`;}
 
-  function renderSettings(){return `<div class="settings-shell"><aside class="settings-sidebar"><input class="settings-search" placeholder="Search"><div class="settings-profile-mini"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions</strong><small>Desktop preferences</small></span></div><div class="settings-list"><div class="settings-row active"><span class="settings-row-icon">◐</span>Appearance</div><div class="settings-row"><span class="settings-row-icon">⌘</span>Desktop & Dock</div><div class="settings-row"><span class="settings-row-icon">♪</span>Sound</div><div class="settings-row"><span class="settings-row-icon">◉</span>About</div></div></aside><main class="settings-main"><h1>Appearance</h1><section class="settings-card"><h2>Wallpaper</h2><p>Choose the grid appearance used across the desktop and interface.</p><div class="settings-theme-grid">${[["grid","Light"],["dark","Dark"],["maroon","Maroon"],["forest","Forest"]].map(([id,label])=>`<button data-settings-wallpaper="${id}" class="theme-choice ${id}"><span></span><strong>${label}</strong></button>`).join("")}</div></section><section class="settings-card"><h2>Desktop & Dock</h2><div class="settings-info-row"><span><strong>Customize the Dock naturally</strong><small>Drag an app from the desktop onto the Dock. Drag Dock apps left or right to reorder, or drag one away to remove it.</small></span></div><button class="mac-button" data-settings-reset>Restore Desktop Layout</button></section><section class="settings-card"><h2>About this build</h2><div class="settings-info-row"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions OS 10.9</strong><small>A personal website pretending to be a Mac.</small></span></div></section></main></div>`;}
+  function renderSettings(){return `<div class="settings-shell"><aside class="settings-sidebar"><input class="settings-search" placeholder="Search"><div class="settings-profile-mini"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions</strong><small>Desktop preferences</small></span></div><div class="settings-list"><div class="settings-row active"><span class="settings-row-icon">◐</span>Appearance</div><div class="settings-row"><span class="settings-row-icon">⌘</span>Desktop & Dock</div><div class="settings-row"><span class="settings-row-icon">♪</span>Sound</div><div class="settings-row"><span class="settings-row-icon">◉</span>About</div></div></aside><main class="settings-main"><h1>Appearance</h1><section class="settings-card"><h2>Wallpaper</h2><p>Choose the grid appearance used across the desktop and interface.</p><div class="settings-theme-grid">${[["grid","Light"],["dark","Dark"],["maroon","Maroon"],["forest","Forest"]].map(([id,label])=>`<button data-settings-wallpaper="${id}" class="theme-choice ${id}"><span></span><strong>${label}</strong></button>`).join("")}</div></section><section class="settings-card"><h2>Desktop & Dock</h2><div class="settings-info-row"><span><strong>Customize the Dock naturally</strong><small>Drag an app from the desktop onto the Dock. Drag Dock apps left or right to reorder, or drag one away to remove it.</small></span></div><button class="mac-button" data-settings-reset>Restore Desktop Layout</button></section><section class="settings-card"><h2>About this build</h2><div class="settings-info-row"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><span><strong>Rizvisions OS 10.10</strong><small>A personal website pretending to be a Mac.</small></span></div></section></main></div>`;}
 
   function renderVideoElement(media, { className = "", autoplay = false, muted = true } = {}) {
     const poster = media.poster ? ` poster="${escapeHtml(media.poster)}"` : "";
@@ -1629,7 +1572,23 @@
     return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
   }
 
-  function renderMessages(){return `<div class="messages-shell"><aside class="conversation-list"><input class="message-search" placeholder="Search"><div class="conversation active"><span class="avatar">R</span><span><strong>Riz</strong><small>Welcome to my corner of the internet.</small></span><time>now</time></div><div class="conversation"><span class="avatar">P</span><span><strong>Parker</strong><small>Back to work?</small></span><time>1:04 AM</time></div></aside><main class="chat-pane"><div class="chat-header">Riz</div><div class="chat-body"><div class="bubble in">You made it this far. What do you want to know?</div><div class="bubble out">This site is cool. How do I reach you?</div><div class="bubble in">LinkedIn is best for work. Instagram works for everything else.</div><div class="chat-actions"><button class="mac-button primary" data-external="https://www.linkedin.com/in/riz-zaheer/">Open LinkedIn</button><button class="mac-button" data-app="instagram">Open Instagram</button></div></div><div class="chat-input">iMessage</div></main></div>`;}
+  function renderMessages(){return `<div class="messages-shell">
+    <aside class="conversation-list">
+      <div class="messages-sidebar-title"><strong>Messages</strong><button type="button" data-message-compose aria-label="New message">✎</button></div>
+      <label class="message-search-wrap"><span aria-hidden="true">⌕</span><input class="message-search" placeholder="Search" aria-label="Search conversations"></label>
+      <div class="conversation-scroll">
+        <button type="button" class="conversation active" data-message-thread="riz"><span class="avatar">R</span><span><strong>Riz</strong><small>Welcome to Rizvisions.</small></span><time>now</time></button>
+        <button type="button" class="conversation" data-message-thread="parker"><span class="avatar parker-avatar">P</span><span><strong>Parker</strong><small>That wasn’t a no.</small></span><time>1:04 AM</time></button>
+      </div>
+    </aside>
+    <main class="chat-pane">
+      <header class="chat-header"><span class="avatar" data-chat-avatar>R</span><strong data-chat-name>Riz</strong><small>iMessage</small></header>
+      <div class="chat-body" data-chat-body></div>
+      <form class="chat-input" data-message-form>
+        <div class="message-field"><input data-message-input autocomplete="off" placeholder="iMessage" aria-label="iMessage"><button type="submit" aria-label="Send message">↑</button></div>
+      </form>
+    </main>
+  </div>`;}
 
   function renderInstagram(){
     const accounts=[
@@ -1675,7 +1634,19 @@
         : `<div class="notes-editor-toolbar"><div class="notes-format-control"><button type="button" data-notes-format-toggle aria-label="Text style" aria-expanded="false">Aa</button><div class="notes-format-menu" hidden><button type="button" data-note-format="h1">Title</button><button type="button" data-note-format="h2">Heading</button><button type="button" data-note-format="div">Body</button><button type="button" data-note-format="pre">Monospaced</button></div></div><button type="button" data-notes-checklist aria-label="Make a checklist">☑</button><span></span></div><div class="notes-scroll"><div class="note-meta">${new Date(active.updatedAt).toLocaleString([], { month:"long", day:"numeric", year:"numeric", hour:"numeric", minute:"2-digit" })}</div><div class="note-editor-content" data-note-editor contenteditable="true" role="textbox" aria-multiline="true" aria-label="Note">${active.bodyHtml}</div></div>`;
     return `<div class="notes-app"><aside class="notes-folders"><div class="notes-sidebar-top" aria-hidden="true"></div><div class="notes-sidebar-label">On My Mac</div><div class="notes-group"><button type="button" class="active"><span class="notes-folder-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3.5 7.5h6l1.7 2H20.5v9.2a1.8 1.8 0 0 1-1.8 1.8H5.3a1.8 1.8 0 0 1-1.8-1.8V7.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M3.5 7.5V5.3c0-1 .8-1.8 1.8-1.8h4.1l1.8 2h7.5c1 0 1.8.8 1.8 1.8v2.2" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span><strong>Notes</strong><em>${notes.length}</em></button></div></aside><section class="notes-browser"><header class="notes-browser-toolbar"><div><strong>Notes</strong><small>${notes.length} ${notes.length === 1 ? "note" : "notes"}</small></div><div class="notes-toolbar-actions"><button type="button" class="notes-compose" data-notes-new aria-label="New note">✎</button></div></header><div class="notes-note-list">${noteRows}</div></section><main class="note-editor apple-note-editor">${editorBody}</main></div>`;
   }
-  function renderTerminal(){return `<div class="terminal-shell"><div class="terminal-output">Last login: ${new Date().toLocaleDateString()} on ttys001\n\nRizvisions OS 10.9\nType <span class="terminal-link">help</span> to see available commands.\n</div><div class="terminal-input-row"><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" spellcheck="false"></div></div>`;}
+  function terminalWordmark(){
+    const glyphs={R:["████ ","█   █","████ ","█  █ ","█   █"],I:["█████","  █  ","  █  ","  █  ","█████"],Z:["█████","   █ ","  █  "," █   ","█████"],V:["█   █","█   █","█   █"," █ █ ","  █  "],S:["█████","█    ","█████","    █","█████"],O:[" ███ ","█   █","█   █","█   █"," ███ "],N:["█   █","██  █","█ █ █","█  ██","█   █"]};
+    return Array.from({length:5},(_,row)=>[..."RIZVISIONS"].map((letter)=>glyphs[letter][row]).join(" ")).join("\n");
+  }
+
+  function renderTerminal(){return `<div class="terminal-shell">
+    <div class="terminal-scroll">
+      <pre class="terminal-wordmark">${terminalWordmark()}</pre>
+      <div class="terminal-intro"><strong>Rizvisions OS 10.10</strong><span>Local, prewritten, and slightly nosy.</span><span>Ask about Riz, Parker, work, photos, or type “help”.</span></div>
+      <div class="terminal-history" aria-live="polite"></div>
+    </div>
+    <form class="terminal-input-row" data-terminal-form><span class="terminal-prompt">›</span><input class="terminal-input" autocomplete="off" spellcheck="false" placeholder="Ask Rizvisions anything…" aria-label="Ask Rizvisions"></form>
+  </div>`;}
   function renderTrash(){return `<div class="empty-state"><div><img src="assets/icons/macos/trash.png?v=106" alt="Trash"><h2>Trash is Empty</h2><p>Old domains, failed ideas, embarrassing drafts, and abandoned businesses will eventually live here.</p></div></div>`;}
 
   function renderProject(project, projectId) {
@@ -1765,7 +1736,43 @@
     });
   }
 
-  function wireTerminal(win){const input=$(".terminal-input",win),output=$(".terminal-output",win);input.focus();input.addEventListener("keydown",(event)=>{if(event.key!=="Enter")return;const command=input.value.trim();output.textContent+=`\nriz@rizvisions ~ % ${command}\n`;input.value="";const lower=command.toLowerCase();if(lower==="help")output.textContent+="about  work  photos  parker  social  spotify  safari  clear\n";else if(["about","work","photos","parker","spotify","safari"].includes(lower)){output.textContent+=`Opening ${lower}…\n`;openApp(lower);}else if(lower==="social"){openApp("instagram");}else if(lower==="clear")output.textContent="";else if(lower==="sudo")output.textContent+="Riz is not in the sudoers file. This incident will be reported.\n";else if(lower)output.textContent+=`zsh: command not found: ${command}\n`;output.scrollTop=output.scrollHeight;});}
+  function terminalReply(query){
+    const text=query.toLowerCase();
+    if (/^(hi|hey|hello|yo|what'?s up|sup)[!?. ]*$/.test(text)) return "Good. How are you? I’m a website, so my day has been pretty consistent.";
+    if (text.includes("help")||text.includes("what can you do")) return "Ask me about Riz, Parker, Blue Specs, Whop, Windsurf, photos, work, or contact. You can also say “open photos”, “open work”, or “clear”.";
+    if (text.includes("who is riz")||text.includes("about riz")||text==="about") return "Riz Zaheer is a Chicago-based creative strategist, internet builder, photographer, and the person who made this slightly overcommitted desktop.";
+    if (text.includes("parker")) return "Parker is where Riz works across AI, ecommerce, GTM, customer conversations, product storytelling, and whatever else the week invents.";
+    if (text.includes("blue specs")||text.includes("bluespecs")) return "Blue Specs was the ecommerce business Riz built at 18: blue-light glasses, influencer deals, paid ads, support tickets, and a very fast education.";
+    if (text.includes("whop")||text.includes("wap")) return "Whop and WAP were Riz’s creator-economy chapter: reward programs, distribution systems, a 25K community, and more than $20K earned.";
+    if (text.includes("windsurf")) return "The Windsurf campaign generated 3.6M views and an extremely practical education in creator incentives, fraud controls, and content rules.";
+    if (text.includes("contact")||text.includes("reach")||text.includes("email")) return "LinkedIn is best for work. Instagram works for everything else. Open Messages for the links.";
+    if (text.includes("weather")) return "Look out the window. I don’t have that permission.";
+    if (text.includes("thank")) return "You’re welcome. I’ll be here pretending this is a real terminal.";
+    if (text.includes("how are you")) return "Running locally and feeling surprisingly conversational.";
+    return "I don’t know that one yet. Try asking about Riz, Parker, Blue Specs, work, photos, or how to get in touch.";
+  }
+
+  function wireTerminal(win){
+    const input=$(".terminal-input",win),history=$(".terminal-history",win),scroll=$(".terminal-scroll",win),form=$("[data-terminal-form]",win);
+    const append=(role,text)=>{const entry=document.createElement("div");entry.className=`terminal-entry ${role}`;const label=document.createElement("span");label.textContent=role==="user"?"you":"rizvisions";const copy=document.createElement("p");copy.textContent=text;entry.append(label,copy);history.append(entry);scroll.scrollTop=scroll.scrollHeight;};
+    form.addEventListener("submit",(event)=>{event.preventDefault();const query=input.value.trim();if(!query)return;input.value="";if(query.toLowerCase()==="clear"){history.replaceChildren();return;}append("user",query);const lower=query.toLowerCase();const openMatch=lower.match(/(?:open|show)\s+(photos|work|parker|spotify|safari|messages|notes|about)/);if(openMatch){append("assistant",`Opening ${openMatch[1]}…`);setTimeout(()=>openApp(openMatch[1]),180);return;}append("assistant",terminalReply(query));});
+    requestAnimationFrame(()=>input.focus());
+  }
+
+  function wireMessages(win){
+    const threads={
+      riz:{name:"Riz",avatar:"R",messages:[{side:"in",text:"Hey — welcome to Rizvisions."},{side:"out",text:"What’s the best way to reach you?"},{side:"in",text:"LinkedIn for work. Instagram for everything else."}]},
+      parker:{name:"Parker",avatar:"P",messages:[{side:"in",text:"Back to work?"},{side:"out",text:"I’m literally inside a portfolio website."},{side:"in",text:"That wasn’t a no."}]}
+    };
+    let active="riz";
+    const body=$("[data-chat-body]",win),name=$("[data-chat-name]",win),avatar=$("[data-chat-avatar]",win),input=$("[data-message-input]",win);
+    const renderThread=()=>{const thread=threads[active];name.textContent=thread.name;avatar.textContent=thread.avatar;avatar.classList.toggle("parker-avatar",active==="parker");body.replaceChildren();thread.messages.forEach((message)=>{const bubble=document.createElement("div");bubble.className=`bubble ${message.side}`;bubble.textContent=message.text;body.append(bubble);});if(active==="riz"){const links=document.createElement("div");links.className="message-contact-links";links.innerHTML='<button type="button" data-external="https://www.linkedin.com/in/riz-zaheer/">LinkedIn</button><button type="button" data-app="instagram">Instagram</button>';body.append(links);}body.scrollTop=body.scrollHeight;};
+    $$('[data-message-thread]',win).forEach((button)=>button.addEventListener("click",()=>{active=button.dataset.messageThread;$$('[data-message-thread]',win).forEach((item)=>item.classList.toggle("active",item===button));renderThread();}));
+    $("[data-message-compose]",win)?.addEventListener("click",()=>{active="riz";$$('[data-message-thread]',win).forEach((item)=>item.classList.toggle("active",item.dataset.messageThread==="riz"));renderThread();input.focus();});
+    $(".message-search",win)?.addEventListener("input",(event)=>{const query=event.target.value.trim().toLowerCase();$$('[data-message-thread]',win).forEach((button)=>{button.hidden=query&&!button.textContent.toLowerCase().includes(query);});});
+    $("[data-message-form]",win).addEventListener("submit",(event)=>{event.preventDefault();const text=input.value.trim();if(!text)return;const threadId=active;threads[threadId].messages.push({side:"out",text});input.value="";renderThread();setTimeout(()=>{threads[threadId].messages.push({side:"in",text:threadId==="riz"?"Message received. This demo doesn’t send anything off your device.":"Noted. Now back to work."});if(active===threadId)renderThread();},480);});
+    renderThread();
+  }
 
   async function discoverMediaLibrary() {
     const config = window.RIZVISIONS_SUPABASE;
@@ -1927,12 +1934,11 @@
     if(action==="open-spotlight")openSpotlight();
     if(action==="cycle-wallpaper")cycleWallpaper();
     if(action==="sort-icons")sortIcons();
-    if(action==="desktop-info")showToast("Rizvisions Desktop · Version 10.9");
+    if(action==="desktop-info")showToast("Rizvisions Desktop · Version 10.10");
     if(action==="quick-look-photo"){const photo=(CONTENT.desktopPhotos||[]).find((item)=>item.id===(contextPhotoId||selectedPhotoId));if(photo)openMediaFile(photo);}
     if(action==="view-photo-library"){const photo=(CONTENT.desktopPhotos||[]).find((item)=>item.id===(contextPhotoId||selectedPhotoId));if(photo)openPhotosAtMedia(photo);}
     if(action==="bring-photo-front"){const file=desktopPhotosRoot.querySelector(`[data-photo-id="${CSS.escape(contextPhotoId||"")}"]`);if(file){file.style.zIndex=String(++photoZCounter);persistObjectPosition(file);saveState();}}
     if(action==="reset-photo-position"){if(contextPhotoId&&defaultPhotos[contextPhotoId]){state.photos[contextPhotoId]=clone(defaultPhotos[contextPhotoId]);applyPhotoLayout();saveState();showToast("Desktop position reset");}}
-    if(action==="show-current-card")showCurrentCard();
     if(action==="dock-reset")resetDock();
     if(action==="dock-magnification"){state.dockMagnification=!state.dockMagnification;dock.classList.toggle("no-magnify",!state.dockMagnification);saveState();showToast(state.dockMagnification?"Dock magnification on":"Dock magnification off");}
     if(action==="media-help")window.open("/admin", "_blank", "noopener");
@@ -1949,11 +1955,8 @@
     spotlightBackdrop?.addEventListener("click",(event)=>{if(event.target===spotlightBackdrop)closeSpotlight();});
     ccFocus?.addEventListener("click",()=>{state.focus=!state.focus;saveState();applyDisplayState();});
     volumeSlider?.addEventListener("input",()=>{state.volume=Number(volumeSlider.value);state.sound=state.volume>0;applyDisplayState();saveState();});
-    $("#widgetNext")?.addEventListener("click",(event)=>{event.stopPropagation();state.widgetIndex=(state.widgetIndex+1)%currentCards.length;saveState();updateCurrentWidget(true);});
-    $("#widgetShow")?.addEventListener("click",(event)=>{event.stopPropagation();showCurrentCard();});
-    currentWidget?.addEventListener("pointerdown",beginWidgetDrag);
     desktop.addEventListener("pointerdown",beginMarqueeSelection);
-    desktop.addEventListener("contextmenu",(event)=>{if(event.target.closest(".mac-window,.dock,.desktop-item,.photo-file,.now-widget,.menu-bar"))return;event.preventDefault();closeMenus();positionPopover(contextMenu,event.clientX,event.clientY);contextMenu.classList.add("open");});
+    desktop.addEventListener("contextmenu",(event)=>{if(event.target.closest(".mac-window,.dock,.desktop-item,.photo-file,.menu-bar"))return;event.preventDefault();closeMenus();positionPopover(contextMenu,event.clientX,event.clientY);contextMenu.classList.add("open");});
     dock.addEventListener("contextmenu",(event)=>{event.preventDefault();event.stopPropagation();closeMenus();positionPopover(dockContextMenu,event.clientX,event.clientY);dockContextMenu.classList.add("open");});
     iconNodes.forEach((item)=>{item.addEventListener("pointerdown",(event)=>beginDesktopObjectDrag(event,item));item.addEventListener("click",(event)=>{event.stopPropagation();if(item._suppressClick)return;selectDesktopItem(item,event.shiftKey||event.metaKey||event.ctrlKey);});item.addEventListener("dblclick",()=>openApp(item.dataset.app));});
     document.addEventListener("click",(event)=>{
@@ -1982,17 +1985,17 @@
 
   function greetingForNow() {
     const hour = new Date().getHours();
-    if (hour < 5) return "go to sleep.";
+    if (hour < 5) return "Go to sleep.";
     if (hour < 12) return "Good morning.";
-    if (hour < 17) return "Good afternoon.";
-    return "Good evening.";
+    if (hour < 18) return "Good afternoon.";
+    return "Good night.";
   }
 
   function runBootIntro() {
     if (!bootIntro) { document.body.classList.add("desktop-ready"); return; }
     const force = new URLSearchParams(location.search).get("hello") === "1";
     let seen = false;
-    try { seen = sessionStorage.getItem("rizvisions-intro-v106") === "1"; } catch {}
+    try { seen = sessionStorage.getItem("rizvisions-intro-v110") === "1"; } catch {}
     if (seen && !force) {
       bootIntro.remove();
       document.body.classList.remove("boot-pending");
@@ -2000,33 +2003,21 @@
       return;
     }
     if (bootGreeting) bootGreeting.textContent = greetingForNow();
+    if ($("#ncGreeting")) $("#ncGreeting").textContent = greetingForNow();
     document.body.classList.add("boot-active");
-    const paths = $$(".boot-hello-path", bootIntro);
-    const configs = [{ duration:720, delay:120 }, { duration:2350, delay:620 }];
-    paths.forEach((path,index)=>{
-      const length = path.getTotalLength();
-      path.style.strokeDasharray = String(length);
-      path.style.strokeDashoffset = String(length);
-      path.animate([
-        { strokeDashoffset:length, opacity:0 },
-        { strokeDashoffset:length * .985, opacity:1, offset:.06 },
-        { strokeDashoffset:0, opacity:1 }
-      ], { duration:configs[index]?.duration || 1800, delay:configs[index]?.delay || 0, easing:"cubic-bezier(.55,.02,.34,1)", fill:"forwards" });
-    });
+    requestAnimationFrame(()=>requestAnimationFrame(()=>bootIntro.classList.add("focused")));
     const finish = () => {
       if (!bootIntro?.isConnected) return;
       document.body.classList.add("desktop-ready");
       bootIntro.classList.add("leaving");
-      try { sessionStorage.setItem("rizvisions-intro-v106","1"); } catch {}
-      setTimeout(()=>{ bootIntro.remove(); document.body.classList.remove("boot-pending","boot-active"); }, 900);
+      try { sessionStorage.setItem("rizvisions-intro-v110","1"); } catch {}
+      setTimeout(()=>{ bootIntro.remove(); document.body.classList.remove("boot-pending","boot-active"); }, 700);
     };
-    bootSkip?.addEventListener("click", finish, { once:true });
-    setTimeout(()=>bootIntro.classList.add("greeting-visible"), 820);
-    setTimeout(finish, 3450);
+    setTimeout(finish, 2100);
   }
 
   function init(){
-    setWallpaper(state.wallpaper,false);renderDesktopPhotos();applyIconLayout();applyWidgetLayout();applyDisplayState();updateCurrentWidget();renderDock();updateClockAndCalendar();bindEvents();runBootIntro();discoverMediaLibrary();
+    setWallpaper(state.wallpaper,false);renderDesktopPhotos();applyIconLayout();applyDisplayState();renderDock();updateClockAndCalendar();bindEvents();runBootIntro();discoverMediaLibrary();
     dock.classList.toggle("no-magnify",!state.dockMagnification);
     setInterval(updateClockAndCalendar,30000);
   }
