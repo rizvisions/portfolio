@@ -24,11 +24,21 @@ test("frontend files do not contain Supabase service-role credentials", async ()
   frontend.forEach((source) => assert.doesNotMatch(source, forbidden));
 });
 
-test("public version labels agree on V10.8.1", async () => {
+test("public version labels agree on V10.9", async () => {
   const [readme, app] = await Promise.all([read("README.md"), read("app.js")]);
-  assert.match(readme, /V10\.8\.1/);
-  assert.match(app, /Rizvisions OS 10\.8\.1/);
-  assert.match(app, /Version 10\.8/);
+  assert.match(readme, /V10\.9/);
+  assert.match(app, /Rizvisions OS 10\.9/);
+  assert.match(app, /Version 10\.9/);
+});
+
+test("Notes ships only real local-notebook controls", async () => {
+  const app = await read("app.js");
+  const notesRenderer = app.slice(app.indexOf("function renderNotes"), app.indexOf("function renderTerminal"));
+  assert.match(app, /createStarterNotes/);
+  assert.match(app, /data-notes-new/);
+  assert.match(app, /data-notes-checklist/);
+  assert.match(app, /data-note-unlock-form/);
+  assert.doesNotMatch(notesRenderer, /Quick Notes|Search|Recently Deleted|Duplicate/);
 });
 
 test("admin placement recovery points to the placement migration", async () => {
