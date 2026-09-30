@@ -1993,7 +1993,14 @@
 
   function runBootIntro() {
     if (!bootIntro) { document.body.classList.add("desktop-ready"); return; }
-    const force = new URLSearchParams(location.search).get("hello") === "1";
+    const params = new URLSearchParams(location.search);
+    const force = params.get("hello") === "1";
+    if (params.get("intro") === "skip") {
+      bootIntro.remove();
+      document.body.classList.remove("boot-pending");
+      document.body.classList.add("desktop-ready");
+      return;
+    }
     let seen = false;
     try { seen = sessionStorage.getItem("rizvisions-intro-v110") === "1"; } catch {}
     if (seen && !force) {
