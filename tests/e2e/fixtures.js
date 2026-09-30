@@ -104,8 +104,7 @@ export async function installDeterministicMedia(page, { delay = 0 } = {}) {
 }
 
 export async function openDesktop(page) {
-  await page.goto("/?hello=1");
-  await page.locator("#bootSkip").click();
+  await page.goto("/?intro=skip");
   await expect(page.locator("body")).toHaveClass(/desktop-ready/);
 }
 
