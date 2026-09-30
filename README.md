@@ -1,6 +1,6 @@
-# Rizvisions macOS V10.9
+# Rizvisions macOS V10.10
 
-V10.9 begins the app-by-app functionality audit with a complete rebuild of Notes while preserving the Photos and window-system work from V10.8.
+V10.10 replaces the explanatory desktop clutter with a cleaner glass introduction and turns Terminal and Messages into intentional, interactive parts of the portfolio.
 
 ## Product baseline
 
@@ -10,7 +10,7 @@ V10.9 begins the app-by-app functionality audit with a complete rebuild of Notes
 - Rebuilt Notes as a functional local notebook with four starter notes, real selection and editing, new-note creation, text styles, checklists, and a locked Easter egg.
 - Added a native-style Calendar month app.
 - Added smooth Gilly-like restore/sort animations instead of teleporting desktop objects.
-- Added the handwritten Apple-style `hello` first-load experience, followed by a local-time greeting.
+- Added a short liquid-glass focus intro with a local-time greeting.
 - Rebuilt Photos around newest-first chronology, Photos / Videos filters, Years / Months / All Photos views, a smaller Featured strip, and a contained gallery viewer.
 - Added image capture metadata ingestion in Admin when metadata is available: capture date, camera, lens, dimensions, and selected EXIF fields.
 - Individual videos autoplay muted, loop, preserve the entire frame, remember the shared audio choice, and use a hover-only QuickTime-style control overlay.
@@ -32,6 +32,15 @@ V10.9 begins the app-by-app functionality audit with a complete rebuild of Notes
 - Centered newly opened apps inside the usable desktop area so they never start behind the Dock.
 - Centered Photos viewer titles independently of its buttons and made the full media filmstrip horizontally browseable.
 - Added an explicit fullscreen image canvas so portrait and landscape photos remain fully contained.
+
+## V10.10 desktop-app update
+
+- Removed the floating Currently / Parker walkthrough widget.
+- Preserved Good morning, Good afternoon, Good night, and Go to sleep through the intro and Notification Center.
+- Rebuilt Terminal with a white Rizvisions wordmark and a small, transparent scripted conversation layer.
+- Rebuilt Messages as an iMessage-style two-thread demo with a working composer and clear contact actions.
+- Let the Spotify embed fill its entire app canvas without the duplicated gray bands.
+- Corrected desktop-relative media centering and prevented late metadata from nudging an already correctly proportioned video.
 
 ## Release safeguards
 
@@ -59,4 +68,4 @@ New image uploads attempt to read embedded capture metadata in the browser befor
 4. Merge the approved pull request into `main`.
 5. GitHub Pages deploys the canonical `rizvisions.com` site.
 
-V10.9 does not require a Supabase migration. Notes stay private to each browser through local storage.
+V10.10 does not require a Supabase migration. Notes stay private to each browser through local storage.
