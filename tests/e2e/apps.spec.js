@@ -121,10 +121,26 @@ test("Terminal input stays visible and accepts commands", async ({ page }) => {
   await expect(input).toBeVisible();
   await input.fill("help");
   await input.press("Enter");
-  await expect(terminalWindow.locator(".terminal-output")).toContainText("about  work  photos");
+  await expect(terminalWindow.locator(".terminal-history")).toContainText("Ask me about Riz, Parker, Blue Specs");
+  await expect(terminalWindow.locator(".terminal-wordmark")).toBeVisible();
 
   const color = await input.evaluate((element) => getComputedStyle(element).color);
   expect(color).not.toBe("rgba(0, 0, 0, 0)");
+});
+
+test("Messages provides working threads, search, and a local composer", async ({ page }) => {
+  const messagesWindow = await openDesktopApp(page, "messages");
+  await expect(messagesWindow.locator('[data-message-thread="riz"]')).toHaveClass(/active/);
+  await expect(messagesWindow.locator("[data-chat-body]")).toContainText("welcome to Rizvisions");
+
+  await messagesWindow.locator('[data-message-thread="parker"]').click();
+  await expect(messagesWindow.locator("[data-chat-name]")).toHaveText("Parker");
+
+  const input = messagesWindow.locator("[data-message-input]");
+  await input.fill("Are you real?");
+  await input.press("Enter");
+  await expect(messagesWindow.locator("[data-chat-body]")).toContainText("Are you real?");
+  await expect(messagesWindow.locator("[data-chat-body]")).toContainText("Now back to work.");
 });
 
 test("Notes is a functional local notebook with starter notes and a locked Easter egg", async ({ page }) => {
