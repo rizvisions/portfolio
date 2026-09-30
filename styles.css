@@ -3674,3 +3674,5 @@ button.conversation.active { background: #087dff; color: #fff; }
 .mac-window:not(.media-window) .spotify-only { box-sizing: border-box; padding-top: 0; }
 .mac-window:not(.media-window) .spotify-only iframe { height: 100%; min-height: 100%; }
 .mac-window[data-app-window="spotify"] > .window-titlebar { color: #fff; }
+.mac-window[data-app-window="spotify"] > .window-titlebar { width: 100%; }
+.mac-window[data-app-window="spotify"] > .window-titlebar .traffic-lights { width: 126px; }
