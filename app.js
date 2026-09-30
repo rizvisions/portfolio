@@ -1771,6 +1771,7 @@
     $("[data-message-compose]",win)?.addEventListener("click",()=>{active="riz";$$('[data-message-thread]',win).forEach((item)=>item.classList.toggle("active",item.dataset.messageThread==="riz"));renderThread();input.focus();});
     $(".message-search",win)?.addEventListener("input",(event)=>{const query=event.target.value.trim().toLowerCase();$$('[data-message-thread]',win).forEach((button)=>{button.hidden=query&&!button.textContent.toLowerCase().includes(query);});});
     $("[data-message-form]",win).addEventListener("submit",(event)=>{event.preventDefault();const text=input.value.trim();if(!text)return;const threadId=active;threads[threadId].messages.push({side:"out",text});input.value="";renderThread();setTimeout(()=>{threads[threadId].messages.push({side:"in",text:threadId==="riz"?"Message received. This demo doesn’t send anything off your device.":"Noted. Now back to work."});if(active===threadId)renderThread();},480);});
+    input.addEventListener("keydown",(event)=>{if(event.key!=="Enter"||event.shiftKey)return;event.preventDefault();event.currentTarget.closest("form")?.requestSubmit();});
     renderThread();
   }
 
@@ -1998,7 +1999,7 @@
     if (params.get("intro") === "skip") {
       bootIntro.remove();
       document.body.classList.remove("boot-pending");
-      document.body.classList.add("desktop-ready");
+      document.body.classList.add("desktop-ready","intro-skipped");
       return;
     }
     let seen = false;
