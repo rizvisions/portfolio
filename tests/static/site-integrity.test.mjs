@@ -31,6 +31,20 @@ test("public version labels agree on V10.10", async () => {
   assert.match(app, /Version 10\.10/);
 });
 
+test("desktop loads directly without the retired hello intro", async () => {
+  const [html, app] = await Promise.all([read("index.html"), read("app.js")]);
+  assert.doesNotMatch(html, /bootIntro|boot-hello|class="boot-pending"/);
+  assert.doesNotMatch(app, /runBootIntro|rizvisions-intro/);
+});
+
+test("Terminal presents a finite command index instead of an AI prompt", async () => {
+  const app = await read("app.js");
+  assert.match(app, /COMMAND INDEX/);
+  assert.match(app, /This is a scripted portfolio terminal—not an AI chat/);
+  assert.match(app, /data-terminal-command="\$\{command\}"/);
+  assert.doesNotMatch(app, /Ask Rizvisions anything/);
+});
+
 test("Notes ships only real local-notebook controls", async () => {
   const app = await read("app.js");
   const notesRenderer = app.slice(app.indexOf("function renderNotes"), app.indexOf("function renderTerminal"));

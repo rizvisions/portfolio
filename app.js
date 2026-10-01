@@ -29,8 +29,6 @@
   const spotlightResults = $("#spotlightResults");
   const volumeSlider = $("#volumeSlider");
   const ccFocus = $("#ccFocus");
-  const bootIntro = $("#bootIntro");
-  const bootGreeting = $("#bootGreeting");
 
   const CONTENT = window.RIZVISIONS_CONTENT || { mediaLoading: true, allMedia: [], desktopPhotos: [], photoLibrary: [], projectMedia: {}, currentCards: [] };
   CONTENT.projectMedia ||= {};
@@ -1634,18 +1632,22 @@
         : `<div class="notes-editor-toolbar"><div class="notes-format-control"><button type="button" data-notes-format-toggle aria-label="Text style" aria-expanded="false">Aa</button><div class="notes-format-menu" hidden><button type="button" data-note-format="h1">Title</button><button type="button" data-note-format="h2">Heading</button><button type="button" data-note-format="div">Body</button><button type="button" data-note-format="pre">Monospaced</button></div></div><button type="button" data-notes-checklist aria-label="Make a checklist">☑</button><span></span></div><div class="notes-scroll"><div class="note-meta">${new Date(active.updatedAt).toLocaleString([], { month:"long", day:"numeric", year:"numeric", hour:"numeric", minute:"2-digit" })}</div><div class="note-editor-content" data-note-editor contenteditable="true" role="textbox" aria-multiline="true" aria-label="Note">${active.bodyHtml}</div></div>`;
     return `<div class="notes-app"><aside class="notes-folders"><div class="notes-sidebar-top" aria-hidden="true"></div><div class="notes-sidebar-label">On My Mac</div><div class="notes-group"><button type="button" class="active"><span class="notes-folder-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3.5 7.5h6l1.7 2H20.5v9.2a1.8 1.8 0 0 1-1.8 1.8H5.3a1.8 1.8 0 0 1-1.8-1.8V7.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M3.5 7.5V5.3c0-1 .8-1.8 1.8-1.8h4.1l1.8 2h7.5c1 0 1.8.8 1.8 1.8v2.2" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span><strong>Notes</strong><em>${notes.length}</em></button></div></aside><section class="notes-browser"><header class="notes-browser-toolbar"><div><strong>Notes</strong><small>${notes.length} ${notes.length === 1 ? "note" : "notes"}</small></div><div class="notes-toolbar-actions"><button type="button" class="notes-compose" data-notes-new aria-label="New note">✎</button></div></header><div class="notes-note-list">${noteRows}</div></section><main class="note-editor apple-note-editor">${editorBody}</main></div>`;
   }
-  function terminalWordmark(){
-    const glyphs={R:["████ ","█   █","████ ","█  █ ","█   █"],I:["█████","  █  ","  █  ","  █  ","█████"],Z:["█████","   █ ","  █  "," █   ","█████"],V:["█   █","█   █","█   █"," █ █ ","  █  "],S:["█████","█    ","█████","    █","█████"],O:[" ███ ","█   █","█   █","█   █"," ███ "],N:["█   █","██  █","█ █ █","█  ██","█   █"]};
-    return Array.from({length:5},(_,row)=>[..."RIZVISIONS"].map((letter)=>glyphs[letter][row]).join(" ")).join("\n");
-  }
-
   function renderTerminal(){return `<div class="terminal-shell">
     <div class="terminal-scroll">
-      <pre class="terminal-wordmark">${terminalWordmark()}</pre>
-      <div class="terminal-intro"><strong>Rizvisions OS 10.10</strong><span>Local, prewritten, and slightly nosy.</span><span>Ask about Riz, Parker, work, photos, or type “help”.</span></div>
+      <header class="terminal-brand">
+        <span class="terminal-brand-mark"><img src="assets/brand/rizvisions-eye-white.png" alt=""></span>
+        <div><small>RIZVISIONS OS</small><strong>RIZVISIONS</strong><span>COMMAND TERMINAL · BUILD 10.10</span></div>
+      </header>
+      <div class="terminal-intro"><strong>Choose a command or type one below.</strong><span>This is a scripted portfolio terminal—not an AI chat.</span></div>
+      <section class="terminal-command-menu" aria-label="Available commands">
+        <span>COMMAND INDEX</span>
+        <div class="terminal-command-grid">
+          ${["help","about","now","work","parker","blue-specs","whop","windsurf","photos","contact","open photos","clear"].map((command)=>`<button type="button" data-terminal-command="${command}">${command}</button>`).join("")}
+        </div>
+      </section>
       <div class="terminal-history" aria-live="polite"></div>
     </div>
-    <form class="terminal-input-row" data-terminal-form><span class="terminal-prompt">›</span><input class="terminal-input" autocomplete="off" spellcheck="false" placeholder="Ask Rizvisions anything…" aria-label="Ask Rizvisions"></form>
+    <form class="terminal-input-row" data-terminal-form><span class="terminal-prompt">›</span><input class="terminal-input" autocomplete="off" spellcheck="false" placeholder="Type a command…" aria-label="Terminal command"></form>
   </div>`;}
   function renderTrash(){return `<div class="empty-state"><div><img src="assets/icons/macos/trash.png?v=106" alt="Trash"><h2>Trash is Empty</h2><p>Old domains, failed ideas, embarrassing drafts, and abandoned businesses will eventually live here.</p></div></div>`;}
 
@@ -1737,25 +1739,26 @@
   }
 
   function terminalReply(query){
-    const text=query.toLowerCase();
-    if (/^(hi|hey|hello|yo|what'?s up|sup)[!?. ]*$/.test(text)) return "Good. How are you? I’m a website, so my day has been pretty consistent.";
-    if (text.includes("help")||text.includes("what can you do")) return "Ask me about Riz, Parker, Blue Specs, Whop, Windsurf, photos, work, or contact. You can also say “open photos”, “open work”, or “clear”.";
-    if (text.includes("who is riz")||text.includes("about riz")||text==="about") return "Riz Zaheer is a Chicago-based creative strategist, internet builder, photographer, and the person who made this slightly overcommitted desktop.";
-    if (text.includes("parker")) return "Parker is where Riz works across AI, ecommerce, GTM, customer conversations, product storytelling, and whatever else the week invents.";
-    if (text.includes("blue specs")||text.includes("bluespecs")) return "Blue Specs was the ecommerce business Riz built at 18: blue-light glasses, influencer deals, paid ads, support tickets, and a very fast education.";
-    if (text.includes("whop")||text.includes("wap")) return "Whop and WAP were Riz’s creator-economy chapter: reward programs, distribution systems, a 25K community, and more than $20K earned.";
-    if (text.includes("windsurf")) return "The Windsurf campaign generated 3.6M views and an extremely practical education in creator incentives, fraud controls, and content rules.";
-    if (text.includes("contact")||text.includes("reach")||text.includes("email")) return "LinkedIn is best for work. Instagram works for everything else. Open Messages for the links.";
-    if (text.includes("weather")) return "Look out the window. I don’t have that permission.";
-    if (text.includes("thank")) return "You’re welcome. I’ll be here pretending this is a real terminal.";
-    if (text.includes("how are you")) return "Running locally and feeling surprisingly conversational.";
-    return "I don’t know that one yet. Try asking about Riz, Parker, Blue Specs, work, photos, or how to get in touch.";
+    const text=query.toLowerCase().trim().replace(/_/g,"-");
+    if (text==="help"||text==="commands") return "Available commands:\nabout · now · work · parker · blue-specs · whop · windsurf · photos · contact\n\nApp controls:\nopen photos · open work · open parker · open spotify · open messages · open notes · clear";
+    if (["about","riz","who is riz","about riz"].includes(text)) return "Riz Zaheer is a Chicago-based creator and operator. Rizvisions is his permanent internet home for work, photography, projects, experiments, and the rest of his life.";
+    if (["now","currently","current"].includes(text)) return "Currently: working at Parker across GTM, customer conversations, product feedback, support, pricing, and storytelling—while continuing to build Rizvisions.";
+    if (text==="work"||text==="projects") return "The archive covers Parker, Blue Specs, creator-economy work through Whop, the Windsurf campaign, photography, and the projects that came before and after them.";
+    if (text==="parker") return "Parker is an AI creative-strategy platform for ecommerce teams. Riz works across GTM, demos, onboarding, customer research, support, pricing, and product feedback.";
+    if (["blue-specs","blue specs","bluespecs"].includes(text)) return "Blue Specs was the ecommerce business Riz built at 18: more than $40K in six months, a 60% margin, 244% ROAS, 50+ influencer contracts, and 200+ support tickets.";
+    if (["whop","wap","clip-curator","clip curator"].includes(text)) return "The Whop chapter included a creator rewards program, a 25K community, roughly $20K earned, and a trip to Whop HQ after winning its $3K in 30 Days competition.";
+    if (text==="windsurf") return "The Windsurf campaign generated 3.6M views through creator incentives and became a practical lesson in distribution, fraud controls, and content systems.";
+    if (text==="photos"||text==="photography") return "Photography is where Rizvisions started. The Photos app contains the growing visual archive; use “open photos” to jump there.";
+    if (["contact","reach","email"].includes(text)) return "LinkedIn is best for work. Instagram is best for everything else. Open Messages for direct links.";
+    return `Command not found: ${query}. Type “help” or choose a command from the index.`;
   }
 
   function wireTerminal(win){
     const input=$(".terminal-input",win),history=$(".terminal-history",win),scroll=$(".terminal-scroll",win),form=$("[data-terminal-form]",win);
-    const append=(role,text)=>{const entry=document.createElement("div");entry.className=`terminal-entry ${role}`;const label=document.createElement("span");label.textContent=role==="user"?"you":"rizvisions";const copy=document.createElement("p");copy.textContent=text;entry.append(label,copy);history.append(entry);scroll.scrollTop=scroll.scrollHeight;};
-    form.addEventListener("submit",(event)=>{event.preventDefault();const query=input.value.trim();if(!query)return;input.value="";if(query.toLowerCase()==="clear"){history.replaceChildren();return;}append("user",query);const lower=query.toLowerCase();const openMatch=lower.match(/(?:open|show)\s+(photos|work|parker|spotify|safari|messages|notes|about)/);if(openMatch){append("assistant",`Opening ${openMatch[1]}…`);setTimeout(()=>openApp(openMatch[1]),180);return;}append("assistant",terminalReply(query));});
+    const append=(role,text)=>{const entry=document.createElement("div");entry.className=`terminal-entry ${role}`;const label=document.createElement("span");label.textContent=role==="user"?"command":"output";const copy=document.createElement("p");copy.textContent=text;entry.append(label,copy);history.append(entry);scroll.scrollTop=scroll.scrollHeight;};
+    const runCommand=(query)=>{const command=query.trim();if(!command)return;input.value="";if(command.toLowerCase()==="clear"){history.replaceChildren();return;}append("user",command);const lower=command.toLowerCase();const openMatch=lower.match(/^(?:open|show)\s+(photos|work|parker|spotify|safari|messages|notes|about)$/);if(openMatch){append("assistant",`Opening ${openMatch[1]}…`);setTimeout(()=>openApp(openMatch[1]),180);return;}append("assistant",terminalReply(command));};
+    form.addEventListener("submit",(event)=>{event.preventDefault();runCommand(input.value);});
+    $$('[data-terminal-command]',win).forEach((button)=>button.addEventListener("click",()=>runCommand(button.dataset.terminalCommand)));
     requestAnimationFrame(()=>input.focus());
   }
 
@@ -1992,40 +1995,9 @@
     return "Good night.";
   }
 
-  function runBootIntro() {
-    if (!bootIntro) { document.body.classList.add("desktop-ready"); return; }
-    const params = new URLSearchParams(location.search);
-    const force = params.get("hello") === "1";
-    if (params.get("intro") === "skip") {
-      bootIntro.remove();
-      document.body.classList.remove("boot-pending");
-      document.body.classList.add("desktop-ready","intro-skipped");
-      return;
-    }
-    let seen = false;
-    try { seen = sessionStorage.getItem("rizvisions-intro-v110") === "1"; } catch {}
-    if (seen && !force) {
-      bootIntro.remove();
-      document.body.classList.remove("boot-pending");
-      document.body.classList.add("desktop-ready");
-      return;
-    }
-    if (bootGreeting) bootGreeting.textContent = greetingForNow();
-    if ($("#ncGreeting")) $("#ncGreeting").textContent = greetingForNow();
-    document.body.classList.add("boot-active");
-    requestAnimationFrame(()=>requestAnimationFrame(()=>bootIntro.classList.add("focused")));
-    const finish = () => {
-      if (!bootIntro?.isConnected) return;
-      document.body.classList.add("desktop-ready");
-      bootIntro.classList.add("leaving");
-      try { sessionStorage.setItem("rizvisions-intro-v110","1"); } catch {}
-      setTimeout(()=>{ bootIntro.remove(); document.body.classList.remove("boot-pending","boot-active"); }, 700);
-    };
-    setTimeout(finish, 2100);
-  }
-
   function init(){
-    setWallpaper(state.wallpaper,false);renderDesktopPhotos();applyIconLayout();applyDisplayState();renderDock();updateClockAndCalendar();bindEvents();runBootIntro();discoverMediaLibrary();
+    document.body.classList.add("desktop-ready");
+    setWallpaper(state.wallpaper,false);renderDesktopPhotos();applyIconLayout();applyDisplayState();renderDock();updateClockAndCalendar();bindEvents();discoverMediaLibrary();
     dock.classList.toggle("no-magnify",!state.dockMagnification);
     setInterval(updateClockAndCalendar,30000);
   }

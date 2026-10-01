@@ -119,10 +119,14 @@ test("Terminal input stays visible and accepts commands", async ({ page }) => {
   const input = terminalWindow.locator(".terminal-input");
 
   await expect(input).toBeVisible();
+  await expect(terminalWindow.locator(".terminal-brand")).toBeVisible();
+  await expect(terminalWindow.locator(".terminal-command-grid")).toContainText("blue-specs");
   await input.fill("help");
   await input.press("Enter");
-  await expect(terminalWindow.locator(".terminal-history")).toContainText("Ask me about Riz, Parker, Blue Specs");
-  await expect(terminalWindow.locator(".terminal-wordmark")).toBeVisible();
+  await expect(terminalWindow.locator(".terminal-history")).toContainText("Available commands");
+
+  await terminalWindow.locator('[data-terminal-command="parker"]').click();
+  await expect(terminalWindow.locator(".terminal-history")).toContainText("AI creative-strategy platform");
 
   const color = await input.evaluate((element) => getComputedStyle(element).color);
   expect(color).not.toBe("rgba(0, 0, 0, 0)");
