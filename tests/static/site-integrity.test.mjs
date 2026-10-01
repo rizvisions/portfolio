@@ -31,18 +31,22 @@ test("public version labels agree on V10.10", async () => {
   assert.match(app, /Version 10\.10/);
 });
 
-test("desktop loads directly without the retired hello intro", async () => {
+test("desktop uses a text-free blur-to-focus intro", async () => {
   const [html, app] = await Promise.all([read("index.html"), read("app.js")]);
+  assert.match(html, /class="focus-pending"/);
+  assert.match(html, /id="focusIntro"/);
+  assert.match(app, /function playFocusIntro/);
   assert.doesNotMatch(html, /bootIntro|boot-hello|class="boot-pending"/);
   assert.doesNotMatch(app, /runBootIntro|rizvisions-intro/);
 });
 
-test("Terminal presents a finite command index instead of an AI prompt", async () => {
+test("Terminal keeps a text-only natural-language interface", async () => {
   const app = await read("app.js");
-  assert.match(app, /COMMAND INDEX/);
-  assert.match(app, /This is a scripted portfolio terminal—not an AI chat/);
-  assert.match(app, /data-terminal-command="\$\{command\}"/);
-  assert.doesNotMatch(app, /Ask Rizvisions anything/);
+  assert.match(app, /terminal-wordmark/);
+  assert.match(app, /Local portfolio archive/);
+  assert.match(app, /what does Riz do/);
+  assert.match(app, /natural-language questions/);
+  assert.doesNotMatch(app, /terminal-command-grid|data-terminal-command|Ask Rizvisions anything/);
 });
 
 test("Notes ships only real local-notebook controls", async () => {

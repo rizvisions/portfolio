@@ -29,6 +29,7 @@
   const spotlightResults = $("#spotlightResults");
   const volumeSlider = $("#volumeSlider");
   const ccFocus = $("#ccFocus");
+  const focusIntro = $("#focusIntro");
 
   const CONTENT = window.RIZVISIONS_CONTENT || { mediaLoading: true, allMedia: [], desktopPhotos: [], photoLibrary: [], projectMedia: {}, currentCards: [] };
   CONTENT.projectMedia ||= {};
@@ -943,6 +944,7 @@
     setWallpaper(state.wallpaper,false);
     renderDesktopPhotos(); applyIconLayout(); applyDisplayState(); resetLayout(); renderDock(); saveState();
     showToast("Rizvisions reset");
+    playFocusIntro();
   }
 
   function sortIcons() {
@@ -1632,22 +1634,19 @@
         : `<div class="notes-editor-toolbar"><div class="notes-format-control"><button type="button" data-notes-format-toggle aria-label="Text style" aria-expanded="false">Aa</button><div class="notes-format-menu" hidden><button type="button" data-note-format="h1">Title</button><button type="button" data-note-format="h2">Heading</button><button type="button" data-note-format="div">Body</button><button type="button" data-note-format="pre">Monospaced</button></div></div><button type="button" data-notes-checklist aria-label="Make a checklist">☑</button><span></span></div><div class="notes-scroll"><div class="note-meta">${new Date(active.updatedAt).toLocaleString([], { month:"long", day:"numeric", year:"numeric", hour:"numeric", minute:"2-digit" })}</div><div class="note-editor-content" data-note-editor contenteditable="true" role="textbox" aria-multiline="true" aria-label="Note">${active.bodyHtml}</div></div>`;
     return `<div class="notes-app"><aside class="notes-folders"><div class="notes-sidebar-top" aria-hidden="true"></div><div class="notes-sidebar-label">On My Mac</div><div class="notes-group"><button type="button" class="active"><span class="notes-folder-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3.5 7.5h6l1.7 2H20.5v9.2a1.8 1.8 0 0 1-1.8 1.8H5.3a1.8 1.8 0 0 1-1.8-1.8V7.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M3.5 7.5V5.3c0-1 .8-1.8 1.8-1.8h4.1l1.8 2h7.5c1 0 1.8.8 1.8 1.8v2.2" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span><strong>Notes</strong><em>${notes.length}</em></button></div></aside><section class="notes-browser"><header class="notes-browser-toolbar"><div><strong>Notes</strong><small>${notes.length} ${notes.length === 1 ? "note" : "notes"}</small></div><div class="notes-toolbar-actions"><button type="button" class="notes-compose" data-notes-new aria-label="New note">✎</button></div></header><div class="notes-note-list">${noteRows}</div></section><main class="note-editor apple-note-editor">${editorBody}</main></div>`;
   }
+  function terminalWordmark(){
+    const glyphs={R:["████ ","█   █","████ ","█  █ ","█   █"],I:["█████","  █  ","  █  ","  █  ","█████"],Z:["█████","   █ ","  █  "," █   ","█████"],V:["█   █","█   █","█   █"," █ █ ","  █  "],S:["█████","█    ","█████","    █","█████"],O:[" ███ ","█   █","█   █","█   █"," ███ "],N:["█   █","██  █","█ █ █","█  ██","█   █"]};
+    return Array.from({length:5},(_,row)=>[..."RIZVISIONS"].map((letter)=>glyphs[letter][row]).join(" ")).join("\n");
+  }
+
   function renderTerminal(){return `<div class="terminal-shell">
     <div class="terminal-scroll">
-      <header class="terminal-brand">
-        <span class="terminal-brand-mark"><img src="assets/brand/rizvisions-eye-white.png" alt=""></span>
-        <div><small>RIZVISIONS OS</small><strong>RIZVISIONS</strong><span>COMMAND TERMINAL · BUILD 10.10</span></div>
-      </header>
-      <div class="terminal-intro"><strong>Choose a command or type one below.</strong><span>This is a scripted portfolio terminal—not an AI chat.</span></div>
-      <section class="terminal-command-menu" aria-label="Available commands">
-        <span>COMMAND INDEX</span>
-        <div class="terminal-command-grid">
-          ${["help","about","now","work","parker","blue-specs","whop","windsurf","photos","contact","open photos","clear"].map((command)=>`<button type="button" data-terminal-command="${command}">${command}</button>`).join("")}
-        </div>
-      </section>
+      <pre class="terminal-wordmark" aria-label="Rizvisions">${terminalWordmark()}</pre>
+      <div class="terminal-intro"><strong>Rizvisions Terminal 10.10</strong><span>Local portfolio archive · 14 topics indexed</span><span>Type naturally, or enter <b>help</b> to see what this build understands.</span></div>
+      <pre class="terminal-suggestions">Try:  “what does Riz do?”   “tell me about Parker”   “open photos”</pre>
       <div class="terminal-history" aria-live="polite"></div>
     </div>
-    <form class="terminal-input-row" data-terminal-form><span class="terminal-prompt">›</span><input class="terminal-input" autocomplete="off" spellcheck="false" placeholder="Type a command…" aria-label="Terminal command"></form>
+    <form class="terminal-input-row" data-terminal-form><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" spellcheck="false" placeholder="type a question or command" aria-label="Terminal input"></form>
   </div>`;}
   function renderTrash(){return `<div class="empty-state"><div><img src="assets/icons/macos/trash.png?v=106" alt="Trash"><h2>Trash is Empty</h2><p>Old domains, failed ideas, embarrassing drafts, and abandoned businesses will eventually live here.</p></div></div>`;}
 
@@ -1739,26 +1738,37 @@
   }
 
   function terminalReply(query){
-    const text=query.toLowerCase().trim().replace(/_/g,"-");
-    if (text==="help"||text==="commands") return "Available commands:\nabout · now · work · parker · blue-specs · whop · windsurf · photos · contact\n\nApp controls:\nopen photos · open work · open parker · open spotify · open messages · open notes · clear";
-    if (["about","riz","who is riz","about riz"].includes(text)) return "Riz Zaheer is a Chicago-based creator and operator. Rizvisions is his permanent internet home for work, photography, projects, experiments, and the rest of his life.";
-    if (["now","currently","current"].includes(text)) return "Currently: working at Parker across GTM, customer conversations, product feedback, support, pricing, and storytelling—while continuing to build Rizvisions.";
-    if (text==="work"||text==="projects") return "The archive covers Parker, Blue Specs, creator-economy work through Whop, the Windsurf campaign, photography, and the projects that came before and after them.";
-    if (text==="parker") return "Parker is an AI creative-strategy platform for ecommerce teams. Riz works across GTM, demos, onboarding, customer research, support, pricing, and product feedback.";
-    if (["blue-specs","blue specs","bluespecs"].includes(text)) return "Blue Specs was the ecommerce business Riz built at 18: more than $40K in six months, a 60% margin, 244% ROAS, 50+ influencer contracts, and 200+ support tickets.";
-    if (["whop","wap","clip-curator","clip curator"].includes(text)) return "The Whop chapter included a creator rewards program, a 25K community, roughly $20K earned, and a trip to Whop HQ after winning its $3K in 30 Days competition.";
-    if (text==="windsurf") return "The Windsurf campaign generated 3.6M views through creator incentives and became a practical lesson in distribution, fraud controls, and content systems.";
-    if (text==="photos"||text==="photography") return "Photography is where Rizvisions started. The Photos app contains the growing visual archive; use “open photos” to jump there.";
-    if (["contact","reach","email"].includes(text)) return "LinkedIn is best for work. Instagram is best for everything else. Open Messages for direct links.";
-    return `Command not found: ${query}. Type “help” or choose a command from the index.`;
+    const text=query.toLowerCase().trim().replace(/[’']/g,"'").replace(/[_-]+/g," ").replace(/[^a-z0-9$+?.' ]+/g," ").replace(/\s+/g," ");
+    const has=(...terms)=>terms.some((term)=>text.includes(term));
+    if (has("help","commands","what can you do","what do you know","topics")) return "I recognize natural-language questions about:\n\n  Riz / about       current work       Parker\n  career history    Rewards Network    Databricks\n  Blue Specs        Whop / Clip Curator / WAP\n  Windsurf          photography        creator work\n  Chicago           Loyola             contact\n  this website\n\nI can also open: photos, work, Parker, Spotify, Safari, Messages, Notes, or About.\nExamples: “what does Riz do?”, “where did he go to school?”, “tell me about Blue Specs”, “open photos”.\nUse clear to erase this session.";
+    if (/^(hi|hey|hello|yo|sup|what'?s up)[?.! ]*$/.test(text)) return "Hey. Welcome to Rizvisions.";
+    if (has("how are you","how's it going","hows it going")) return "Running locally and doing fine. Thanks for asking.";
+    if (has("thank","thanks")) return "You’re welcome.";
+    if (has("parker")) return "Parker is an AI creative-strategy platform for ecommerce teams. Riz works across GTM, demos, onboarding, customer research, support, pricing, and product feedback.";
+    if (has("blue specs","bluespecs")) return "Blue Specs was the ecommerce business Riz built at 18: more than $40K in six months, a 60% margin, 244% ROAS, 50+ influencer contracts, and 200+ support tickets.";
+    if (has("whop","clip curator","wap","creator rewards")) return "The Whop chapter included Clip Curator, creator reward programs, a 25K community, roughly $20K earned, and a trip to Whop HQ after winning its $3K in 30 Days competition.";
+    if (has("windsurf")) return "The Windsurf campaign generated 3.6M views through creator incentives and became a practical lesson in distribution, fraud controls, and content systems.";
+    if (has("rewards network","restaurant sales","first sales job")) return "At Rewards Network, Riz became the top SDR, averaged 11 closed deals per month, and contributed roughly $1.04M in incremental annual revenue.";
+    if (has("databricks","data bricks")) return "At Databricks, Riz worked as a Solutions Specialist, built roughly $750K in ARR pipeline, and finished as the number-one outbound performer over his final 90 days.";
+    if (has("photo","photography","camera")) return "Photography is where Rizvisions started. The Photos app contains the growing visual archive; say “open photos” to jump there.";
+    if (has("tiktok","creator","content","views","social media")) return "Riz is a creator with more than 30M lifetime short-form views. His personal work spans photography, video, lifestyle, internet experiments, and business content.";
+    if (has("chicago","where is riz","where are you","based","location")) return "Riz is based in Chicago.";
+    if (has("loyola","college","university","school","education")) return "Riz graduated cum laude from Loyola University Chicago in 2024 with a BBA in Marketing and Entrepreneurship.";
+    if (has("contact","reach","email","linkedin","instagram")) return "LinkedIn is best for work. Instagram is best for everything else. Say “open messages” for direct links.";
+    if (has("rizvisions","this site","this website","website")) return "Rizvisions is Riz’s permanent internet home: a catch-all for work, photography, old businesses, current projects, personal artifacts, and whatever comes next.";
+    if (has("current","currently","right now","now","working on")) return "Currently: working at Parker across GTM, customer conversations, product feedback, support, pricing, and storytelling—while continuing to build Rizvisions.";
+    if (has("career","resume","job history","work history","where has","experience")) return "Riz’s path runs through entrepreneurship, creator programs, Rewards Network, Databricks, and now Parker. Say a company name for the shorter version of that chapter.";
+    if (has("what does riz do","who is riz","about riz","tell me about riz","who are you","about","riz")) return "Riz Zaheer is a Chicago-based creator and operator. Rizvisions is his permanent internet home for work, photography, projects, experiments, and the rest of his life.";
+    if (has("work","projects","portfolio")) return "The archive covers Parker, Blue Specs, creator-economy work through Whop, the Windsurf campaign, photography, and the projects that came before and after them.";
+    if (has("weather")) return "I don’t have live weather access. The menu bar is committed to the bit, though.";
+    return "That isn’t in the local text bank yet. Type help to see the topics and example phrasing I recognize.";
   }
 
   function wireTerminal(win){
     const input=$(".terminal-input",win),history=$(".terminal-history",win),scroll=$(".terminal-scroll",win),form=$("[data-terminal-form]",win);
-    const append=(role,text)=>{const entry=document.createElement("div");entry.className=`terminal-entry ${role}`;const label=document.createElement("span");label.textContent=role==="user"?"command":"output";const copy=document.createElement("p");copy.textContent=text;entry.append(label,copy);history.append(entry);scroll.scrollTop=scroll.scrollHeight;};
-    const runCommand=(query)=>{const command=query.trim();if(!command)return;input.value="";if(command.toLowerCase()==="clear"){history.replaceChildren();return;}append("user",command);const lower=command.toLowerCase();const openMatch=lower.match(/^(?:open|show)\s+(photos|work|parker|spotify|safari|messages|notes|about)$/);if(openMatch){append("assistant",`Opening ${openMatch[1]}…`);setTimeout(()=>openApp(openMatch[1]),180);return;}append("assistant",terminalReply(command));};
+    const append=(role,text)=>{const entry=document.createElement("div");entry.className=`terminal-entry ${role}`;const label=document.createElement("span");label.textContent=role==="user"?"❯":"●";const copy=document.createElement("p");copy.textContent=text;entry.append(label,copy);history.append(entry);scroll.scrollTop=scroll.scrollHeight;};
+    const runCommand=(query)=>{const command=query.trim();if(!command)return;input.value="";if(command.toLowerCase()==="clear"){history.replaceChildren();return;}append("user",command);const lower=command.toLowerCase();const openMatch=lower.match(/\b(?:open|show)\s+(photos|work|parker|spotify|safari|messages|notes|about)\b/);if(openMatch){append("assistant",`Opening ${openMatch[1]}…`);setTimeout(()=>openApp(openMatch[1]),180);return;}append("assistant",terminalReply(command));};
     form.addEventListener("submit",(event)=>{event.preventDefault();runCommand(input.value);});
-    $$('[data-terminal-command]',win).forEach((button)=>button.addEventListener("click",()=>runCommand(button.dataset.terminalCommand)));
     requestAnimationFrame(()=>input.focus());
   }
 
@@ -1995,9 +2005,33 @@
     return "Good night.";
   }
 
+  let focusIntroTimer = null;
+  function playFocusIntro() {
+    if (!focusIntro) { document.body.classList.add("desktop-ready"); return; }
+    const params = new URLSearchParams(location.search);
+    if (params.get("intro") === "skip" || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      clearTimeout(focusIntroTimer);
+      focusIntro.hidden = true;
+      document.body.classList.remove("focus-pending");
+      document.body.classList.add("desktop-ready");
+      return;
+    }
+    clearTimeout(focusIntroTimer);
+    focusIntro.hidden = false;
+    focusIntro.classList.remove("leaving");
+    document.body.classList.remove("desktop-ready");
+    document.body.classList.add("focus-pending");
+    void focusIntro.offsetWidth;
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      document.body.classList.remove("focus-pending");
+      document.body.classList.add("desktop-ready");
+      focusIntro.classList.add("leaving");
+    }));
+    focusIntroTimer = setTimeout(()=>{ focusIntro.hidden = true; }, 1050);
+  }
+
   function init(){
-    document.body.classList.add("desktop-ready");
-    setWallpaper(state.wallpaper,false);renderDesktopPhotos();applyIconLayout();applyDisplayState();renderDock();updateClockAndCalendar();bindEvents();discoverMediaLibrary();
+    setWallpaper(state.wallpaper,false);renderDesktopPhotos();applyIconLayout();applyDisplayState();renderDock();updateClockAndCalendar();bindEvents();playFocusIntro();discoverMediaLibrary();
     dock.classList.toggle("no-magnify",!state.dockMagnification);
     setInterval(updateClockAndCalendar,30000);
   }

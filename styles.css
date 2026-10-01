@@ -1671,6 +1671,28 @@ body.desktop-ready .desktop-item:nth-child(11) { transition-delay: .35s; }
 body.desktop-ready .desktop-item:nth-child(12) { transition-delay: .38s; }
 body.desktop-ready .dock-wrap { transition-delay: .2s; }
 
+/* A content-free liquid-glass focus transition. No logo, card, or greeting. */
+.focus-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  background:
+    radial-gradient(circle at 46% 42%,rgba(255,255,255,.3),transparent 48%),
+    rgba(241,244,246,.18);
+  backdrop-filter: blur(30px) saturate(145%);
+  -webkit-backdrop-filter: blur(30px) saturate(145%);
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity .95s cubic-bezier(.2,.75,.2,1), backdrop-filter 1.05s ease, -webkit-backdrop-filter 1.05s ease;
+}
+.focus-intro.leaving {
+  opacity: 0;
+  pointer-events: none;
+  backdrop-filter: blur(0) saturate(100%);
+  -webkit-backdrop-filter: blur(0) saturate(100%);
+}
+body.focus-pending #os { opacity:.7; transform:scale(1.025); filter:blur(22px) saturate(.85); }
+
 /* Desktop defaults now form a centered 4 × 3 field rather than leaning left. */
 .desktop-item { will-change: left, top, transform, opacity; }
 
@@ -3527,37 +3549,28 @@ button.conversation.active { background: #087dff; color: #fff; }
 .message-field input { flex: 1; min-width: 0; height: 100%; padding: 0 11px; border: 0; outline: 0; background: transparent; }
 .message-field button { width: 27px; height: 27px; border: 0; border-radius: 50%; background: #087dff; color: #fff; font-weight: 800; cursor: pointer; }
 
-/* Terminal is an explicit command surface, not a fake LLM. */
-.terminal-shell { background: radial-gradient(circle at 25% 0,rgba(65,65,72,.24),transparent 34%),#09090a; color: #f7f7f7; font-size: 12px; }
-.terminal-scroll { flex: 1; min-height: 0; overflow: auto; padding: 72px 24px 24px; }
-.terminal-brand { display:flex; align-items:center; gap:17px; margin-bottom:24px; }
-.terminal-brand-mark { width:58px; height:58px; flex:0 0 58px; display:grid; place-items:center; border:1px solid rgba(255,255,255,.16); border-radius:17px; background:linear-gradient(145deg,#28282d,#101012); box-shadow:0 14px 34px rgba(0,0,0,.38),inset 0 1px rgba(255,255,255,.08); }
-.terminal-brand-mark img { width:39px; height:39px; object-fit:contain; }
-.terminal-brand > div { min-width:0; display:grid; }
-.terminal-brand small { margin-bottom:2px; color:#8a8a92; font-size:9px; font-weight:760; letter-spacing:.2em; }
-.terminal-brand strong { font:800 clamp(29px,5vw,52px)/.9 -apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif; letter-spacing:-.065em; text-shadow:0 0 32px rgba(255,255,255,.12); }
-.terminal-brand span { margin-top:7px; color:#72727b; font-size:9px; letter-spacing:.14em; }
-.terminal-intro { display:grid; gap:4px; margin-bottom:18px; color:#8f8f98; }
-.terminal-intro strong { color:#fff; font-size:13px; }
-.terminal-command-menu { display:grid; gap:10px; margin-bottom:24px; }
-.terminal-command-menu > span { color:#6f6f78; font-size:9px; font-weight:760; letter-spacing:.15em; }
-.terminal-command-grid { display:flex; flex-wrap:wrap; gap:7px; }
-.terminal-command-grid button { border:1px solid rgba(255,255,255,.13); border-radius:8px; padding:6px 9px; background:rgba(255,255,255,.045); color:#d8d8dd; font:inherit; font-size:10.5px; cursor:pointer; transition:border-color .14s ease,background .14s ease,color .14s ease,transform .14s ease; }
-.terminal-command-grid button:hover { border-color:rgba(255,255,255,.3); background:rgba(255,255,255,.1); color:#fff; transform:translateY(-1px); }
-.terminal-command-grid button:active { transform:translateY(0); }
-.terminal-history { display:grid; gap:13px; padding-top:17px; border-top:1px solid rgba(255,255,255,.08); }
-.terminal-entry { display: grid; grid-template-columns: 76px minmax(0,1fr); gap: 11px; line-height: 1.5; }
-.terminal-entry > span { color: #6f6f76; text-transform: uppercase; font-size: 9px; letter-spacing: .1em; padding-top: 3px; }
-.terminal-entry p { margin: 0; color: #dedee2; white-space: pre-wrap; }
-.terminal-entry.user p { color: #fff; }
-.terminal-input-row { flex: 0 0 54px; margin: 0; padding: 9px 16px 12px; border-top: 1px solid rgba(255,255,255,.1); background: #111113; }
-.terminal-prompt { margin-right: 9px; color: #fff; font-size: 18px; }
+/* A text-only terminal modeled after modern coding assistants. */
+.terminal-shell { background:#0b0b0c; color:#f4f4f5; font:12.5px/1.55 "SFMono-Regular",Menlo,Monaco,Consolas,monospace; }
+.terminal-scroll { flex:1; min-height:0; overflow:auto; padding:72px 22px 24px; }
+.terminal-wordmark { max-width:100%; margin:0 0 21px; overflow:auto hidden; color:#fff; font:700 clamp(6px,.82vw,9px)/1.08 "SFMono-Regular",Menlo,Monaco,Consolas,monospace; letter-spacing:-.075em; white-space:pre; text-shadow:0 0 24px rgba(255,255,255,.09); }
+.terminal-intro { display:grid; gap:2px; margin-bottom:15px; color:#8e8e95; }
+.terminal-intro strong { color:#f5f5f7; font-weight:650; }
+.terminal-intro b { color:#d9d9dc; font-weight:600; }
+.terminal-suggestions { margin:0 0 22px; padding:10px 12px; overflow:auto hidden; border-left:2px solid #5e5e66; background:rgba(255,255,255,.025); color:#8c8c94; font:inherit; white-space:pre; }
+.terminal-history { display:grid; gap:13px; }
+.terminal-entry { display:grid; grid-template-columns:18px minmax(0,1fr); gap:7px; line-height:1.55; }
+.terminal-entry > span { color:#777780; padding-top:1px; font-size:12px; }
+.terminal-entry.user > span,.terminal-entry.user p { color:#fff; }
+.terminal-entry.assistant > span { color:#a9a9af; }
+.terminal-entry p { margin:0; color:#d3d3d7; white-space:pre-wrap; }
+.terminal-input-row { flex:0 0 52px; margin:0; padding:8px 16px 11px; border-top:1px solid rgba(255,255,255,.1); background:#0f0f11; }
+.terminal-prompt { margin-right:9px; color:#a8e6b8; font-size:11px; }
 .terminal-input { min-width: 0; }
 .terminal-input::placeholder { color: #68686f; }
 
-/* A compact title lane keeps native window controls clear of Spotify's UI. */
-.mac-window:not(.media-window) .spotify-only { box-sizing:border-box; padding-top:56px; background:#535353; }
+/* Spotify stays flush; its own top breathing room carries the window controls. */
+.mac-window:not(.media-window) .spotify-only { box-sizing:border-box; padding-top:0; background:#121212; }
 .mac-window:not(.media-window) .spotify-only iframe { height:100%; min-height:100%; }
 .mac-window[data-app-window="spotify"] > .window-titlebar { color: #fff; }
-.mac-window[data-app-window="spotify"] > .window-titlebar { width: 100%; }
+.mac-window[data-app-window="spotify"] > .window-titlebar { width:100%; height:46px; }
 .mac-window[data-app-window="spotify"] > .window-titlebar .traffic-lights { width: 126px; }
