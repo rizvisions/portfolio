@@ -47,3 +47,26 @@ It also recognizes greetings, how-are-you questions, short replies such as `I'm 
 - Tab: complete commands and app names. Ambiguous prefixes show the available completions.
 
 Unknown questions receive a topic suggestion. The interpreter does not invent answers or fetch live information. Closing the window ends the session and its command history.
+
+## Global Thermonuclear War campaign
+
+`war` or game-menu option `3` opens an original 18-region territory game. `war easy` adds two reinforcements to your income; `war hard` adds two to the computer’s. Standard mode uses equal rules and budgets.
+
+Win by capturing WOPR’s HQ in China (`CH`) or controlling 12 regions. Your HQ is `US`. The world map shows ownership and troop counts, while dotted routes show allowed movements. Alaska–Siberia is a wraparound connection. Green regions belong to you; amber belongs to WOPR; dim green is neutral.
+
+1. Deploy all reinforcements to regions you own. First-turn example: `deploy CA 4`.
+2. Attack a neighboring enemy or neutral region: `attack CA EU 6`.
+3. Transfer troops between your regions: `move US CA 3`.
+4. Type `end` to give WOPR its turn. It reinforces, expands, transfers interior troops toward its borders, and protects its HQ.
+
+Every region retains one guard. Armies can move once per turn, so arriving troops cannot immediately attack onward. You get four move orders per turn. Income is three armies, plus one per three regions and bonuses for controlling a complete continent: Americas +3, Europe +2, Africa +2, Asia +3, Pacific +2.
+
+Combat is deterministic. Attackers remove 70% of their number from the defending force, rounded down. Defenders remove 60% of their number from the attacking force, rounded down with a minimum of one. A territory is captured when all defenders are eliminated and attackers survive. Surviving attackers return when the attack fails. These are fictional game mechanics.
+
+Click your region to prepare a deployment. Once deployment is complete, select a source and then an adjacent target to prepare an attack or transfer. You may edit the troop count before pressing Enter. `inspect [code]` lists a region’s borders; `rules` shows the complete manual.
+
+`strike CH` requests the nuclear ending. `confirm strike` triggers a launch and WOPR’s retaliation: DEFCON 1, mutual destruction, no winner. `cancel` withdraws the request. Nuclear escalation is a deliberate losing branch; the conventional campaign can be won.
+
+`restart` starts a fresh campaign, `exit` or Escape disconnects. A campaign ends after 40 rounds if neither side has won. Game state lasts for the current Terminal session.
+
+Reference mechanics: [War.app gameplay basics](https://war.app/wiki/Gameplay_Basics). This implementation uses an original map, combat model, AI, rules, and visual assets.

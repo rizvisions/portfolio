@@ -1636,11 +1636,9 @@
   }
   function terminalWordmark(){
     const glyphs={R:["#### ","#   #","#### ","#  # ","#   #"],I:["#####","  #  ","  #  ","  #  ","#####"],Z:["#####","   # ","  #  "," #   ","#####"],V:["#   #","#   #","#   #"," # # ","  #  "],S:["#####","#    ","#####","    #","#####"],O:[" ### ","#   #","#   #","#   #"," ### "],N:["#   #","##  #","# # #","#  ##","#   #"]};
-    const face=Array.from({length:5},(_,row)=>" ".repeat(4-row)+[..."RIZVISIONS"].map(letter=>glyphs[letter][row]).join(" "));
-    const width=Math.max(...face.map(row=>row.length))+3;
-    const canvas=Array.from({length:8},()=>Array(width).fill(" "));
-    for(let depth=3;depth>=0;depth--)face.forEach((line,y)=>[...line].forEach((char,x)=>{if(char!==" ")canvas[y+depth][x+depth]=depth===0?"#":depth===3?".":"/";}));
-    return canvas.map(row=>row.join("").trimEnd()).join("\n");
+    const face=Array.from({length:5},(_,row)=>[..."RIZVISIONS"].map(letter=>glyphs[letter][row]).join("   ")).join("\n");
+    // The shadow is a separate text layer so it never fills the letter counters.
+    return `<span class="terminal-wordmark-shadow" aria-hidden="true">${face}</span><span class="terminal-wordmark-face">${face}</span>`;
   }
 
   function renderTerminal(){return `<div class="terminal-shell">
@@ -1650,6 +1648,7 @@
       <pre class="terminal-suggestions">Try: “what does Riz do?” / “tell me about Parker”
      “shall we play a game?”</pre></div>
       <div class="terminal-link-status" hidden>WOPR // RIZVISIONS CONNECTION <span>ONLINE</span></div>
+      <section class="terminal-war-panel" hidden aria-label="Territory campaign"></section>
       <div class="terminal-history" role="log" aria-live="polite"></div>
     </div>
     <form class="terminal-input-row" data-terminal-form><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" spellcheck="false" placeholder="type a question or command" aria-label="Terminal input"></form>
@@ -1746,16 +1745,48 @@
   function wireTerminal(win){
     const input=$(".terminal-input",win),history=$(".terminal-history",win),scroll=$(".terminal-scroll",win),form=$("[data-terminal-form]",win),shell=$(".terminal-shell",win),prompt=$(".terminal-prompt",win);
     const session=window.RizvisionsTerminal.createSession();
-    const commands=[];let cursor=0,draft="",animation=0;
+    const commands=[];let cursor=0,draft="",animation=0,warState=null,selectedRegion=null,preWarRect=null;
+    const warPanel=$(".terminal-war-panel",win);
     const append=(role,text)=>{
       const entry=document.createElement("div");entry.className=`terminal-entry ${role}`;
       const label=document.createElement("span");label.textContent=role==="user"?"❯":"●";
       const copy=document.createElement("p");copy.textContent=text;entry.append(label,copy);history.append(entry);scroll.scrollTop=scroll.scrollHeight;return copy;
     };
+    const renderWar=(snapshot)=>{
+      warState=snapshot;
+      if(!snapshot){warPanel.hidden=true;return;}
+      warPanel.hidden=false;
+      const ownerClass={human:"human",computer:"computer",neutral:"neutral"};
+      const edges=snapshot.regions.flatMap(r=>r.neighbors.filter(n=>r.id<n).map(n=>{const target=snapshot.regions.find(t=>t.id===n);return `<line x1="${r.x}" y1="${r.y}" x2="${target.x}" y2="${target.y}"/>`;})).join("");
+      const selected=snapshot.regions.find(r=>r.id===selectedRegion);
+      const regions=snapshot.regions.map(r=>`<g class="war-region ${ownerClass[r.owner]} ${r.id===selectedRegion?"selected":""} ${selected?.neighbors.includes(r.id)?"adjacent":""}" data-war-region="${r.id}" role="button" tabindex="0" aria-label="${r.name}, ${r.owner}, ${r.armies} armies"><title>${r.name} / ${r.id} / ${r.owner.toUpperCase()} / ${r.armies} armies</title><polygon points="${r.shape}"/><text class="war-code" x="${r.x}" y="${r.y-6}">${r.id}${r.id==="US"||r.id==="CH"?" *":""}</text><text class="war-armies" x="${r.x}" y="${r.y+16}">${r.armies}</text></g>`).join("");
+      const status=snapshot.outcome?({victory:"CAMPAIGN WON",defeat:"COMMAND LOST",mutual:"MUTUAL DESTRUCTION",stalemate:"STALEMATE"}[snapshot.outcome]):snapshot.reserves?`DEPLOY ${snapshot.reserves} ARMIES`:`${snapshot.orders} ORDERS LEFT`;
+      const hint=selected?`${selected.id} / ${selected.name.toUpperCase()} / ${selected.armies} ARMIES / ${selected.owner==="human"?selected.ready+" READY":selected.owner.toUpperCase()}`:"SELECT A REGION OR TYPE AN ORDER";
+      warPanel.innerHTML=`<div class="war-heading"><strong>GLOBAL THERMONUCLEAR WAR</strong><span>ROUND ${snapshot.round} / DEFCON ${snapshot.defcon}</span></div><div class="war-score"><span class="war-human">YOU ${snapshot.human.regions}/18 · +${snapshot.human.income}/TURN</span><strong>${status}</strong><span class="war-computer">WOPR ${snapshot.computer.regions}/18 · +${snapshot.computer.income}/TURN</span></div><svg class="war-world" viewBox="0 0 1100 560" role="group" aria-label="World territory map"><defs><pattern id="war-grid-${win.dataset.appWindow}" width="55" height="56" patternUnits="userSpaceOnUse"><path d="M55 0H0V56" fill="none" stroke="#244435" stroke-width=".6"/></pattern></defs><rect x="0" y="0" width="1100" height="560" fill="url(#war-grid-${win.dataset.appWindow})"/><ellipse cx="550" cy="280" rx="530" ry="263" class="war-grid-globe"/><path d="M20 280H1080 M550 17V543" class="war-grid-globe"/><g class="war-routes">${edges}</g>${regions}<text class="war-map-caption" x="28" y="548">* HQ / CAPTURE CH OR CONTROL 12 REGIONS</text>${snapshot.outcome==="mutual"?'<path class="war-launch-path" d="M210 209 Q520 5 801 226 M801 226 Q540 490 210 209"/><text class="war-end-overlay" x="550" y="285">NO WINNER</text>':""}</svg><div class="war-selected">${hint}</div><div class="war-manual"><span>deploy CA 4</span><span>attack CA EU 6</span><span>inspect EU</span><span>end / rules / exit</span></div>`;
+    };
+    const selectRegion=(id)=>{
+      if(!warState || warState.outcome)return;
+      const region=warState.regions.find(r=>r.id===id),previous=warState.regions.find(r=>r.id===selectedRegion);
+      if(warState.reserves>0){selectedRegion=id;input.value=region.owner==="human"?`deploy ${id} ${warState.reserves}`:`inspect ${id}`;}
+      else if(previous?.owner==="human" && previous.id!==id && previous.neighbors.includes(id)){
+        input.value=`${region.owner==="human"?"move":"attack"} ${previous.id} ${id} ${Math.min(previous.ready,previous.armies-1)}`;
+      }else{selectedRegion=id;input.value=region.owner==="human"?`attack ${id} `:`inspect ${id}`;}
+      renderWar(warState);input.focus();input.setSelectionRange(input.value.length,input.value.length);
+    };
+    warPanel.addEventListener("click",event=>{const region=event.target.closest("[data-war-region]");if(region)selectRegion(region.dataset.warRegion);});
+    warPanel.addEventListener("keydown",event=>{if(event.key!=="Enter"&&event.key!==" ")return;const region=event.target.closest("[data-war-region]");if(region){event.preventDefault();selectRegion(region.dataset.warRegion);}});
     const syncMode=()=>{
+      const isWar=session.mode==="war";
+      if(isWar && !preWarRect){
+        preWarRect={left:win.offsetLeft,top:win.offsetTop,width:win.offsetWidth,height:win.offsetHeight};
+        const area=mediaWorkArea(),rect=defaultWindowRect("terminal",Math.min(1040,area.right-area.left),Math.min(740,area.bottom-area.top));
+        Object.assign(win.style,{left:`${rect.left}px`,top:`${rect.top}px`,width:`${rect.width}px`,height:`${rect.height}px`});
+      }else if(!isWar && preWarRect){Object.assign(win.style,{left:`${preWarRect.left}px`,top:`${preWarRect.top}px`,width:`${preWarRect.width}px`,height:`${preWarRect.height}px`});preWarRect=null;}
+      shell.classList.toggle("war-mode",isWar);
+      if(!isWar)renderWar(null);
       const active=session.mode!=="normal";shell.classList.toggle("wopr-active",active);win.classList.toggle("wopr-window",active);
       $(".terminal-welcome",win).hidden=active;$(".terminal-link-status",win).hidden=!active;
-      prompt.textContent=active?"WOPR >":"riz@rizvisions ~ %";
+      prompt.textContent=isWar?"COMMAND >":active?"WOPR >":"riz@rizvisions ~ %";
       input.placeholder=active?"enter a move or command · exit to disconnect":"type a question or command";
     };
     const runCommand=(query)=>{
@@ -1763,7 +1794,9 @@
       input.value="";commands.push(command);cursor=commands.length;draft="";animation++;
       if(window.RizvisionsTerminal.normalize(command)==="history"){append("user",command);append("assistant",commands.map((item,i)=>`${String(i+1).padStart(3)}  ${item}`).join("\n"));return;}
       const response=session.handle(command);syncMode();
+      if(response.war)renderWar(response.war);
       if(response.clear){history.replaceChildren();return;}
+      if(session.mode==="war")history.replaceChildren();
       append("user",command);const output=append("assistant",response.text);
       if(response.openApp)openApp(response.openApp);
       if(response.observe){

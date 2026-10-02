@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import "../../war-engine.js";
 import "../../terminal-engine.js";
 const {createSession,bestMove,winner}=globalThis.RizvisionsTerminal;
 

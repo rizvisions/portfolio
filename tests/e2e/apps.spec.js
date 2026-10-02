@@ -256,3 +256,42 @@ test("Safari favorites use LinkedIn and X brand icons", async ({ page }) => {
     expect(await image.evaluate(img=>img.complete && img.naturalWidth>0)).toBe(true);
   }
 });
+
+test("ASCII wordmark keeps clear letter faces at a readable size", async ({ page }) => {
+  const win=await openDesktopApp(page,"terminal");
+  const face=win.locator(".terminal-wordmark-face");
+  await expect(face).toBeVisible();
+  const layout=await face.evaluate(el=>({font:parseFloat(getComputedStyle(el).fontSize),width:el.getBoundingClientRect().width,available:el.parentElement.clientWidth,text:el.textContent}));
+  expect(layout.font).toBeGreaterThanOrEqual(15);
+  expect(layout.width).toBeLessThanOrEqual(layout.available+1);
+  expect(layout.text.split("\n")).toHaveLength(5);
+  expect(layout.text).not.toContain("/");
+});
+
+test("world campaign supports map selection, combat, computer turns and nuclear ending", async ({ page }) => {
+  const win=await openDesktopApp(page,"terminal"),initial=await win.boundingBox();
+  const input=win.locator(".terminal-input");
+  const send=async text=>{await input.fill(text);await input.press("Enter");};
+  await send("shall we play a game?");await send("3");
+  const panel=win.locator(".terminal-war-panel");
+  await expect(panel).toBeVisible();
+  await expect(panel.locator("[data-war-region]")).toHaveCount(18);
+  expect((await panel.locator("svg.war-world").boundingBox()).height).toBeGreaterThan(150);
+  await panel.locator('[data-war-region="CA"]').click();
+  await expect(input).toHaveValue("deploy CA 4");await input.press("Enter");
+  await panel.locator('[data-war-region="CA"]').click();
+  await panel.locator('[data-war-region="EU"]').click();
+  await expect(input).toHaveValue("attack CA EU 8");await input.press("Enter");
+  await expect(panel.locator('[data-war-region="EU"]')).toHaveClass(/human/);
+  await expect(win.locator(".terminal-history")).toContainText("YOU CAPTURE");
+  await send("end");
+  await expect(panel.locator(".war-heading")).toContainText("ROUND 2");
+  await expect(win.locator(".terminal-history")).toContainText("WOPR");
+  await send("strike CH");await expect(panel.locator(".war-heading")).toContainText("DEFCON 5");
+  await send("confirm strike");
+  await expect(panel.locator(".war-score")).toContainText("MUTUAL DESTRUCTION");
+  await expect(panel.locator(".war-end-overlay")).toHaveText("NO WINNER");
+  await send("restart");await expect(panel.locator(".war-heading")).toContainText("ROUND 1");
+  await input.press("Escape");await expect(panel).toBeHidden();
+  const restored=await win.boundingBox();expect(Math.abs(initial.width-restored.width)).toBeLessThan(2);expect(Math.abs(initial.height-restored.height)).toBeLessThan(2);
+});

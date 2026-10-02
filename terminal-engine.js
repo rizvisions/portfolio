@@ -46,17 +46,25 @@
     return chosen;
   }
   const boardText=(board)=>["",...Array.from({length:3},(_,row)=>"       "+board.slice(row*3,row*3+3).map((v,i)=>` ${v || row*3+i+1} `).join("| ")+(row<2?"\n       ----+----+----":"")),""].join("\n");
-  const menu="RIZVISIONS / WOPR LINK\nCONNECTION ESTABLISHED\n\nSHALL WE PLAY A GAME?\n\n  1  TIC-TAC-TOE         Human vs computer\n  2  ZERO-PLAYER MODE   Watch perfect play\n\nType 1 or ‘tic tac toe’ to play. Type 2 or ‘watch’ to observe.\nType exit to return to the terminal.";
+  const menu="RIZVISIONS / WOPR LINK\nCONNECTION ESTABLISHED\n\nSHALL WE PLAY A GAME?\n\n  1  TIC-TAC-TOE         Human vs computer\n  2  ZERO-PLAYER MODE   Watch perfect play\n  3  THERMONUCLEAR WAR  Territory campaign vs WOPR\n\nType 1 or 2 for tic-tac-toe, or 3 for the world campaign.\nType exit to return to the terminal.";
   function createSession() {
-    let lastTopic=null, mode="normal", board=null, human="X", finished=false;
+    let lastTopic=null, mode="normal", board=null, human="X", finished=false,war=null;
     const result=(text,extra={})=>({text,mode,...extra});
     const start=(symbol="X")=>{mode="game";human=symbol;board=Array(9).fill(null);finished=false;if(human==="O")board[bestMove(board,"X")]="X";return result(`TIC-TAC-TOE // YOU: ${human}  COMPUTER: ${human==="X"?"O":"X"}\n${boardText(board)}\nEnter a square 1–9 (or ‘top left’, ‘center’, ‘bottom right’).\n‘play o’ lets the computer start. ‘restart’ resets. ‘exit’ disconnects.`,{board:[...board],status:"YOUR MOVE"});};
     const positions={"top left":0,"top middle":1,"top center":1,"top right":2,"middle left":3,"center":4,"centre":4,"middle":4,"middle right":5,"bottom left":6,"bottom middle":7,"bottom center":7,"bottom right":8};
     function handle(query) {
       const text=normalize(query);
       if(!text)return result("");
-      if(text==="clear" || text==="cls")return result("",{clear:true});
-      if(/^(exit|quit|disconnect|back|stop|leave)( the)?( game)?$/.test(text)){mode="normal";board=null;return result("WOPR LINK CLOSED.\nBack at riz@rizvisions. Type help for the archive.");}
+      if(text==="clear" || text==="cls")return result("",{clear:true,...(mode==="war"?{war:war.snapshot()}:{})});
+      if(/^(exit|quit|disconnect|back|stop|leave)( the)?( game)?$/.test(text)){mode="normal";board=null;war=null;return result("WOPR LINK CLOSED.\nBack at riz@rizvisions. Type help for the archive.");}
+      const warStart=/^(?:war|risk|warlight|warapp|war app|thermonuclear war|global thermonuclear war)(?: (easy|standard|hard))?$/.exec(text);
+      if(warStart || (mode==="menu" && text==="3")){
+        mode="war";war=globalThis.RizvisionsWar.createGame({difficulty:warStart?.[1]||"standard"});return result(war.opening().text,{war:war.snapshot()});
+      }
+      if(mode==="war"){
+        if(/^(restart|again|new game)$/.test(text)){war=globalThis.RizvisionsWar.createGame({difficulty:war.snapshot().difficulty});return result(war.opening().text,{war:war.snapshot()});}
+        const response=war.handle(text);return result(response.text,{war:response.war});
+      }
       if(/\b(shall we play a game|play a game|lets play|games|wargames|war games|wopr|joshua|global thermonuclear war)\b/.test(text)){
         mode="menu";return result(menu);
       }
@@ -126,6 +134,6 @@
     }
     return {handle,observe,get mode(){return mode;}};
   }
-  const completions=["help","help parker","help photography","games","shall we play a game?","tic tac toe","tell me more","history","clear",... ["photos","work","parker","spotify","safari","messages","notes","about","instagram","calendar","settings","trash"].map(a=>`open ${a}`)];
+  const completions=["help","help parker","help photography","games","shall we play a game?","tic tac toe","war","war easy","war hard","deploy ","attack ","move ","inspect ","end","rules","restart","exit","tell me more","history","clear",... ["photos","work","parker","spotify","safari","messages","notes","about","instagram","calendar","settings","trash"].map(a=>`open ${a}`)];
   globalThis.RizvisionsTerminal={createSession,topics,normalize,bestMove,winner,completions};
 })();
