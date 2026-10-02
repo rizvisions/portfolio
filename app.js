@@ -1636,7 +1636,7 @@
   }
   function terminalWordmark(){
     const glyphs={R:["11110","10001","10001","11110","10100","10010","10001"],I:["11111","00100","00100","00100","00100","00100","11111"],Z:["11111","00001","00010","00100","01000","10000","11111"],V:["10001","10001","10001","10001","10001","01010","00100"],S:["11111","10000","10000","11111","00001","00001","11111"],O:["01110","10001","10001","10001","10001","10001","01110"],N:["10001","11001","11001","10101","10011","10011","10001"]};
-    const face=Array.from({length:7},(_,row)=>[..."RIZVISIONS"].map(letter=>[...glyphs[letter][row]].map(cell=>cell==="1"?"██":"  ").join("")).join("  ")).join("\n");
+    const face=Array.from({length:7},(_,row)=>[..."RIZVISIONS"].map(letter=>[...glyphs[letter][row]].map(cell=>cell==="1"?"██":"  ").join("")).join(" ")).join("\n");
     return `<span class="terminal-wordmark-shadow" aria-hidden="true">${face}</span><span class="terminal-wordmark-face">${face}</span>`;
   }
 
@@ -1755,8 +1755,8 @@
       const copy=document.createElement("p");copy.textContent=text;entry.append(label,copy);history.append(entry);if(session.mode==="war")history.scrollTop=history.scrollHeight;else scroll.scrollTop=scroll.scrollHeight;return copy;
     };
     const stopPlayback=()=>{playbackToken++;clearTimeout(playbackTimer);playing=false;input.disabled=false;currentFrame=null;};
-    win._terminalDispose=()=>{stopPlayback();audio?.close().catch(()=>{});};
-    const expand=()=>{win.classList.add("war-immersive");focusWindow(win);};
+    win._terminalDispose=()=>{stopPlayback();document.removeEventListener("keydown",immersiveEscape,true);audio?.close().catch(()=>{});};
+    const expand=()=>{win.classList.add("war-immersive","war-session-window");focusWindow(win);};
     const returnDesktop=()=>{win.classList.remove("war-immersive");input.focus();};
     win._terminalReturnDesktop=returnDesktop;
     const faction=who=>({human:"YOU",computer:"WOPR",neutral:"NEUTRAL"}[who]);
@@ -1849,6 +1849,13 @@
     warPanel.addEventListener("keydown",event=>{const r=event.target.closest("[data-war-region]");if(r&&(event.key==="Enter"||event.key===" ")){event.preventDefault();selectRegion(r.dataset.warRegion);}});
     form.addEventListener("submit",event=>{event.preventDefault();runCommand(input.value);});
     win.addEventListener("keydown",event=>{if(event.key!=="Escape")return;if(session.mode==="war"){event.preventDefault();event.stopPropagation();if(helpOpen){helpOpen=false;renderWar(warState);return;}if(win.classList.contains("war-immersive")){returnDesktop();renderWar(warState);}else if(editor){editor=null;renderWar(warState);}}else if(session.mode!=="normal"){event.preventDefault();event.stopPropagation();runCommand("exit");}});
+    const immersiveEscape=event=>{
+      if(event.key!=="Escape"||!win.classList.contains("war-immersive"))return;
+      event.preventDefault();event.stopPropagation();
+      if(helpOpen)helpOpen=false;else returnDesktop();
+      renderWar(warState);
+    };
+    document.addEventListener("keydown",immersiveEscape,true);
     input.addEventListener("keydown",event=>{
       if(event.key==="ArrowUp"||event.key==="ArrowDown"){event.preventDefault();if(cursor===commands.length)draft=input.value;cursor=Math.max(0,Math.min(commands.length,cursor+(event.key==="ArrowUp"?-1:1)));input.value=cursor===commands.length?draft:commands[cursor]||"";input.setSelectionRange(input.value.length,input.value.length);}
       if(event.key==="Tab"){event.preventDefault();const prefix=input.value.toLowerCase();if(!prefix)return;const matches=window.RizvisionsTerminal.completions.filter(item=>item.startsWith(prefix));if(matches.length===1)input.value=matches[0];else if(matches.length>1)append("assistant",matches.join("   "));}

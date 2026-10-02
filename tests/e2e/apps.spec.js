@@ -297,7 +297,7 @@ test("campaign queues editable orders, fills the site, animates commit and prese
   await send("deploy CA 4");await send("shield US");
   await panel.locator("[data-war-replay]").click();await expect(input).toBeDisabled();await panel.locator("[data-war-skip]").click();await expect(input).toBeEnabled();
   await expect(panel.locator(".war-order-list")).toContainText("Shield US");await expect(panel.locator('[data-war-region="CA"] .war-planned-count')).toContainText("+4 planned");
-  await input.press("Escape");await expect(win).not.toHaveClass(/war-immersive/);await expect(panel).toBeVisible();await expect(page.locator(".dock-wrap")).toBeVisible();
+  await input.evaluate(el=>el.blur());await page.keyboard.press("Escape");await expect(win).not.toHaveClass(/war-immersive/);await expect(panel).toBeVisible();await expect(page.locator(".dock-wrap")).toBeVisible();
   await panel.locator("[data-war-view]").click();await expect(win).toHaveClass(/war-immersive/);
   await panel.locator("[data-war-sound]").click();await expect(panel.locator("[data-war-sound]")).toHaveAttribute("aria-pressed","false");
   await panel.locator('[data-war-command="rules"]').click();await expect(panel.locator(".war-help")).toContainText("NUCLEAR ESCALATION");await panel.locator("[data-war-close-help]").click();

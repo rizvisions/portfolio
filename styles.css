@@ -3670,6 +3670,7 @@ button.conversation.active { background: #087dff; color: #fff; }
 .mac-window[data-app-window="terminal"] .war-end-overlay { fill:#eeffc8; font:700 34px Menlo,monospace; text-anchor:middle; paint-order:stroke; stroke:#06120c; stroke-width:8; }
 
 /* Queued campaign: clear factions, expanded viewport and readable order controls. */
+.mac-window[data-app-window="terminal"].war-session-window { animation:none; }
 .mac-window[data-app-window="terminal"] .terminal-wordmark { font-size:11px; line-height:1.12; letter-spacing:0; overflow:visible; padding:0 7px 8px 0; }
 .mac-window[data-app-window="terminal"] .terminal-wordmark-face { color:#fff; position:relative; text-shadow:none; }
 .mac-window[data-app-window="terminal"] .terminal-wordmark-shadow { left:4px; top:6px; color:#0b0b0c; opacity:1; -webkit-text-stroke:.55px #9ba1ac; text-shadow:2px 2px 0 #0b0b0c,3px 3px 0 #656b76; }
