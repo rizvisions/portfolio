@@ -122,7 +122,7 @@ test("Terminal input stays visible and accepts commands", async ({ page }) => {
   await expect(terminalWindow.locator(".terminal-wordmark")).toBeVisible();
   await input.fill("help");
   await input.press("Enter");
-  await expect(terminalWindow.locator(".terminal-history")).toContainText("natural-language questions");
+  await expect(terminalWindow.locator(".terminal-history")).toContainText("Natural-language questions");
 
   await input.fill("Can you tell me about Parker?");
   await input.press("Enter");
@@ -221,4 +221,38 @@ test("Notes is a functional local notebook with starter notes and a locked Easte
   expect(layout.headerAlignment).toBeLessThan(1);
   expect(layout.dateSharesNotePage).toBe(true);
   expect(layout.editorInside).toBe(true);
+});
+
+test("WarGames session is playable, supports observation, and exits cleanly", async ({ page }) => {
+  const win=await openDesktopApp(page,"terminal");
+  const input=win.locator(".terminal-input");
+  const send=async text=>{await input.fill(text);await input.press("Enter");};
+  await send("shall we play a game?");
+  await expect(win.locator(".terminal-shell")).toHaveClass(/wopr-active/);
+  await expect(win.locator(".terminal-history")).toContainText("SHALL WE PLAY A GAME?");
+  await send("1");await send("top left");await send("1");
+  await expect(win.locator(".terminal-history")).toContainText("SQUARE OCCUPIED");
+  await send("restart");await send("play o");
+  await expect(win.locator(".terminal-history")).toContainText("YOU: O");
+  await input.press("Escape");
+  await expect(win.locator(".terminal-shell")).not.toHaveClass(/wopr-active/);
+  await send("Can you open the notes app?");
+  await expect(page.locator('[data-app-window="notes"]')).toBeVisible();
+  await page.locator('[data-app-window="notes"] [data-window-action="close"]').click();
+  await send("What did Riz do at Parker?");await send("tell me more");
+  await expect(win.locator(".terminal-history")).toContainText("ad-account analysis");
+  await input.press("ArrowUp");await expect(input).toHaveValue("tell me more");
+  await send("games");await send("2");
+  await expect(win.locator(".terminal-history")).toContainText("EVALUATION COMPLETE",{timeout:8000});
+  await send("exit");await send("clear");
+  await expect(win.locator(".terminal-history")).toBeEmpty();
+});
+
+test("Safari favorites use LinkedIn and X brand icons", async ({ page }) => {
+  const win=await openDesktopApp(page,"safari");
+  for(const [name,asset] of [["LinkedIn","linkedin.svg"],["X","x.svg"]]){
+    const image=win.locator(".safari-favorites button").filter({hasText:new RegExp(`^${name}$`)}).locator("img");
+    await expect(image).toHaveAttribute("src",new RegExp(asset));
+    expect(await image.evaluate(img=>img.complete && img.naturalWidth>0)).toBe(true);
+  }
 });

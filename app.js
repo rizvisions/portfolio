@@ -1599,7 +1599,7 @@
     return `<div class="instagram-shell"><div class="instagram-heading"><img src="assets/icons/macos/instagram.png?v=106" alt="Instagram"><h2>Choose an Instagram</h2><p>Different accounts for different parts of my life.</p></div><div class="account-list">${accounts.map((account)=>`<button type="button" class="account-row" data-external="${account.url}"><span class="account-avatar">${account.initials}</span><span><strong>${account.handle}</strong><small>${account.description}</small></span><span class="chevron">›</span></button>`).join("")}</div></div>`;
   }
 
-  function renderSafari(){return `<div class="safari-shell"><div class="safari-toolbar"><button>‹</button><button>›</button><button>▣</button><div class="safari-address"><span>🔒</span> rizvisions.com</div><button>↗</button><button>＋</button></div><div class="safari-page"><div class="safari-start"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><h1>Start Page</h1><div class="safari-favorites">${[["Parker","assets/icons/macos/parker.png?v=106","https://heyparker.ai/"],["LinkedIn","assets/icons/macos/mail.png?v=106","https://www.linkedin.com/in/riz-zaheer/"],["Instagram","assets/icons/macos/instagram.png?v=106","https://www.instagram.com/rizvisions/"],["Spotify","assets/icons/macos/spotify.png?v=106","https://open.spotify.com/user/riz002"],["X","assets/icons/macos/rizvisions.png?v=106","https://x.com/rizvisions"]].map(([label,icon,href])=>`<button data-external="${href}"><span><img src="${icon}" alt=""></span><strong>${label}</strong></button>`).join("")}</div><section class="safari-reading"><div><span>READING LIST</span><strong>The internet home of Riz Zaheer</strong><p>Work, photos, projects, notes, music, and the weird archive still to come.</p></div><button data-app="about">Open About Riz</button></section></div></div></div>`;}
+  function renderSafari(){return `<div class="safari-shell"><div class="safari-toolbar"><button>‹</button><button>›</button><button>▣</button><div class="safari-address"><span>🔒</span> rizvisions.com</div><button>↗</button><button>＋</button></div><div class="safari-page"><div class="safari-start"><img src="assets/icons/macos/rizvisions.png?v=106" alt=""><h1>Start Page</h1><div class="safari-favorites">${[["Parker","assets/icons/macos/parker.png?v=106","https://heyparker.ai/"],["LinkedIn","assets/icons/linkedin.svg?v=1104","https://www.linkedin.com/in/riz-zaheer/"],["Instagram","assets/icons/macos/instagram.png?v=106","https://www.instagram.com/rizvisions/"],["Spotify","assets/icons/macos/spotify.png?v=106","https://open.spotify.com/user/riz002"],["X","assets/icons/x.svg?v=1104","https://x.com/rizvisions"]].map(([label,icon,href])=>`<button data-external="${href}"><span><img src="${icon}" alt=""></span><strong>${label}</strong></button>`).join("")}</div><section class="safari-reading"><div><span>READING LIST</span><strong>The internet home of Riz Zaheer</strong><p>Work, photos, projects, notes, music, and the weird archive still to come.</p></div><button data-app="about">Open About Riz</button></section></div></div></div>`;}
 
   function renderParker(){return `<div class="parker-app"><header class="parker-hero"><img src="assets/icons/macos/parker.png?v=106" alt="Parker"><div><span>CURRENTLY</span><h1>Parker</h1><p>AI creative strategy for ecommerce teams — and the place where most of my work brain lives right now.</p><button class="mac-button primary" data-external="https://heyparker.ai/">Visit heyparker.ai ↗</button></div></header><section class="parker-command"><span>Ask Parker</span><strong>“Cross-reference our reviews with our ad account and find creative angles we haven't tested.”</strong><button data-external="https://heyparker.ai/">→</button></section><section class="parker-grid"><article><span>01</span><h3>Creative intelligence</h3><p>Connect ad performance, customer language, competitors, content, and brand context.</p></article><article><span>02</span><h3>What I do</h3><p>Sales, demos, onboarding, support, customer research, GTM experiments, pricing, and product feedback.</p></article><article><span>03</span><h3>Parker Brain</h3><p>A context layer designed to make AI useful for marketers instead of generic.</p></article></section><footer><button data-project="parker">View my Parker story</button><button data-external="https://heyparker.ai/">Open website ↗</button></footer></div>`;}
 
@@ -1635,16 +1635,22 @@
     return `<div class="notes-app"><aside class="notes-folders"><div class="notes-sidebar-top" aria-hidden="true"></div><div class="notes-sidebar-label">On My Mac</div><div class="notes-group"><button type="button" class="active"><span class="notes-folder-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3.5 7.5h6l1.7 2H20.5v9.2a1.8 1.8 0 0 1-1.8 1.8H5.3a1.8 1.8 0 0 1-1.8-1.8V7.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M3.5 7.5V5.3c0-1 .8-1.8 1.8-1.8h4.1l1.8 2h7.5c1 0 1.8.8 1.8 1.8v2.2" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span><strong>Notes</strong><em>${notes.length}</em></button></div></aside><section class="notes-browser"><header class="notes-browser-toolbar"><div><strong>Notes</strong><small>${notes.length} ${notes.length === 1 ? "note" : "notes"}</small></div><div class="notes-toolbar-actions"><button type="button" class="notes-compose" data-notes-new aria-label="New note">✎</button></div></header><div class="notes-note-list">${noteRows}</div></section><main class="note-editor apple-note-editor">${editorBody}</main></div>`;
   }
   function terminalWordmark(){
-    const glyphs={R:["████ ","█   █","████ ","█  █ ","█   █"],I:["█████","  █  ","  █  ","  █  ","█████"],Z:["█████","   █ ","  █  "," █   ","█████"],V:["█   █","█   █","█   █"," █ █ ","  █  "],S:["█████","█    ","█████","    █","█████"],O:[" ███ ","█   █","█   █","█   █"," ███ "],N:["█   █","██  █","█ █ █","█  ██","█   █"]};
-    return Array.from({length:5},(_,row)=>[..."RIZVISIONS"].map((letter)=>glyphs[letter][row]).join(" ")).join("\n");
+    const glyphs={R:["#### ","#   #","#### ","#  # ","#   #"],I:["#####","  #  ","  #  ","  #  ","#####"],Z:["#####","   # ","  #  "," #   ","#####"],V:["#   #","#   #","#   #"," # # ","  #  "],S:["#####","#    ","#####","    #","#####"],O:[" ### ","#   #","#   #","#   #"," ### "],N:["#   #","##  #","# # #","#  ##","#   #"]};
+    const face=Array.from({length:5},(_,row)=>" ".repeat(4-row)+[..."RIZVISIONS"].map(letter=>glyphs[letter][row]).join(" "));
+    const width=Math.max(...face.map(row=>row.length))+3;
+    const canvas=Array.from({length:8},()=>Array(width).fill(" "));
+    for(let depth=3;depth>=0;depth--)face.forEach((line,y)=>[...line].forEach((char,x)=>{if(char!==" ")canvas[y+depth][x+depth]=depth===0?"#":depth===3?".":"/";}));
+    return canvas.map(row=>row.join("").trimEnd()).join("\n");
   }
 
   function renderTerminal(){return `<div class="terminal-shell">
     <div class="terminal-scroll">
-      <pre class="terminal-wordmark" aria-label="Rizvisions">${terminalWordmark()}</pre>
-      <div class="terminal-intro"><strong>Rizvisions Terminal 10.10</strong><span>Local portfolio archive · 14 topics indexed</span><span>Type naturally, or enter <b>help</b> to see what this build understands.</span></div>
-      <pre class="terminal-suggestions">Try:  “what does Riz do?”   “tell me about Parker”   “open photos”</pre>
-      <div class="terminal-history" aria-live="polite"></div>
+      <div class="terminal-welcome"><pre class="terminal-wordmark" aria-label="Rizvisions">${terminalWordmark()}</pre>
+      <div class="terminal-intro"><strong>Rizvisions Terminal 10.10</strong><span>Local portfolio archive · ${window.RizvisionsTerminal.topics.length} topics indexed</span><span>Type naturally. Use <b>help</b> for the text bank, or ↑ / ↓ for command history.</span></div>
+      <pre class="terminal-suggestions">Try: “what does Riz do?” / “tell me about Parker”
+     “shall we play a game?”</pre></div>
+      <div class="terminal-link-status" hidden>WOPR // RIZVISIONS CONNECTION <span>ONLINE</span></div>
+      <div class="terminal-history" role="log" aria-live="polite"></div>
     </div>
     <form class="terminal-input-row" data-terminal-form><span class="terminal-prompt">riz@rizvisions ~ %</span><input class="terminal-input" autocomplete="off" spellcheck="false" placeholder="type a question or command" aria-label="Terminal input"></form>
   </div>`;}
@@ -1737,38 +1743,52 @@
     });
   }
 
-  function terminalReply(query){
-    const text=query.toLowerCase().trim().replace(/[’']/g,"'").replace(/[_-]+/g," ").replace(/[^a-z0-9$+?.' ]+/g," ").replace(/\s+/g," ");
-    const has=(...terms)=>terms.some((term)=>text.includes(term));
-    if (has("help","commands","what can you do","what do you know","topics")) return "I recognize natural-language questions about:\n\n  Riz / about       current work       Parker\n  career history    Rewards Network    Databricks\n  Blue Specs        Whop / Clip Curator / WAP\n  Windsurf          photography        creator work\n  Chicago           Loyola             contact\n  this website\n\nI can also open: photos, work, Parker, Spotify, Safari, Messages, Notes, or About.\nExamples: “what does Riz do?”, “where did he go to school?”, “tell me about Blue Specs”, “open photos”.\nUse clear to erase this session.";
-    if (/^(hi|hey|hello|yo|sup|what'?s up)[?.! ]*$/.test(text)) return "Hey. Welcome to Rizvisions.";
-    if (has("how are you","how's it going","hows it going")) return "Running locally and doing fine. Thanks for asking.";
-    if (has("thank","thanks")) return "You’re welcome.";
-    if (has("parker")) return "Parker is an AI creative-strategy platform for ecommerce teams. Riz works across GTM, demos, onboarding, customer research, support, pricing, and product feedback.";
-    if (has("blue specs","bluespecs")) return "Blue Specs was the ecommerce business Riz built at 18: more than $40K in six months, a 60% margin, 244% ROAS, 50+ influencer contracts, and 200+ support tickets.";
-    if (has("whop","clip curator","wap","creator rewards")) return "The Whop chapter included Clip Curator, creator reward programs, a 25K community, roughly $20K earned, and a trip to Whop HQ after winning its $3K in 30 Days competition.";
-    if (has("windsurf")) return "The Windsurf campaign generated 3.6M views through creator incentives and became a practical lesson in distribution, fraud controls, and content systems.";
-    if (has("rewards network","restaurant sales","first sales job")) return "At Rewards Network, Riz became the top SDR, averaged 11 closed deals per month, and contributed roughly $1.04M in incremental annual revenue.";
-    if (has("databricks","data bricks")) return "At Databricks, Riz worked as a Solutions Specialist, built roughly $750K in ARR pipeline, and finished as the number-one outbound performer over his final 90 days.";
-    if (has("photo","photography","camera")) return "Photography is where Rizvisions started. The Photos app contains the growing visual archive; say “open photos” to jump there.";
-    if (has("tiktok","creator","content","views","social media")) return "Riz is a creator with more than 30M lifetime short-form views. His personal work spans photography, video, lifestyle, internet experiments, and business content.";
-    if (has("chicago","where is riz","where are you","based","location")) return "Riz is based in Chicago.";
-    if (has("loyola","college","university","school","education")) return "Riz graduated cum laude from Loyola University Chicago in 2024 with a BBA in Marketing and Entrepreneurship.";
-    if (has("contact","reach","email","linkedin","instagram")) return "LinkedIn is best for work. Instagram is best for everything else. Say “open messages” for direct links.";
-    if (has("rizvisions","this site","this website","website")) return "Rizvisions is Riz’s permanent internet home: a catch-all for work, photography, old businesses, current projects, personal artifacts, and whatever comes next.";
-    if (has("current","currently","right now","now","working on")) return "Currently: working at Parker across GTM, customer conversations, product feedback, support, pricing, and storytelling—while continuing to build Rizvisions.";
-    if (has("career","resume","job history","work history","where has","experience")) return "Riz’s path runs through entrepreneurship, creator programs, Rewards Network, Databricks, and now Parker. Say a company name for the shorter version of that chapter.";
-    if (has("what does riz do","who is riz","about riz","tell me about riz","who are you","about","riz")) return "Riz Zaheer is a Chicago-based creator and operator. Rizvisions is his permanent internet home for work, photography, projects, experiments, and the rest of his life.";
-    if (has("work","projects","portfolio")) return "The archive covers Parker, Blue Specs, creator-economy work through Whop, the Windsurf campaign, photography, and the projects that came before and after them.";
-    if (has("weather")) return "I don’t have live weather access. The menu bar is committed to the bit, though.";
-    return "That isn’t in the local text bank yet. Type help to see the topics and example phrasing I recognize.";
-  }
-
   function wireTerminal(win){
-    const input=$(".terminal-input",win),history=$(".terminal-history",win),scroll=$(".terminal-scroll",win),form=$("[data-terminal-form]",win);
-    const append=(role,text)=>{const entry=document.createElement("div");entry.className=`terminal-entry ${role}`;const label=document.createElement("span");label.textContent=role==="user"?"❯":"●";const copy=document.createElement("p");copy.textContent=text;entry.append(label,copy);history.append(entry);scroll.scrollTop=scroll.scrollHeight;};
-    const runCommand=(query)=>{const command=query.trim();if(!command)return;input.value="";if(command.toLowerCase()==="clear"){history.replaceChildren();return;}append("user",command);const lower=command.toLowerCase();const openMatch=lower.match(/\b(?:open|show)\s+(photos|work|parker|spotify|safari|messages|notes|about)\b/);if(openMatch){append("assistant",`Opening ${openMatch[1]}…`);setTimeout(()=>openApp(openMatch[1]),180);return;}append("assistant",terminalReply(command));};
-    form.addEventListener("submit",(event)=>{event.preventDefault();runCommand(input.value);});
+    const input=$(".terminal-input",win),history=$(".terminal-history",win),scroll=$(".terminal-scroll",win),form=$("[data-terminal-form]",win),shell=$(".terminal-shell",win),prompt=$(".terminal-prompt",win);
+    const session=window.RizvisionsTerminal.createSession();
+    const commands=[];let cursor=0,draft="",animation=0;
+    const append=(role,text)=>{
+      const entry=document.createElement("div");entry.className=`terminal-entry ${role}`;
+      const label=document.createElement("span");label.textContent=role==="user"?"❯":"●";
+      const copy=document.createElement("p");copy.textContent=text;entry.append(label,copy);history.append(entry);scroll.scrollTop=scroll.scrollHeight;return copy;
+    };
+    const syncMode=()=>{
+      const active=session.mode!=="normal";shell.classList.toggle("wopr-active",active);win.classList.toggle("wopr-window",active);
+      $(".terminal-welcome",win).hidden=active;$(".terminal-link-status",win).hidden=!active;
+      prompt.textContent=active?"WOPR >":"riz@rizvisions ~ %";
+      input.placeholder=active?"enter a move or command · exit to disconnect":"type a question or command";
+    };
+    const runCommand=(query)=>{
+      const command=query.trim();if(!command)return;
+      input.value="";commands.push(command);cursor=commands.length;draft="";animation++;
+      if(window.RizvisionsTerminal.normalize(command)==="history"){append("user",command);append("assistant",commands.map((item,i)=>`${String(i+1).padStart(3)}  ${item}`).join("\n"));return;}
+      const response=session.handle(command);syncMode();
+      if(response.clear){history.replaceChildren();return;}
+      append("user",command);const output=append("assistant",response.text);
+      if(response.openApp)openApp(response.openApp);
+      if(response.observe){
+        const token=animation,frames=session.observe();let frame=0;
+        const advance=()=>{
+          if(!win.isConnected || animation!==token)return;
+          output.textContent=response.text+"\n"+frames[frame++];scroll.scrollTop=scroll.scrollHeight;
+          if(frame<frames.length)setTimeout(advance,430);
+        };setTimeout(advance,250);
+      }
+    };
+    form.addEventListener("submit",event=>{event.preventDefault();runCommand(input.value);});
+    input.addEventListener("keydown",event=>{
+      if(event.key==="ArrowUp" || event.key==="ArrowDown"){
+        event.preventDefault();if(cursor===commands.length)draft=input.value;
+        cursor=Math.max(0,Math.min(commands.length,cursor+(event.key==="ArrowUp"?-1:1)));
+        input.value=cursor===commands.length?draft:commands[cursor]||"";input.setSelectionRange(input.value.length,input.value.length);
+      }
+      if(event.key==="Tab"){
+        event.preventDefault();const prefix=input.value.toLowerCase();if(!prefix)return;
+        const matches=window.RizvisionsTerminal.completions.filter(item=>item.startsWith(prefix));
+        if(matches.length===1)input.value=matches[0];else if(matches.length>1)append("assistant",matches.join("   "));
+      }
+      if(event.key==="Escape" && session.mode!=="normal"){event.preventDefault();event.stopPropagation();runCommand("exit");}
+    });
     requestAnimationFrame(()=>input.focus());
   }
 

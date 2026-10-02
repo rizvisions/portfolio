@@ -3582,3 +3582,37 @@ button.conversation.active { background: #087dff; color: #fff; }
   cursor:grab;
 }
 .mac-window[data-app-window="spotify"] > .window-titlebar .traffic-lights { width: 126px; }
+
+/* Raised ASCII lettering; the depth is drawn from characters in the wordmark. */
+.mac-window[data-app-window="terminal"] .terminal-wordmark {
+  font:700 clamp(8px, .85vw, 12px)/1.04 "SFMono-Regular",Menlo,Monaco,Consolas,monospace;
+  letter-spacing:0;
+  text-shadow:0 0 16px rgba(255,255,255,.16);
+  margin-bottom:22px;
+}
+.mac-window[data-app-window="terminal"] .terminal-scroll { padding-top:64px; }
+.mac-window[data-app-window="terminal"] .terminal-suggestions { white-space:pre-wrap; }
+.mac-window[data-app-window="terminal"] .terminal-link-status {
+  margin-bottom:24px; padding-bottom:10px; border-bottom:1px solid #285b3b;
+  color:#6cad7d; font-size:10px; letter-spacing:.08em;
+}
+.mac-window[data-app-window="terminal"] .terminal-link-status span { float:right; color:#acffc0; }
+.mac-window[data-app-window="terminal"] .terminal-shell.wopr-active {
+  position:relative; isolation:isolate; background:#06120c; color:#a2ffb7;
+  box-shadow:inset 0 0 90px rgba(0,0,0,.72);
+}
+.mac-window[data-app-window="terminal"] .terminal-shell.wopr-active::after {
+  content:""; position:absolute; inset:0; z-index:5; pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.18) 2px,rgba(0,0,0,.18) 3px);
+  box-shadow:inset 0 0 40px rgba(0,0,0,.5);
+}
+.mac-window[data-app-window="terminal"] .wopr-active .terminal-entry p,
+.mac-window[data-app-window="terminal"] .wopr-active .terminal-entry > span {
+  color:#a2ffb7; text-shadow:0 0 6px rgba(87,255,134,.28);
+}
+.mac-window[data-app-window="terminal"] .wopr-active .terminal-entry.user p { color:#68b77d; }
+.mac-window[data-app-window="terminal"] .wopr-active .terminal-input-row { background:#08190f; border-top-color:#23452e; }
+.mac-window[data-app-window="terminal"] .wopr-active .terminal-prompt,
+.os .mac-window[data-app-window="terminal"] .wopr-active .terminal-input { color:#a2ffb7; caret-color:#a2ffb7; }
+.mac-window[data-app-window="terminal"] .wopr-active .terminal-input::placeholder { color:#569768; }
+.mac-window[data-app-window="terminal"].wopr-window { background:#06120c; }

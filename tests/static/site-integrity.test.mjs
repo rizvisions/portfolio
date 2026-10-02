@@ -41,11 +41,11 @@ test("desktop uses a text-free blur-to-focus intro", async () => {
 });
 
 test("Terminal keeps a text-only natural-language interface", async () => {
-  const app = await read("app.js");
+  const app = (await Promise.all([read("app.js"), read("terminal-engine.js")])).join("\n");
   assert.match(app, /terminal-wordmark/);
   assert.match(app, /Local portfolio archive/);
   assert.match(app, /what does Riz do/);
-  assert.match(app, /natural-language questions/);
+  assert.match(app, /Natural-language questions/);
   assert.doesNotMatch(app, /terminal-command-grid|data-terminal-command|Ask Rizvisions anything/);
 });
 
