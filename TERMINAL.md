@@ -50,9 +50,9 @@ Unknown questions receive a topic suggestion. The interpreter does not invent an
 
 ## Global Thermonuclear War campaign
 
-`war` or game-menu option `3` opens an original 18-region territory game across the website viewport. `war easy` adds two reinforcements to your income; `war hard` adds two to WOPR's. Chrome's real browser bar stays visible. Escape returns to the desktop without ending the campaign; Expand brings the game back. `exit` disconnects. Closing Terminal ends the session.
+`war` or game-menu option `3` opens an original 32-region territory game across the website viewport. `war easy` adds two reinforcements to your income; `war hard` adds two to WOPR's. Chrome's real browser bar stays visible. Escape returns to the desktop without ending the campaign; Expand brings the game back. `exit` disconnects. Closing Terminal ends the session.
 
-Win by capturing China (`CH`, WOPR HQ) or controlling 12 regions. WOPR wins by capturing `US` or controlling 12. Green is YOU, amber is WOPR, and gray is NEUTRAL. Selection adds a white outline without changing the faction color. Dotted routes show neighboring regions, including Alaska–Siberia.
+Win by capturing China (`CH`, WOPR HQ) or controlling 22 regions. WOPR wins by capturing `US` or controlling 22. Green is YOU, amber is WOPR, and gray is NEUTRAL. Selection adds a white outline without changing the faction color. Dotted routes show neighboring regions, including Alaska–Siberia.
 
 ### Plan, commit, watch
 
@@ -68,7 +68,7 @@ The numeric editor starts with a small useful troop count, not automatically the
 
 One army stays behind to hold a region. Available means its current army, which already includes deployed troops, minus the guard and troops already assigned to other actions. Each army moves once per round. Arriving troops, returning survivors, and newly captured territories cannot attack onward until next round. You can issue multiple orders from the same source using different unassigned troops. If an earlier action captures a source, its later orders cancel. If casualties leave fewer troops, a later order sends only what remains available. Changed target ownership can also cancel an order; playback explains why.
 
-Income is three armies, plus one per three regions and full-continent bonuses: Americas +3, Europe +2, Africa +2, Asia +3, Pacific +2. A campaign ends in stalemate after 40 rounds if neither side wins.
+Income is three armies, plus one per three regions and full-continent bonuses: Americas +5, Europe +3, Africa +4, Asia +6, Pacific +2. A campaign ends in stalemate after 40 rounds if neither side wins.
 
 ### Combat
 
@@ -101,8 +101,10 @@ These are fictional game rules. Nuclear escalation is a playable risk, rather th
 | Resolve | `commit`, `end`, `end turn`, `done`, `next` |
 | Manual or session | `rules`, `help`, `how to play`, `restart`, `exit` |
 
-SFX toggles locally synthesized movement and launch cues. Music toggles an original quiet analog-style synth loop; it starts only when enabled and pauses on returning to the desktop. Missile flight and impact have distinct event cards and a brief map shake only during actual firing. Reduced-motion settings suppress the shake.
+SFX toggles locally synthesized movement and launch cues. Music toggles an original analog-style synth loop with bass and sustained harmony; it starts only when enabled and pauses on returning to the desktop. Music starts off; enable Music on and adjust its dedicated Volume slider (default 65%). Missile flight and impact have distinct event cards and a brief map shake only during actual firing. Reduced-motion settings suppress the shake.
 
 The event log accumulates the turn history. Its default height is 160 pixels; drag its separator, use the Height slider, or focus the separator and press Up/Down to resize it. Hide console hides the log and command input while retaining all map, order, playback, rules, restart, and Leave game controls. Commands are optional during the campaign. Rules opens the full manual in the game. Escape closes the manual first if it is open, otherwise returns the expanded game to the desktop. All campaign state remains local to the current Terminal session.
 
 Reference mechanics: [War.app combat basics](https://war.app/wiki/Combat_Basics) and [move order](https://war.app/wiki/Move_Order). The map, AI, nuclear rules, and visual assets are original to this implementation.
+
+Victory opens a mission-complete debrief with the winning objective, rounds fought, territories held and captured, troop losses, missiles launched, and final DEFCON. Inspect final map dismisses it without ending the campaign; New campaign starts fresh. The completion sound respects SFX. The 32-region map retains reciprocal world routes and expands continent bonuses; world-control victory requires 22 territories.

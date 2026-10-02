@@ -351,3 +351,35 @@ test("missile effects happen during firing and reduced motion removes launch sha
   await panel.locator("[data-war-next]").click();await expect(panel.locator(".war-event-card")).toContainText("MISSILE IMPACT");await expect(panel.locator(".war-region-changes")).toContainText("11 → 6");
   await panel.locator("[data-war-skip]").click();await expect(shell).not.toHaveClass(/war-launch-active/);
 });
+
+test("expanded campaign renders 32 regions and produces audible music with independent volume", async ({page})=>{
+  await page.evaluate(()=>{
+    window.__warAudio={contexts:[],peaks:[]};
+    const Original=window.AudioContext;
+    window.AudioContext=class extends Original {
+      constructor(...args){super(...args);window.__warAudio.contexts.push(this);}
+      createGain(){const gain=super.createGain(),ramp=gain.gain.exponentialRampToValueAtTime.bind(gain.gain);gain.gain.exponentialRampToValueAtTime=(value,time)=>{window.__warAudio.peaks.push(value);return ramp(value,time);};return gain;}
+    };
+  });
+  const win=await openDesktopApp(page,"terminal"),input=win.locator(".terminal-input");await input.fill("war");await input.press("Enter");
+  const panel=win.locator(".terminal-war-panel");await expect(panel.locator(".war-region")).toHaveCount(32);await expect(panel.locator(".war-map-objective")).toContainText("22 of 32");
+  await panel.locator("[data-war-music]").click();
+  await expect.poll(()=>page.evaluate(()=>window.__warAudio.contexts[0]?.state)).toBe("running");
+  expect(await page.evaluate(()=>Math.max(...window.__warAudio.peaks))).toBeGreaterThan(.04);
+  await panel.locator("[data-war-volume]").fill("100");await page.waitForTimeout(2500);
+  expect(await page.evaluate(()=>Math.max(...window.__warAudio.peaks))).toBeGreaterThan(.08);
+  await page.screenshot({path:`test-results/campaign-map-${page.viewportSize().width}.png`});
+  await panel.locator("[data-war-music]").click();await expect(panel.locator("[data-war-music]")).toHaveAttribute("aria-pressed","false");
+});
+
+test("victory presents a campaign debrief then retains the final map and restarts cleanly",async({page})=>{
+  // Exercise end-state presentation separately from exhaustive engine campaigns.
+  await page.evaluate(()=>{const original=window.RizvisionsTerminal.createSession;window.RizvisionsTerminal.createSession=(...args)=>{const session=original(...args),handle=session.handle.bind(session);session.handle=text=>{const result=handle(text);if(text==="commit"&&result.war){result.war.outcome="victory";result.war.human.regions=22;result.war.stats.captures=19;}return result;};return session;};});
+  const win=await openDesktopApp(page,"terminal"),input=win.locator(".terminal-input"),send=async text=>{await input.fill(text);await input.press("Enter");};
+  await send("war");await send("deploy CA 4");await send("commit");
+  const panel=win.locator(".terminal-war-panel");await panel.locator("[data-war-skip]").click();
+  const debrief=panel.getByRole("dialog",{name:"Campaign victory"});await expect(debrief).toBeVisible();await expect(debrief).toContainText("CAMPAIGN WON");await expect(debrief).toContainText("22/32");await expect(debrief).toContainText("Territories captured");
+  await page.screenshot({path:`test-results/campaign-victory-${page.viewportSize().width}.png`});
+  await debrief.locator("[data-war-victory-close]").click();await expect(debrief).toHaveCount(0);await expect(panel.locator(".war-world")).toBeVisible();
+  await panel.locator('[data-war-command="restart"]').click();await expect(panel.locator(".war-score")).toContainText("YOU 3/32");await expect(panel.getByRole("dialog",{name:"Campaign victory"})).toHaveCount(0);
+});

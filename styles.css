@@ -3824,3 +3824,21 @@ button.conversation.active { background: #087dff; color: #fff; }
 
 .mac-window[data-app-window="terminal"] .war-plan .war-selected { min-height:0; padding:0; line-height:1.5; }
 .mac-window[data-app-window="terminal"] .war-plan > * { flex-shrink:0; }
+
+/* Campaign completion and independent soundtrack controls. */
+.mac-window[data-app-window="terminal"] .war-music-volume { display:flex; align-items:center; gap:6px; font-size:12px; }
+.mac-window[data-app-window="terminal"] .war-music-volume input { width:65px; accent-color:#81fbb0; }
+.mac-window[data-app-window="terminal"] .war-victory { position:absolute; inset:0; z-index:6; display:grid; place-items:center; padding:24px; background:rgba(0,10,6,.88); overflow:auto; backdrop-filter:blur(5px); }
+.mac-window[data-app-window="terminal"] .war-victory-card { width:min(640px,100%); padding:32px; border:1px solid #8cf5b0; background:#071b10; box-shadow:0 0 80px #42eb8133,inset 0 0 40px #42eb810d; text-align:center; animation:war-victory-enter .65s ease-out; }
+.mac-window[data-app-window="terminal"] .war-victory-card small { letter-spacing:.16em; color:#98caaa; }
+.mac-window[data-app-window="terminal"] .war-victory-card pre { color:#82ffaf; font-size:clamp(12px,1.5vw,18px); line-height:1.3; margin:20px 0; }
+.mac-window[data-app-window="terminal"] .war-victory h2 { color:#b4ffcf; font-size:clamp(28px,4vw,46px); letter-spacing:.06em; margin:12px 0; text-shadow:0 0 22px #55ff9580; }
+.mac-window[data-app-window="terminal"] .war-victory p { font-size:16px; line-height:1.5; }
+.mac-window[data-app-window="terminal"] .war-victory-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:24px 0; }
+.mac-window[data-app-window="terminal"] .war-victory-stats div { padding:14px 6px; border:1px solid #32563e; display:grid; gap:8px; }
+.mac-window[data-app-window="terminal"] .war-victory-stats b { font-size:26px; color:#afffc9; }
+.mac-window[data-app-window="terminal"] .war-victory-stats span { font-size:14px; color:#bed2c5; }
+.mac-window[data-app-window="terminal"] .war-victory-transmission { color:#87d9a3; }
+.mac-window[data-app-window="terminal"] .war-victory button { margin:8px; padding:12px 16px; }
+@keyframes war-victory-enter { from { opacity:0; transform:translateY(15px); } to { opacity:1; transform:translateY(0); } }
+@media (prefers-reduced-motion:reduce) { .mac-window[data-app-window="terminal"] .war-victory-card { animation:none; } }

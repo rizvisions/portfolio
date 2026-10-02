@@ -7,9 +7,9 @@ const region=(g,id)=>g.snapshot().regions.find(r=>r.id===id);
 const deployAll=g=>{const s=g.snapshot(),id=s.regions.find(r=>r.owner==="human").id;g.handle(`deploy ${id} ${s.reserves}`);};
 
 test("the campaign graph remains reciprocal and connected",()=>{
-  assert.equal(new Set(regions.map(r=>r.id)).size,18);
+  assert.equal(new Set(regions.map(r=>r.id)).size,32);
   for(const r of regions)for(const n of r.neighbors)assert.ok(regions.find(t=>t.id===n).neighbors.includes(r.id));
-  const seen=new Set(),queue=["US"];while(queue.length){const id=queue.shift();if(seen.has(id))continue;seen.add(id);queue.push(...regions.find(r=>r.id===id).neighbors);}assert.equal(seen.size,18);
+  const seen=new Set(),queue=["US"];while(queue.length){const id=queue.shift();if(seen.has(id))continue;seen.add(id);queue.push(...regions.find(r=>r.id===id).neighbors);}assert.equal(seen.size,32);
 });
 test("deployments apply instantly while movement stays queued and guards against overassignment",()=>{
   const g=createGame({seed:7}),before=g.snapshot();
@@ -107,4 +107,18 @@ test("immediate reinforcement can be undone and reset without creating extra arm
   g.handle("deploy CA 2");g.handle("attack CA EU 8");assert.match(g.handle("undeploy 1").text,/MOVEMENT ORDERS FIRST/);
   g.handle("reset orders");assert.equal(region(g,"CA").armies,5);assert.equal(region(g,"US").armies,7);assert.equal(g.snapshot().reserves,4);
   g.handle("deploy CA 4");assert.equal(region(g,"CA").armies,9);g.handle("commit");assert.equal(region(g,"CA").armies,9);assert.equal(region(g,"CA").deployed,0);
+});
+
+
+test("expanded campaign has a scaled victory objective and trustworthy final statistics",()=>{
+  const g=createGame({seed:5,difficulty:"easy"});assert.equal(g.snapshot().victoryTarget,22);
+  let captured=0,lost=0,launches=0;
+  for(let turn=0;turn<41&&!g.snapshot().outcome;turn++){
+    const st=g.snapshot(),front=st.regions.filter(r=>r.owner==="human"&&r.neighbors.some(n=>st.regions.find(t=>t.id===n).owner!=="human"));
+    const source=(front.length?front:st.regions.filter(r=>r.owner==="human")).sort((a,b)=>b.armies-a.armies)[0];g.handle(`deploy ${source.id} ${st.reserves}`);
+    for(let order=0;order<4;order++){const s=g.snapshot();let best=null;for(const r of s.regions.filter(r=>r.owner==="human"))for(const id of r.neighbors){const t=s.regions.find(t=>t.id===id);if(t.owner!=="human"&&g.previewBattle(r.id,id,r.available).capture)best={from:r.id,to:id,count:r.available};}if(!best)break;g.handle(`attack ${best.from} ${best.to} ${best.count}`);}
+    const result=g.handle("commit");for(const f of result.resolution){if(f.type==="capture"&&f.who==="human")captured++;if(f.detail.attackersLost!==undefined)lost+=f.who==="human"?f.detail.attackersLost:f.beforeWar.regions.find(r=>r.id===f.to).owner==="human"?f.detail.defendersLost:0;if(["strike","intercept"].includes(f.type)&&f.who==="human")launches++;}
+    assert.equal(result.war.stats.captures,captured);assert.equal(result.war.stats.troopsLost,lost);assert.equal(result.war.stats.launches,launches);
+    if(result.war.outcome==="victory")assert.ok(result.war.human.regions>=22||result.war.regions.find(r=>r.id==="CH").owner==="human");
+  }assert.ok(g.snapshot().outcome);
 });
