@@ -379,6 +379,9 @@ test("victory presents a campaign debrief then retains the final map and restart
   await send("war");await send("deploy CA 4");await send("commit");
   const panel=win.locator(".terminal-war-panel");await panel.locator("[data-war-skip]").click();
   const debrief=panel.getByRole("dialog",{name:"Campaign victory"});await expect(debrief).toBeVisible();await expect(debrief).toContainText("CAMPAIGN WON");await expect(debrief).toContainText("22/32");await expect(debrief).toContainText("Territories captured");
+  await expect(debrief.locator(".war-victory-card")).toHaveCSS("transform","none");
+  const resultRect=await debrief.boundingBox();expect(resultRect.height).toBe(page.viewportSize().height);expect(resultRect.y).toBe(0);
+  const closeRect=await debrief.locator("[data-war-victory-close]").boundingBox();expect(closeRect.y+closeRect.height).toBeLessThan(page.viewportSize().height);
   await page.screenshot({path:`test-results/campaign-victory-${page.viewportSize().width}.png`});
   await debrief.locator("[data-war-victory-close]").click();await expect(debrief).toHaveCount(0);await expect(panel.locator(".war-world")).toBeVisible();
   await panel.locator('[data-war-command="restart"]').click();await expect(panel.locator(".war-score")).toContainText("YOU 3/32");await expect(panel.getByRole("dialog",{name:"Campaign victory"})).toHaveCount(0);

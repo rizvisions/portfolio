@@ -3828,8 +3828,8 @@ button.conversation.active { background: #087dff; color: #fff; }
 /* Campaign completion and independent soundtrack controls. */
 .mac-window[data-app-window="terminal"] .war-music-volume { display:flex; align-items:center; gap:6px; font-size:12px; }
 .mac-window[data-app-window="terminal"] .war-music-volume input { width:65px; accent-color:#81fbb0; }
-.mac-window[data-app-window="terminal"] .war-victory { position:absolute; inset:0; z-index:6; display:grid; place-items:center; padding:24px; background:rgba(0,10,6,.88); overflow:auto; backdrop-filter:blur(5px); }
-.mac-window[data-app-window="terminal"] .war-victory-card { width:min(640px,100%); padding:32px; border:1px solid #8cf5b0; background:#071b10; box-shadow:0 0 80px #42eb8133,inset 0 0 40px #42eb810d; text-align:center; animation:war-victory-enter .65s ease-out; }
+.mac-window[data-app-window="terminal"] .war-victory { position:fixed; inset:0; z-index:6; display:grid; place-items:center; padding:24px; background:rgba(0,10,6,.88); overflow:auto; backdrop-filter:blur(5px); }
+.mac-window[data-app-window="terminal"] .war-victory-card { box-sizing:border-box; max-height:calc(100dvh - 48px); overflow:auto; width:min(640px,100%); padding:32px; border:1px solid #8cf5b0; background:#071b10; box-shadow:0 0 80px #42eb8133,inset 0 0 40px #42eb810d; text-align:center; animation:war-victory-enter .65s ease-out; }
 .mac-window[data-app-window="terminal"] .war-victory-card small { letter-spacing:.16em; color:#98caaa; }
 .mac-window[data-app-window="terminal"] .war-victory-card pre { color:#82ffaf; font-size:clamp(12px,1.5vw,18px); line-height:1.3; margin:20px 0; }
 .mac-window[data-app-window="terminal"] .war-victory h2 { color:#b4ffcf; font-size:clamp(28px,4vw,46px); letter-spacing:.06em; margin:12px 0; text-shadow:0 0 22px #55ff9580; }
