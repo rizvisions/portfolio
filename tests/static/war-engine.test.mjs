@@ -65,7 +65,7 @@ test("computer plan is independent of the visitor's pending plan",()=>{
 test("nuclear launches are queued, limited, interceptable and followed by cooling",()=>{
   const g=createGame({seed:7});deployAll(g);g.handle("strike CH");assert.equal(g.snapshot().pendingStrike,"CH");g.handle("cancel");assert.equal(g.snapshot().pendingStrike,null);
   g.handle("strike CH");g.handle("confirm strike");assert.equal(g.snapshot().arsenal.human,3);assert.equal(g.snapshot().defcon,5);assert.match(g.handle("strike SI").text,/ONE LAUNCH/);
-  const r=g.handle("commit");assert.equal(r.war.defcon,4);assert.equal(r.war.arsenal.human,2);assert.equal(r.war.outcome,null);assert.ok(r.resolution.some(f=>f.type==="strike"));
+  const r=g.handle("commit");assert.equal(r.war.defcon,4);assert.equal(r.war.arsenal.human,2);assert.equal(r.war.outcome,null);assert.ok(r.resolution.some(f=>f.type==="strike"));assert.equal(r.war.stats.enemyTroopsLost,r.resolution.reduce((sum,f)=>sum+(f.type==="strike"&&f.who==="human"?f.detail.defendersLost:f.who==="computer"&&f.detail.attackersLost!==undefined?f.detail.attackersLost:0),0));
   deployAll(g);g.handle("shield CA");assert.match(g.handle("shield US").text,/ONE SHIELD/);const intercepted=g.handle("commit");
   assert.equal(intercepted.war.defcon,3);assert.equal(intercepted.war.arsenal.computer,2);assert.ok(intercepted.resolution.some(f=>f.type==="intercept"&&f.to==="CA"));
   const shieldIndex=intercepted.resolution.findIndex(f=>f.type==="shield"&&f.who==="human"),launchIndex=intercepted.resolution.findIndex(f=>f.type==="intercept");assert.ok(shieldIndex<launchIndex);

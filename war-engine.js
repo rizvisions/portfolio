@@ -574,6 +574,7 @@ Closing Terminal ends the session. No campaign is sent to a server.`;
           if(map[o.to].owner!==other){frame(`${factions[who]} LAUNCH ${o.to} CANCELLED: target no longer hostile.`,"cancel",who,null,o.to);continue;}
           arsenal[who]--;launches++;if(who==="human")stats.launches++;defcon=Math.max(1,defcon-1);if(who==="human")newHumanLaunch=o.to;
           const beforeArmy=map[o.to].armies,blocked=shields[other].delete(o.to);if(!blocked){map[o.to].armies=Math.max(1,Math.ceil(map[o.to].armies/2));movable[other][o.to]=Math.min(movable[other][o.to]||0,map[o.to].armies-1);}
+          if(!blocked){if(other==="human")stats.troopsLost+=beforeArmy-map[o.to].armies;else stats.enemyTroopsLost+=beforeArmy-map[o.to].armies;}
           if(defcon===1)outcome="mutual";
           frame(`${factions[who]} LAUNCH > ${o.to}: ${blocked?"INTERCEPTED":`${beforeArmy} → ${map[o.to].armies} armies`}. DEFCON ${defcon}.${outcome?" MUTUAL DESTRUCTION. NO WINNER.":""}`,blocked?"intercept":"strike",who,who==="human"?"US":"CH",o.to,{defconBefore:defcon+1,defconAfter:defcon,blocked,defendersLost:beforeArmy-map[o.to].armies});continue;
         }

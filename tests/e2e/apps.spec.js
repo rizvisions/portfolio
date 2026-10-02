@@ -366,7 +366,7 @@ test("expanded campaign renders 32 regions and produces audible music with indep
   await panel.locator("[data-war-music]").click();
   await expect.poll(()=>page.evaluate(()=>window.__warAudio.contexts[0]?.state)).toBe("running");
   expect(await page.evaluate(()=>Math.max(...window.__warAudio.peaks))).toBeGreaterThan(.04);
-  await panel.locator("[data-war-volume]").fill("100");await page.waitForTimeout(2500);
+  await panel.locator("[data-war-volume]").focus();await panel.locator("[data-war-volume]").press("End");await page.waitForTimeout(2500);
   expect(await page.evaluate(()=>Math.max(...window.__warAudio.peaks))).toBeGreaterThan(.08);
   await page.screenshot({path:`test-results/campaign-map-${page.viewportSize().width}.png`});
   await panel.locator("[data-war-music]").click();await expect(panel.locator("[data-war-music]")).toHaveAttribute("aria-pressed","false");
