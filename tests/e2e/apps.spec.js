@@ -269,7 +269,10 @@ test("ASCII wordmark keeps clear letter faces at a readable size", async ({ page
 });
 
 test("world campaign supports map selection, combat, computer turns and nuclear ending", async ({ page }) => {
-  const win=await openDesktopApp(page,"terminal"),initial=await win.boundingBox();
+  const win=await openDesktopApp(page,"terminal");
+  // Measure the settled window, rather than its transient opening scale.
+  await expect(win).toHaveCSS("transform","none");
+  const initial=await win.boundingBox();
   const input=win.locator(".terminal-input");
   const send=async text=>{await input.fill(text);await input.press("Enter");};
   await send("shall we play a game?");await send("3");
