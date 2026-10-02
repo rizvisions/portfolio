@@ -691,7 +691,7 @@
   }
 
   function saveWindowRect(win) {
-    if (!win || win.classList.contains("maximized")) return;
+    if (!win || win.classList.contains("maximized") || win.classList.contains("war-immersive")) return;
     const appId = win.dataset.appWindow;
     state.windows[appId] = { left:win.offsetLeft, top:win.offsetTop, width:win.offsetWidth, height:win.offsetHeight };
     saveState();
@@ -700,14 +700,14 @@
   function closeWindow(win = activeWindow) {
     if (!win) return;
     if (win._fullscreenChangeHandler) document.removeEventListener("fullscreenchange", win._fullscreenChangeHandler);
-    saveWindowRect(win); win.remove(); playSound("close");
+    saveWindowRect(win); win._terminalDispose?.(); win.remove(); playSound("close");
     activeWindow = $$(".mac-window:not([hidden])", windowsRoot).sort((a,b) => Number(a.style.zIndex)-Number(b.style.zIndex)).pop() || null;
     if (activeWindow) focusWindow(activeWindow); else activeAppName.textContent = "Rizvisions";
     renderDock();
   }
 
   function minimizeWindow(win = activeWindow) {
-    if (!win) return; saveWindowRect(win); win.classList.add("minimizing");
+    if (!win) return; win._terminalReturnDesktop?.(); saveWindowRect(win); win.classList.add("minimizing");
     setTimeout(() => { win.hidden = true; win.classList.remove("minimizing"); activeWindow = $$(".mac-window:not([hidden])", windowsRoot).sort((a,b)=>Number(a.style.zIndex)-Number(b.style.zIndex)).pop() || null; if (activeWindow) focusWindow(activeWindow); else activeAppName.textContent = "Rizvisions"; renderDock(); }, 210);
   }
 
@@ -728,7 +728,7 @@
   function wireWindow(win, definition) {
     win.addEventListener("pointerdown", (event) => {
       focusWindow(win);
-      if (event.defaultPrevented || win.classList.contains("maximized")) return;
+      if (event.defaultPrevented || win.classList.contains("maximized") || win.classList.contains("war-immersive")) return;
       const rect = win.getBoundingClientRect();
       const inTopBand = event.clientY >= rect.top && event.clientY <= rect.top + 56;
       const isControl = event.target.closest?.("button,input,textarea,a,iframe,[contenteditable='true']");
@@ -1635,9 +1635,8 @@
     return `<div class="notes-app"><aside class="notes-folders"><div class="notes-sidebar-top" aria-hidden="true"></div><div class="notes-sidebar-label">On My Mac</div><div class="notes-group"><button type="button" class="active"><span class="notes-folder-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3.5 7.5h6l1.7 2H20.5v9.2a1.8 1.8 0 0 1-1.8 1.8H5.3a1.8 1.8 0 0 1-1.8-1.8V7.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M3.5 7.5V5.3c0-1 .8-1.8 1.8-1.8h4.1l1.8 2h7.5c1 0 1.8.8 1.8 1.8v2.2" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span><strong>Notes</strong><em>${notes.length}</em></button></div></aside><section class="notes-browser"><header class="notes-browser-toolbar"><div><strong>Notes</strong><small>${notes.length} ${notes.length === 1 ? "note" : "notes"}</small></div><div class="notes-toolbar-actions"><button type="button" class="notes-compose" data-notes-new aria-label="New note">✎</button></div></header><div class="notes-note-list">${noteRows}</div></section><main class="note-editor apple-note-editor">${editorBody}</main></div>`;
   }
   function terminalWordmark(){
-    const glyphs={R:["#### ","#   #","#### ","#  # ","#   #"],I:["#####","  #  ","  #  ","  #  ","#####"],Z:["#####","   # ","  #  "," #   ","#####"],V:["#   #","#   #","#   #"," # # ","  #  "],S:["#####","#    ","#####","    #","#####"],O:[" ### ","#   #","#   #","#   #"," ### "],N:["#   #","##  #","# # #","#  ##","#   #"]};
-    const face=Array.from({length:5},(_,row)=>[..."RIZVISIONS"].map(letter=>glyphs[letter][row]).join("   ")).join("\n");
-    // The shadow is a separate text layer so it never fills the letter counters.
+    const glyphs={R:["11110","10001","10001","11110","10100","10010","10001"],I:["11111","00100","00100","00100","00100","00100","11111"],Z:["11111","00001","00010","00100","01000","10000","11111"],V:["10001","10001","10001","10001","10001","01010","00100"],S:["11111","10000","10000","11111","00001","00001","11111"],O:["01110","10001","10001","10001","10001","10001","01110"],N:["10001","11001","11001","10101","10011","10011","10001"]};
+    const face=Array.from({length:7},(_,row)=>[..."RIZVISIONS"].map(letter=>[...glyphs[letter][row]].map(cell=>cell==="1"?"██":"  ").join("")).join("  ")).join("\n");
     return `<span class="terminal-wordmark-shadow" aria-hidden="true">${face}</span><span class="terminal-wordmark-face">${face}</span>`;
   }
 
@@ -1743,84 +1742,116 @@
   }
 
   function wireTerminal(win){
-    const input=$(".terminal-input",win),history=$(".terminal-history",win),scroll=$(".terminal-scroll",win),form=$("[data-terminal-form]",win),shell=$(".terminal-shell",win),prompt=$(".terminal-prompt",win);
+    const input=$(".terminal-input",win),history=$(".terminal-history",win),scroll=$(".terminal-scroll",win),form=$("[data-terminal-form]",win),shell=$(".terminal-shell",win),prompt=$(".terminal-prompt",win),warPanel=$(".terminal-war-panel",win);
     const session=window.RizvisionsTerminal.createSession();
-    const commands=[];let cursor=0,draft="",animation=0,warState=null,selectedRegion=null,preWarRect=null;
-    const warPanel=$(".terminal-war-panel",win);
+    const commands=[];let cursor=0,draft="",animation=0,warState=null,selectedRegion=null,preWarRect=null,editor=null,playing=false,playbackToken=0,playbackTimer=null,finalWar=null,lastResolution=null,lastPlan=null,playbackReturnState=null,currentFrame=null,soundEnabled=true,audio=null,helpOpen=false;
+    const tone=(type)=>{
+      if(!soundEnabled)return;
+      try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;audio ||= new Audio();if(audio.state==="suspended")audio.resume().catch(()=>{});const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;const freq={queue:620,deploy:330,move:440,attack:170,capture:760,shield:520,strike:90,intercept:900,lock:260,cooldown:570,cancel:140}[type]||400;o.type=type==="strike"?"sawtooth":"sine";o.frequency.setValueAtTime(freq,now);o.frequency.exponentialRampToValueAtTime(Math.max(40,freq*.6),now+.13);g.gain.setValueAtTime(.035,now);g.gain.exponentialRampToValueAtTime(.001,now+.19);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+.2);o.onended=()=>{o.disconnect();g.disconnect();};}catch{/* Audio is optional. */}
+    };
     const append=(role,text)=>{
       const entry=document.createElement("div");entry.className=`terminal-entry ${role}`;
       const label=document.createElement("span");label.textContent=role==="user"?"❯":"●";
-      const copy=document.createElement("p");copy.textContent=text;entry.append(label,copy);history.append(entry);scroll.scrollTop=scroll.scrollHeight;return copy;
+      const copy=document.createElement("p");copy.textContent=text;entry.append(label,copy);history.append(entry);if(session.mode==="war")history.scrollTop=history.scrollHeight;else scroll.scrollTop=scroll.scrollHeight;return copy;
+    };
+    const stopPlayback=()=>{playbackToken++;clearTimeout(playbackTimer);playing=false;input.disabled=false;currentFrame=null;};
+    win._terminalDispose=()=>{stopPlayback();audio?.close().catch(()=>{});};
+    const expand=()=>{win.classList.add("war-immersive");focusWindow(win);};
+    const returnDesktop=()=>{win.classList.remove("war-immersive");input.focus();};
+    win._terminalReturnDesktop=returnDesktop;
+    const faction=who=>({human:"YOU",computer:"WOPR",neutral:"NEUTRAL"}[who]);
+    const orderText=o=>o.type==="deploy"?`Deploy ${o.to} +${o.count}`:o.type==="strike"?`Launch → ${o.to}`:o.type==="shield"?`Shield ${o.to}`:`${o.type==="move"?"Transfer":"Attack"} ${o.from} → ${o.to} · ${o.count}`;
+    const preview=()=>{
+      if(!editor||!warState)return "Select a territory to plan an order.";
+      const source=warState.regions.find(r=>r.id===editor.from),target=warState.regions.find(r=>r.id===editor.to),count=Number(editor.count);
+      if(editor.type==="deploy")return `${warState.reserves} reinforcements remain. This is a planned deployment; the board changes on Commit.`;
+      if(editor.type==="strike")return `1 of ${warState.arsenal.human} missiles · 1 action. Target army halved; no capture. DEFCON ${warState.defcon} → ${Math.max(1,warState.defcon-1)}. ${warState.defcon<=2?"THIS LAUNCH ENDS IN MUTUAL DESTRUCTION.":"Another launch from WOPR can lower it further. Interception still escalates."}`;
+      if(editor.type==="shield")return "Uses 1 action. Blocks 1 missile at this territory this round. Shields activate before launches.";
+      if(!source||!target)return "Choose a connected target.";
+      if(!Number.isInteger(count)||count<1||count>source.available)return `Choose 1–${source.available} troops. One stays behind; troops already assigned cannot move again.`;
+      const left=source.armies+source.plannedDeploy-source.assigned-count;
+      if(editor.type==="move")return `${source.available} available · ${left} left defending ${source.id}. Arrivals defend immediately but move next round.`;
+      const remaining=Math.max(0,count-Math.round(target.armies*.7)),defenders=Math.max(0,target.armies-Math.round(count*.6)),capture=defenders===0&&remaining>0;
+      return `${source.available} available · ${left} left defending ${source.id}. Estimate: ${capture?`capture with ${remaining} survivors`:`repelled; ${remaining} return, ${Math.max(1,defenders)} defend`}. Based on current board; earlier orders can change this.`;
+    };
+    const editorMarkup=()=>{
+      if(!editor)return '<div class="war-order-editor"><strong>Plan an order</strong><p>Click your territory to deploy. After deployment, click a source and a connected target to choose troops.</p></div>';
+      const max=editor.type==="deploy"?warState.reserves:warState.regions.find(r=>r.id===editor.from)?.available||0;
+      return `<div class="war-order-editor"><strong>${escapeHtml(orderText(editor))}</strong>${["deploy","attack","move"].includes(editor.type)?`<label class="war-amount-label">Troops <input data-war-amount type="number" min="1" max="${max}" value="${editor.count}" aria-label="Troops to send"><button type="button" data-war-max>Max</button></label>`:""}<p data-war-preview>${escapeHtml(preview())}</p><button type="button" data-war-queue>${editor.type==="strike"?"Confirm & queue launch":"Queue order"}</button><button type="button" class="war-subtle" data-war-cancel-editor>Cancel</button></div>`;
     };
     const renderWar=(snapshot)=>{
-      warState=snapshot;
-      if(!snapshot){warPanel.hidden=true;return;}
-      warPanel.hidden=false;
-      const ownerClass={human:"human",computer:"computer",neutral:"neutral"};
-      const edges=snapshot.regions.flatMap(r=>r.neighbors.filter(n=>r.id<n).map(n=>{const target=snapshot.regions.find(t=>t.id===n);return `<line x1="${r.x}" y1="${r.y}" x2="${target.x}" y2="${target.y}"/>`;})).join("");
-      const selected=snapshot.regions.find(r=>r.id===selectedRegion);
-      const regions=snapshot.regions.map(r=>`<g class="war-region ${ownerClass[r.owner]} ${r.id===selectedRegion?"selected":""} ${selected?.neighbors.includes(r.id)?"adjacent":""}" data-war-region="${r.id}" role="button" tabindex="0" aria-label="${r.name}, ${r.owner}, ${r.armies} armies"><title>${r.name} / ${r.id} / ${r.owner.toUpperCase()} / ${r.armies} armies</title><polygon points="${r.shape}"/><text class="war-code" x="${r.x}" y="${r.y-6}">${r.id}${r.id==="US"||r.id==="CH"?" *":""}</text><text class="war-armies" x="${r.x}" y="${r.y+16}">${r.armies}</text></g>`).join("");
-      const status=snapshot.outcome?({victory:"CAMPAIGN WON",defeat:"COMMAND LOST",mutual:"MUTUAL DESTRUCTION",stalemate:"STALEMATE"}[snapshot.outcome]):snapshot.reserves?`DEPLOY ${snapshot.reserves} ARMIES`:`${snapshot.orders} ORDERS LEFT`;
-      const hint=selected?`${selected.id} / ${selected.name.toUpperCase()} / ${selected.armies} ARMIES / ${selected.owner==="human"?selected.ready+" READY":selected.owner.toUpperCase()}`:"SELECT A REGION OR TYPE AN ORDER";
-      warPanel.innerHTML=`<div class="war-heading"><strong>GLOBAL THERMONUCLEAR WAR</strong><span>ROUND ${snapshot.round} / DEFCON ${snapshot.defcon}</span></div><div class="war-score"><span class="war-human">YOU ${snapshot.human.regions}/18 · +${snapshot.human.income}/TURN</span><strong>${status}</strong><span class="war-computer">WOPR ${snapshot.computer.regions}/18 · +${snapshot.computer.income}/TURN</span></div><svg class="war-world" viewBox="0 0 1100 560" role="group" aria-label="World territory map"><defs><pattern id="war-grid-${win.dataset.appWindow}" width="55" height="56" patternUnits="userSpaceOnUse"><path d="M55 0H0V56" fill="none" stroke="#244435" stroke-width=".6"/></pattern></defs><rect x="0" y="0" width="1100" height="560" fill="url(#war-grid-${win.dataset.appWindow})"/><ellipse cx="550" cy="280" rx="530" ry="263" class="war-grid-globe"/><path d="M20 280H1080 M550 17V543" class="war-grid-globe"/><g class="war-routes">${edges}</g>${regions}<text class="war-map-caption" x="28" y="548">* HQ / CAPTURE CH OR CONTROL 12 REGIONS</text>${snapshot.outcome==="mutual"?'<path class="war-launch-path" d="M210 209 Q520 5 801 226 M801 226 Q540 490 210 209"/><text class="war-end-overlay" x="550" y="285">NO WINNER</text>':""}</svg><div class="war-selected">${hint}</div><div class="war-manual"><span>deploy CA 4</span><span>attack CA EU 6</span><span>inspect EU</span><span>end / rules / exit</span></div>`;
+      warState=snapshot;if(!snapshot){warPanel.hidden=true;return;}warPanel.hidden=false;
+      const selected=snapshot.regions.find(r=>r.id===selectedRegion),regionBy=id=>snapshot.regions.find(r=>r.id===id),active=currentFrame;
+      const paths=snapshot.regions.flatMap(r=>r.neighbors.filter(n=>r.id<n).map(n=>{const t=regionBy(n);return `<line x1="${r.x}" y1="${r.y}" x2="${t.x}" y2="${t.y}"/>`;})).join("");
+      const arrow=(o,cls)=>{const a=regionBy(o.from),b=regionBy(o.to);return a&&b?`<path class="war-order-path ${cls}" d="M${a.x} ${a.y} Q${(a.x+b.x)/2} ${Math.min(a.y,b.y)-35} ${b.x} ${b.y}" marker-end="url(#war-arrow)"/>`:"";};
+      const plannedArrows=!playing?snapshot.queue.filter(o=>o.from).map(o=>arrow(o,"planned")).join(""):"";
+      const activeArrow=active?.from?arrow(active,`${active.who} live ${["strike","intercept"].includes(active.type)?"missile":""}`):"";
+      const regions=snapshot.regions.map(r=>`<g class="war-region ${r.owner} ${r.id===selectedRegion?"selected":""} ${selected?.neighbors.includes(r.id)?"adjacent":""} ${active?.to===r.id?"war-impact":""}" data-war-region="${r.id}" role="button" tabindex="${playing?-1:0}" aria-label="${r.name}, ${faction(r.owner)}, ${r.armies} armies"><title>${r.name} / ${faction(r.owner)} / ${r.armies} armies</title><polygon points="${r.shape}"/><text class="war-code" x="${r.x}" y="${r.y-7}">${r.id}${r.id==="US"||r.id==="CH"?" *":""}</text><text class="war-armies" x="${r.x}" y="${r.y+15}">${r.armies}</text>${r.plannedDeploy&&!playing?`<text class="war-planned-count" x="${r.x}" y="${r.y+32}">+${r.plannedDeploy} planned</text>`:""}</g>`).join("");
+      const status=snapshot.outcome?({victory:"CAMPAIGN WON",defeat:"WOPR WINS",mutual:"MUTUAL DESTRUCTION",stalemate:"STALEMATE"}[snapshot.outcome]):playing?`RESOLVING: ${faction(active?.who)||"BOTH SIDES"}`:snapshot.reserves?`PLANNING · ${snapshot.reserves} TO DEPLOY`:`PLANNING · ${snapshot.queue.length}/4 ACTIONS QUEUED`;
+      const plan=playing&&lastPlan?lastPlan:snapshot;
+      const orders=plan.queue.map((o,i)=>`<li><span>${i+1}. ${escapeHtml(orderText(o))}</span><div><button type="button" data-war-command="up ${i+1}" aria-label="Move order ${i+1} up" ${i===0?"disabled":""}>↑</button><button type="button" data-war-command="down ${i+1}" aria-label="Move order ${i+1} down" ${i===plan.queue.length-1?"disabled":""}>↓</button><button type="button" data-war-command="remove ${i+1}" aria-label="Remove order ${i+1}">×</button></div></li>`).join("");
+      const hint=selected?`${selected.name} / ${faction(selected.owner)} / ${selected.armies} total${selected.owner==="human"&&!playing?` +${selected.plannedDeploy} planned / ${selected.assigned} assigned / ${selected.available} available`:""}`:"Select a territory. Dotted routes show its connections.";
+      warPanel.innerHTML=`<header class="war-heading"><div><strong>GLOBAL THERMONUCLEAR WAR</strong><span>ROUND ${snapshot.round} · DEFCON ${snapshot.defcon} · ${snapshot.difficulty.toUpperCase()}</span></div><nav><button type="button" data-war-view>${win.classList.contains("war-immersive")?"Return to desktop · Esc":"Expand game"}</button><button type="button" data-war-sound aria-pressed="${soundEnabled}">Sound ${soundEnabled?"on":"off"}</button><button type="button" data-war-command="rules">Rules</button></nav></header><div class="war-score"><span class="war-human">YOU ${snapshot.human.regions}/18 · +${snapshot.human.income}/TURN · ${snapshot.arsenal.human} MISSILES</span><strong>${status}</strong><span class="war-computer">WOPR ${snapshot.computer.regions}/18 · +${snapshot.computer.income}/TURN · ${snapshot.arsenal.computer} MISSILES</span></div><div class="war-workspace"><div class="war-map-area"><div class="war-legend"><span class="human">● YOU</span><span class="computer">● WOPR</span><span class="neutral">● NEUTRAL</span><span>${faction(snapshot.first)} has first action priority</span></div><svg class="war-world" viewBox="0 0 1100 560" role="group" aria-label="World territory map"><defs><pattern id="war-grid" width="55" height="56" patternUnits="userSpaceOnUse"><path d="M55 0H0V56" fill="none" stroke="#244435" stroke-width=".6"/></pattern><marker id="war-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="context-stroke"/></marker></defs><rect width="1100" height="560" fill="url(#war-grid)"/><ellipse cx="550" cy="280" rx="530" ry="263" class="war-grid-globe"/><g class="war-routes">${paths}</g>${regions}${plannedArrows}${activeArrow}${active?.type==="shield"?`<circle class="war-shield-ring" cx="${regionBy(active.to).x}" cy="${regionBy(active.to).y}" r="47"/>`:""}${snapshot.outcome==="mutual"?'<text class="war-end-overlay" x="550" y="285">NO WINNER</text>':""}</svg><div class="war-selected">${escapeHtml(hint)}</div><p class="war-map-objective">* HQ · Capture CH or control 12 regions. Nuclear strikes weaken territory; they do not capture it.</p>${selected&&!playing?`<div class="war-territory-actions">${selected.owner==="human"?`<button type="button" data-war-editor="deploy" ${snapshot.reserves?"":"disabled"}>Deploy here</button><button type="button" data-war-editor="shield">Shield here</button>`:selected.owner==="computer"?'<button type="button" data-war-editor="strike">Plan launch here</button>':""}<button type="button" data-war-command="inspect ${selected.id}">Inspect</button></div>`:""}</div><aside class="war-plan"><div class="war-phase-copy" role="status">${playing?escapeHtml(active?.text||"Both plans locked."):"Your planning phase. Orders are editable until Commit."}</div>${playing?`<button type="button" data-war-skip>Skip animation</button>`:snapshot.outcome?'<button type="button" data-war-command="restart">New campaign</button>':editorMarkup()}<div class="war-deployments"><strong>Deployments · ${plan.budget-plan.reserves}/${plan.budget}</strong>${plan.deployments.map((d,i)=>`<div>${escapeHtml(orderText(d))}<button type="button" data-war-command="undeploy ${i+1}" aria-label="Remove deployment ${i+1}">×</button></div>`).join("")}</div><strong>Action queue · ${plan.queue.length}/4${playing?" · locked":""}</strong><ol class="war-order-list">${orders||'<li class="war-empty">No actions queued.</li>'}</ol>${!playing&&!snapshot.outcome?`<button type="button" class="war-commit" data-war-command="commit" ${snapshot.reserves?"disabled":""}>Commit turn${snapshot.queue.length===4?" · Ready":""}</button><button type="button" class="war-subtle" data-war-command="reset orders">Clear plan</button><small>Commit fewer than 4 actions if you prefer. Each army moves once. A quiet round eases DEFCON by 1.</small>`:""}${!playing&&lastResolution?'<button type="button" class="war-subtle" data-war-replay>Replay last round</button>':""}<small>Type commands below. <b>exit</b> ends the game.</small></aside></div>`;
+      if(helpOpen){const help=document.createElement("section");help.className="war-help";help.setAttribute("aria-label","Campaign rules");help.innerHTML='<button type="button" data-war-close-help>Close rules</button><pre>'+escapeHtml(window.RizvisionsWar.rules)+'</pre>';warPanel.append(help);}
+      if(playing)warPanel.querySelectorAll("[data-war-command]").forEach(b=>b.disabled=true);
     };
-    const selectRegion=(id)=>{
-      if(!warState || warState.outcome)return;
-      const region=warState.regions.find(r=>r.id===id),previous=warState.regions.find(r=>r.id===selectedRegion);
-      if(warState.reserves>0){selectedRegion=id;input.value=region.owner==="human"?`deploy ${id} ${warState.reserves}`:`inspect ${id}`;}
-      else if(previous?.owner==="human" && previous.id!==id && previous.neighbors.includes(id)){
-        input.value=`${region.owner==="human"?"move":"attack"} ${previous.id} ${id} ${Math.min(previous.ready,previous.armies-1)}`;
-      }else{selectedRegion=id;input.value=region.owner==="human"?`attack ${id} `:`inspect ${id}`;}
-      renderWar(warState);input.focus();input.setSelectionRange(input.value.length,input.value.length);
+    const updatePreview=()=>{const title=$(".war-order-editor > strong",warPanel);if(title&&editor)title.textContent=orderText(editor);const p=$("[data-war-preview]",warPanel);if(p)p.textContent=preview();const button=$("[data-war-queue]",warPanel);if(button&&editor&&["deploy","attack","move"].includes(editor.type)){const max=editor.type==="deploy"?warState.reserves:warState.regions.find(r=>r.id===editor.from)?.available||0;button.disabled=!Number.isInteger(Number(editor.count))||Number(editor.count)<1||Number(editor.count)>max;}};
+    const selectRegion=id=>{
+      if(!warState||playing||warState.outcome)return;
+      const r=warState.regions.find(r=>r.id===id),previous=warState.regions.find(r=>r.id===selectedRegion);
+      if(warState.reserves>0&&r.owner==="human"){selectedRegion=id;editor={type:"deploy",to:id,count:1};}
+      else if(!warState.reserves&&previous?.owner==="human"&&previous.id!==id&&previous.neighbors.includes(id)){
+        let count=1;if(r.owner!=="human"){count=Math.min(previous.available,Math.max(1,Math.ceil((r.armies-.49)/.6)));}
+        editor={type:r.owner==="human"?"move":"attack",from:previous.id,to:id,count};
+      }else{selectedRegion=id;editor=null;}
+      renderWar(warState);updatePreview();
     };
-    warPanel.addEventListener("click",event=>{const region=event.target.closest("[data-war-region]");if(region)selectRegion(region.dataset.warRegion);});
-    warPanel.addEventListener("keydown",event=>{if(event.key!=="Enter"&&event.key!==" ")return;const region=event.target.closest("[data-war-region]");if(region){event.preventDefault();selectRegion(region.dataset.warRegion);}});
     const syncMode=()=>{
       const isWar=session.mode==="war";
-      if(isWar && !preWarRect){
-        preWarRect={left:win.offsetLeft,top:win.offsetTop,width:win.offsetWidth,height:win.offsetHeight};
-        const area=mediaWorkArea(),rect=defaultWindowRect("terminal",Math.min(1040,area.right-area.left),Math.min(740,area.bottom-area.top));
-        Object.assign(win.style,{left:`${rect.left}px`,top:`${rect.top}px`,width:`${rect.width}px`,height:`${rect.height}px`});
-      }else if(!isWar && preWarRect){Object.assign(win.style,{left:`${preWarRect.left}px`,top:`${preWarRect.top}px`,width:`${preWarRect.width}px`,height:`${preWarRect.height}px`});preWarRect=null;}
-      shell.classList.toggle("war-mode",isWar);
-      if(!isWar)renderWar(null);
-      const active=session.mode!=="normal";shell.classList.toggle("wopr-active",active);win.classList.toggle("wopr-window",active);
-      $(".terminal-welcome",win).hidden=active;$(".terminal-link-status",win).hidden=!active;
-      prompt.textContent=isWar?"COMMAND >":active?"WOPR >":"riz@rizvisions ~ %";
-      input.placeholder=active?"enter a move or command · exit to disconnect":"type a question or command";
+      if(isWar&&!preWarRect){preWarRect={left:win.offsetLeft,top:win.offsetTop,width:win.offsetWidth,height:win.offsetHeight};const area=mediaWorkArea(),r=defaultWindowRect("terminal",Math.min(1100,area.right-area.left),Math.min(760,area.bottom-area.top));Object.assign(win.style,{left:`${r.left}px`,top:`${r.top}px`,width:`${r.width}px`,height:`${r.height}px`});expand();}
+      else if(!isWar&&preWarRect){stopPlayback();win.classList.remove("war-immersive");Object.assign(win.style,{left:`${preWarRect.left}px`,top:`${preWarRect.top}px`,width:`${preWarRect.width}px`,height:`${preWarRect.height}px`});preWarRect=null;editor=null;selectedRegion=null;lastResolution=null;renderWar(null);}
+      shell.classList.toggle("war-mode",isWar);const active=session.mode!=="normal";shell.classList.toggle("wopr-active",active);win.classList.toggle("wopr-window",active);$(".terminal-welcome",win).hidden=active;$(".terminal-link-status",win).hidden=!active;prompt.textContent=isWar?"COMMAND >":active?"WOPR >":"riz@rizvisions ~ %";input.placeholder=isWar?"queue orders · commit · rules · exit":active?"enter a move or command · exit to disconnect":"type a question or command";
     };
-    const runCommand=(query)=>{
-      const command=query.trim();if(!command)return;
+    const playResolution=(frames,final)=>{
+      stopPlayback();playing=true;input.disabled=true;editor=null;playbackReturnState=final;const token=playbackToken;let i=0;
+      const advance=()=>{if(!win.isConnected||token!==playbackToken)return;if(i>=frames.length){playing=false;input.disabled=false;currentFrame=null;renderWar(final);history.replaceChildren();append("assistant",final.events.slice(-5).join("\n"));input.focus();return;}currentFrame=frames[i++];renderWar(currentFrame.war);tone(currentFrame.type);history.replaceChildren();append("assistant",currentFrame.text);playbackTimer=setTimeout(advance,650);};advance();
+    };
+    const runCommand=query=>{
+      const command=query.trim();if(!command||playing)return;
       input.value="";commands.push(command);cursor=commands.length;draft="";animation++;
-      if(window.RizvisionsTerminal.normalize(command)==="history"){append("user",command);append("assistant",commands.map((item,i)=>`${String(i+1).padStart(3)}  ${item}`).join("\n"));return;}
-      const response=session.handle(command);syncMode();
-      if(response.war)renderWar(response.war);
+      if(window.RizvisionsTerminal.normalize(command)==="history"){append("user",command);append("assistant",commands.map((item,i)=>`${i+1}  ${item}`).join("\n"));return;}
+      if(session.mode==="war"&&/^(rules|help|how to play)$/.test(command.toLowerCase()))helpOpen=true;
+      if(/^(restart|again|new game)$/.test(command.toLowerCase())){lastResolution=null;finalWar=null;selectedRegion=null;}
+      const pendingPlan=warState;const response=session.handle(command);if(response.resolution?.length)lastPlan=pendingPlan;syncMode();
+      if(response.war){editor=null;renderWar(response.war);}
       if(response.clear){history.replaceChildren();return;}
-      if(session.mode==="war")history.replaceChildren();
-      append("user",command);const output=append("assistant",response.text);
+      if(session.mode==="war")history.replaceChildren();append("user",command);const output=append("assistant",response.text);
+      if(response.resolution?.length){lastResolution=response.resolution;finalWar=response.war;playResolution(lastResolution,finalWar);}else if(response.war)tone("queue");
       if(response.openApp)openApp(response.openApp);
-      if(response.observe){
-        const token=animation,frames=session.observe();let frame=0;
-        const advance=()=>{
-          if(!win.isConnected || animation!==token)return;
-          output.textContent=response.text+"\n"+frames[frame++];scroll.scrollTop=scroll.scrollHeight;
-          if(frame<frames.length)setTimeout(advance,430);
-        };setTimeout(advance,250);
-      }
+      if(response.observe){const token=animation,frames=session.observe();let frame=0;const advance=()=>{if(!win.isConnected||animation!==token)return;output.textContent=response.text+"\n"+frames[frame++];scroll.scrollTop=scroll.scrollHeight;if(frame<frames.length)setTimeout(advance,430);};setTimeout(advance,250);}
     };
+    warPanel.addEventListener("input",event=>{if(event.target.matches("[data-war-amount]")&&editor){editor.count=Number(event.target.value);updatePreview();}});
+    warPanel.addEventListener("click",event=>{
+      const target=event.target.closest("button,[data-war-region]");if(!target)return;
+      if(target.matches("[data-war-close-help]")){helpOpen=false;renderWar(warState);return;}
+      if(target.matches("[data-war-view]")){win.classList.contains("war-immersive")?returnDesktop():expand();renderWar(warState);return;}
+      if(target.matches("[data-war-sound]")){soundEnabled=!soundEnabled;if(soundEnabled)tone("queue");renderWar(warState);return;}
+      if(target.matches("[data-war-skip]")){stopPlayback();renderWar(playbackReturnState);history.replaceChildren();append("assistant",playbackReturnState.events.slice(-5).join("\n"));return;}
+      if(playing)return;
+      if(target.dataset.warRegion){selectRegion(target.dataset.warRegion);return;}
+      if(target.dataset.warCommand){runCommand(target.dataset.warCommand);return;}
+      if(target.matches("[data-war-replay]")){playResolution(lastResolution,warState);return;}
+      if(target.matches("[data-war-max]")&&editor){editor.count=editor.type==="deploy"?warState.reserves:warState.regions.find(r=>r.id===editor.from).available;$("[data-war-amount]",warPanel).value=editor.count;updatePreview();return;}
+      if(target.dataset.warEditor){editor={type:target.dataset.warEditor,to:selectedRegion,count:1};renderWar(warState);updatePreview();return;}
+      if(target.matches("[data-war-cancel-editor]")){editor=null;renderWar(warState);return;}
+      if(target.matches("[data-war-queue]")&&editor){const o={...editor};if(o.type==="strike"){runCommand(`strike ${o.to}`);if(warState.pendingStrike)runCommand("confirm strike");}else runCommand(o.type==="shield"?`shield ${o.to}`:o.type==="deploy"?`deploy ${o.to} ${o.count}`:`${o.type} ${o.from} ${o.to} ${o.count}`);}
+    });
+    warPanel.addEventListener("keydown",event=>{const r=event.target.closest("[data-war-region]");if(r&&(event.key==="Enter"||event.key===" ")){event.preventDefault();selectRegion(r.dataset.warRegion);}});
     form.addEventListener("submit",event=>{event.preventDefault();runCommand(input.value);});
+    win.addEventListener("keydown",event=>{if(event.key!=="Escape")return;if(session.mode==="war"){event.preventDefault();event.stopPropagation();if(helpOpen){helpOpen=false;renderWar(warState);return;}if(win.classList.contains("war-immersive")){returnDesktop();renderWar(warState);}else if(editor){editor=null;renderWar(warState);}}else if(session.mode!=="normal"){event.preventDefault();event.stopPropagation();runCommand("exit");}});
     input.addEventListener("keydown",event=>{
-      if(event.key==="ArrowUp" || event.key==="ArrowDown"){
-        event.preventDefault();if(cursor===commands.length)draft=input.value;
-        cursor=Math.max(0,Math.min(commands.length,cursor+(event.key==="ArrowUp"?-1:1)));
-        input.value=cursor===commands.length?draft:commands[cursor]||"";input.setSelectionRange(input.value.length,input.value.length);
-      }
-      if(event.key==="Tab"){
-        event.preventDefault();const prefix=input.value.toLowerCase();if(!prefix)return;
-        const matches=window.RizvisionsTerminal.completions.filter(item=>item.startsWith(prefix));
-        if(matches.length===1)input.value=matches[0];else if(matches.length>1)append("assistant",matches.join("   "));
-      }
-      if(event.key==="Escape" && session.mode!=="normal"){event.preventDefault();event.stopPropagation();runCommand("exit");}
+      if(event.key==="ArrowUp"||event.key==="ArrowDown"){event.preventDefault();if(cursor===commands.length)draft=input.value;cursor=Math.max(0,Math.min(commands.length,cursor+(event.key==="ArrowUp"?-1:1)));input.value=cursor===commands.length?draft:commands[cursor]||"";input.setSelectionRange(input.value.length,input.value.length);}
+      if(event.key==="Tab"){event.preventDefault();const prefix=input.value.toLowerCase();if(!prefix)return;const matches=window.RizvisionsTerminal.completions.filter(item=>item.startsWith(prefix));if(matches.length===1)input.value=matches[0];else if(matches.length>1)append("assistant",matches.join("   "));}
     });
     requestAnimationFrame(()=>input.focus());
   }

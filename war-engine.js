@@ -23,137 +23,155 @@
   ];
   const groups={AMERICAS:3,EUROPE:2,AFRICA:2,ASIA:3,PACIFIC:2};
   const factions={human:"YOU",computer:"WOPR",neutral:"NEUTRAL"};
-  const rules="GLOBAL THERMONUCLEAR WAR // RULES\n\nOBJECTIVE: capture the opposing HQ (US / CH), or control 12 regions.\nEach turn: deploy all reinforcements, then make up to 4 attack / transfer orders.\nIncome: 3 + one per 3 regions + full-continent bonuses.\nEach army moves once per turn. Keep one army to hold its region.\nBattle: attackers remove 70% of their number; defenders remove 60% of theirs, rounded down (minimum 1). Survivors return if the attack fails.\n\ndeploy CA 4         Reinforce an owned region\nattack CA EU 6      Attack a connected region\nmove US CA 3        Transfer to a friendly neighbor\ninspect EU         Show its borders and troops\nend                Hand the turn to WOPR\n\nstrike CH          Request the fictional nuclear option\nconfirm strike     DEFCON drops. WOPR retaliates; at DEFCON 1, both lose.\ncancel             Cancel a pending strike\nrestart            New campaign\nexit               Disconnect\n\nClick your region to prepare a deploy / attack order. Click a neighboring region to select a target. All orders use the command line.";
+  const rules=`PLAN / COMMIT / WATCH
+Deploy all reinforcements, then queue up to 4 actions. Nothing moves until commit.
+Click a source and destination to choose troop count and preview combat.
+One army stays to hold each region. Each army moves once per round.
+Your queued deployments and assigned troops are shown separately from the real board.
+Both sides plan independently. All deployments resolve first. Shields then activate.
+Movement and launches interleave: priority reverses between action slots and between rounds.
+Combat: attackers eliminate 60% of their number; defenders eliminate 70% of theirs, nearest whole number. Losses are simultaneous.
+If both forces die, one defender remains. Capturing armies cannot move again this round.
+Capture CH (WOPR HQ), or control 12 regions. WOPR targets US. 40 rounds is a stalemate.
+Income: 3 + one per 3 regions + full-continent bonuses.
+
+NUCLEAR ESCALATION / FICTIONAL GAME RULES
+3 missiles per side; at most 1 launch per side per round.
+A strike halves the target army (rounded up, minimum 1); it does not capture territory.
+shield US protects one owned territory from one missile this round. One shield per side.
+Launches and shields each use 1 action slot. A launch lowers shared DEFCON by 1, even if intercepted.
+A round without launches restores DEFCON by 1 (maximum 5). At DEFCON 1, both sides lose.
+WOPR can launch and defend too. Shield phases resolve before launches, regardless of queue position.
+
+COMMANDS
+ deploy CA 4 / attack CA EU 6 / move US CA 3
+ shield US / strike CH / confirm strike / cancel
+ remove 1 / up 2 / down 1 / undo / reset orders
+ inspect EU / status / commit (or end) / rules / restart / exit
+Escape returns to the desktop without ending the game. Expand resumes the large view.
+Closing Terminal ends the session. No campaign is sent to a server.`;
+  const clone=v=>JSON.parse(JSON.stringify(v));
   function createGame({seed=Date.now(),difficulty="standard"}={}) {
-    seed=Number(seed)>>>0;let randomState=seed || 1;
+    seed=Number(seed)>>>0;let randomState=seed||1;
     const rand=()=>{randomState=(Math.imul(randomState,1664525)+1013904223)>>>0;return randomState/4294967296;};
-    let round=1,defcon=5,orders=4,outcome=null,pendingStrike=null,events=[];
-    const map=Object.fromEntries(regions.map(r=>[r.id,{owner:"neutral",armies:2,ready:0}]));
-    for(const [id,armies] of [["CA",5],["US",7],["MX",3]])map[id]={owner:"human",armies,ready:armies-1};
-    for(const [id,armies] of [["SI",5],["CH",7],["JP",3]])map[id]={owner:"computer",armies,ready:armies-1};
-    // Neutral forces vary slightly between campaigns; both sides use identical rules.
+    let round=1,defcon=5,outcome=null,pendingStrike=null,queue=[],deployments=[],events=[],serial=0;
+    const arsenal={human:3,computer:3};let lastHumanLaunch=null;
+    const map=Object.fromEntries(regions.map(r=>[r.id,{owner:"neutral",armies:2}]));
+    for(const [id,armies] of [["CA",5],["US",7],["MX",3]])map[id]={owner:"human",armies};
+    for(const [id,armies] of [["SI",5],["CH",7],["JP",3]])map[id]={owner:"computer",armies};
     for(const id of ["AL","AR","SA","NZ"])map[id].armies=1+Math.floor(rand()*3);
-    const owned=(who)=>regions.filter(r=>map[r.id].owner===who);
-    const bonuses=(who)=>Object.keys(groups).filter(g=>regions.filter(r=>r.group===g).every(r=>map[r.id].owner===who));
-    const income=(who)=>3+Math.floor(owned(who).length/3)+bonuses(who).reduce((s,g)=>s+groups[g],0)+(who==="human"&&difficulty==="easy"?2:who==="computer"&&difficulty==="hard"?2:0);
-    let reserves=income("human");
-    const resolve=(value)=>{const key=String(value||"").toUpperCase();if(map[key])return key;const normal=String(value||"").toLowerCase();return regions.find(r=>r.name.toLowerCase()===normal)?.id;};
-    const isNeighbor=(a,b)=>regions.find(r=>r.id===a)?.neighbors.includes(b);
-    const snapshot=()=>({round,defcon,orders,reserves,difficulty,seed,outcome,pendingStrike,regions:regions.map(r=>({...r,...map[r.id],neighbors:[...r.neighbors]})),human:{regions:owned("human").length,armies:owned("human").reduce((s,r)=>s+map[r.id].armies,0),income:income("human"),bonuses:bonuses("human")},computer:{regions:owned("computer").length,armies:owned("computer").reduce((s,r)=>s+map[r.id].armies,0),income:income("computer"),bonuses:bonuses("computer")},events:[...events]});
-    const respond=(text)=>({text,war:snapshot()});
-    const remember=(text)=>{events.push(text);events=events.slice(-6);};
+    const owned=who=>regions.filter(r=>map[r.id].owner===who);
+    const bonuses=who=>Object.keys(groups).filter(g=>regions.filter(r=>r.group===g).every(r=>map[r.id].owner===who));
+    const income=who=>3+Math.floor(owned(who).length/3)+bonuses(who).reduce((s,g)=>s+groups[g],0)+(who==="human"&&difficulty==="easy"?2:who==="computer"&&difficulty==="hard"?2:0);
+    let budget=income("human");
+    const reserves=()=>budget-deployments.reduce((s,d)=>s+d.count,0);
+    const resolve=value=>map[String(value).toUpperCase()]?String(value).toUpperCase():regions.find(r=>r.name.toLowerCase()===String(value).toLowerCase())?.id;
+    const adjacent=(a,b)=>regions.find(r=>r.id===a)?.neighbors.includes(b);
+    const planned=id=>deployments.filter(d=>d.to===id).reduce((s,d)=>s+d.count,0);
+    const assigned=id=>queue.filter(o=>o.from===id).reduce((s,o)=>s+o.count,0);
+    const available=id=>map[id]?.owner==="human"?Math.max(0,map[id].armies+planned(id)-1-assigned(id)):0;
+    const snapshot=()=>clone({round,defcon,difficulty,seed,outcome,pendingStrike,queue,deployments,arsenal,budget,reserves:reserves(),orders:4-queue.length,phase:"planning",first:round%2?"human":"computer",regions:regions.map(r=>({...r,...map[r.id],plannedDeploy:planned(r.id),assigned:assigned(r.id),available:available(r.id)})),human:{regions:owned("human").length,income:income("human"),bonuses:bonuses("human")},computer:{regions:owned("computer").length,income:income("computer"),bonuses:bonuses("computer")},events});
+    const respond=(text,extra={})=>({text,war:snapshot(),...extra});
+    const remember=text=>{events.push(text);events=events.slice(-12);};
     const previewBattle=(from,to,count)=>{
-      const defenders=map[to].armies;
-      const losses=Math.min(count,Math.max(1,Math.floor(defenders*.6)));
-      const defenderLosses=Math.min(defenders,Math.floor(count*.7));
-      return {remaining:count-losses,defending:defenders-defenderLosses,capture:defenderLosses===defenders && count-losses>0};
+      const defenders=map[to].armies,remaining=Math.max(0,count-Math.round(defenders*.7)),defending=Math.max(0,defenders-Math.round(count*.6));
+      return {remaining,defending:remaining===0&&defending===0?1:defending,capture:defending===0&&remaining>0};
     };
-    function checkVictory(){
-      if(map.US.owner==="computer" || owned("computer").length>=12)outcome="defeat";
-      else if(map.CH.owner==="human" || owned("human").length>=12)outcome="victory";
-      if(outcome)remember(outcome==="victory"?"CAMPAIGN WON. Conventional control secured. No launches required.":"WOPR WINS. Your command network has fallen. Try another opening.");
-    }
-    function move(who,from,to,count){
-      const source=map[from],target=map[to];
-      if(!source || !target)return {text:"UNKNOWN REGION. Use its two-letter map code.",ok:false};
-      if(source.owner!==who)return {text:"SOURCE NOT OWNED. Choose one of your regions.",ok:false};
-      if(from===to || !isNeighbor(from,to))return {text:"NO DIRECT ROUTE. Inspect the source to see its neighbors.",ok:false};
-      if(!Number.isSafeInteger(count) || count<1)return {text:"ENTER A POSITIVE WHOLE NUMBER OF ARMIES.",ok:false};
-      if(count>Math.min(source.ready,source.armies-1))return {text:"NOT ENOUGH READY ARMIES. Leave one behind; each army moves only once per turn.",ok:false};
-      source.armies-=count;source.ready-=count;
-      if(target.owner===who){target.armies+=count;const msg=`${factions[who]} TRANSFER ${from} > ${to}: ${count} armies. Arrivals move next turn.`;remember(msg);return {text:msg,ok:true};}
-      const combat=previewBattle(from,to,count);
-      let msg;
-      if(combat.capture){target.owner=who;target.armies=combat.remaining;target.ready=0;msg=`${factions[who]} CAPTURE ${from} > ${to}: ${combat.remaining} survive.`;}
-      else{target.armies=Math.max(1,combat.defending);source.armies+=combat.remaining;msg=`${factions[who]} ATTACK ${from} > ${to}: repelled. ${combat.remaining} return; ${target.armies} defend.`;}
-      remember(msg);checkVictory();return {text:msg,ok:true};
-    }
-    const resetReady=(who)=>owned(who).forEach(r=>map[r.id].ready=map[r.id].armies-1);
-    function distanceToEnemy(start,who){
-      const queue=[[start,0]],seen=new Set([start]);
-      while(queue.length){const [id,d]=queue.shift();if(map[id].owner!==who)return d;for(const n of regions.find(r=>r.id===id).neighbors)if(!seen.has(n)){seen.add(n);queue.push([n,d+1]);}}
-      return 99;
-    }
-    function computerTurn(){
-      resetReady("computer");let pool=income("computer");
-      const frontier=owned("computer").filter(r=>r.neighbors.some(n=>map[n].owner!=="computer"));
-      const choose=frontier.sort((a,b)=>{
-        const score=r=>r.neighbors.reduce((s,n)=>s+(map[n].owner==="human"?map[n].armies:0),0)*.6+map[r.id].armies+(r.neighbors.includes("US")?12:0)+(r.id==="CH"?3:0);
-        return score(b)-score(a);
-      })[0] || owned("computer")[0];
-      if(!choose)return;
-      // Protect the HQ when a human force can reach it this turn.
-      const threat=regions.find(r=>r.id==="CH").neighbors.filter(n=>map[n].owner==="human").reduce((s,n)=>Math.max(s,map[n].armies-1),0);
-      const defense=Math.min(pool,Math.max(0,Math.ceil(threat*.7)+1-map.CH.armies));
-      if(map.CH.owner==="computer"){map.CH.armies+=defense;map.CH.ready+=defense;pool-=defense;}
-      map[choose.id].armies+=pool;map[choose.id].ready+=pool;remember(`WOPR DEPLOY: ${pool+defense} reinforcements.`);
-      for(let order=0;order<4 && !outcome;order++){
+    const checkVictory=()=>{if(map.US.owner==="computer"||owned("computer").length>=12)outcome="defeat";else if(map.CH.owner==="human"||owned("human").length>=12)outcome="victory";};
+    // This planner reads only the real start-of-round board, never the visitor's queue.
+    function computerPlan(){
+      const plan=[],ds=[],board=clone(map),avail={};let pool=income("computer");
+      const frontline=owned("computer").filter(r=>r.neighbors.some(n=>board[n].owner!=="computer"));
+      const strongest=frontline.sort((a,b)=>board[b.id].armies-board[a.id].armies)[0]||owned("computer")[0];
+      const threat=regions.find(r=>r.id==="CH").neighbors.filter(n=>board[n].owner==="human").reduce((s,n)=>Math.max(s,board[n].armies-1),0);
+      const defense=Math.min(pool,Math.max(0,Math.round(threat*.6)+1-board.CH.armies));
+      if(defense){ds.push({type:"deploy",to:"CH",count:defense});board.CH.armies+=defense;pool-=defense;}
+      if(pool){ds.push({type:"deploy",to:strongest.id,count:pool});board[strongest.id].armies+=pool;}
+      for(const r of owned("computer"))avail[r.id]=board[r.id].armies-1;
+      if(lastHumanLaunch || defcon<5){plan.push({type:"shield",to:lastHumanLaunch&&board[lastHumanLaunch].owner==="computer"?lastHumanLaunch:"CH"});}
+      const enemy=owned("human").sort((a,b)=>board[b.id].armies-board[a.id].armies)[0];
+      if(arsenal.computer>0 && enemy && defcon>2 && (lastHumanLaunch || board[enemy.id].armies>=12 || round>=5&&rand()<.2))plan.push({type:"strike",to:enemy.id});
+      while(plan.length<4){
         const candidates=[];
-        for(const r of owned("computer")){
-          const amount=Math.min(map[r.id].ready,map[r.id].armies-1);if(amount<1)continue;
-          for(const n of r.neighbors)if(map[n].owner!=="computer"){
-            const fight=previewBattle(r.id,n,amount);if(!fight.capture)continue;
-            const target=regions.find(t=>t.id===n);
-            const groupOwned=owned("computer").filter(t=>t.group===target.group).length;
-            const score=(n==="US"?100:0)+(map[n].owner==="human"?9:4)+groupOwned*3+fight.remaining*.4-map[n].armies*.3+rand();
-            candidates.push({from:r.id,to:n,amount,score});
-          }
+        for(const r of owned("computer"))for(const n of r.neighbors){
+          const count=avail[r.id];if(count<1||board[n].owner==="computer"||plan.some(o=>o.type==="attack"&&o.to===n))continue;
+          if(Math.round(count*.6)>=board[n].armies && count>Math.round(board[n].armies*.7))candidates.push({type:"attack",from:r.id,to:n,count,score:(n==="US"?100:0)+(board[n].owner==="human"?10:4)+count*.2+rand()});
         }
         candidates.sort((a,b)=>b.score-a.score);
-        if(candidates.length){const c=candidates[0];move("computer",c.from,c.to,c.amount);continue;}
-        const interior=owned("computer").filter(r=>map[r.id].ready>0 && !r.neighbors.some(n=>map[n].owner!=="computer")).sort((a,b)=>map[b.id].ready-map[a.id].ready);
-        let transferred=false;
-        for(const r of interior){
-          const neighbor=r.neighbors.filter(n=>map[n].owner==="computer").sort((a,b)=>distanceToEnemy(a,"computer")-distanceToEnemy(b,"computer"))[0];
-          if(neighbor && distanceToEnemy(neighbor,"computer")<distanceToEnemy(r.id,"computer")){move("computer",r.id,neighbor,map[r.id].ready);transferred=true;break;}
-        }
-        if(!transferred)break;
+        if(candidates.length){const o=candidates[0];plan.push(o);avail[o.from]-=o.count;continue;}
+        const interior=owned("computer").filter(r=>avail[r.id]>0&&r.neighbors.every(n=>board[n].owner==="computer"));
+        let transfer=null;
+        for(const r of interior){const n=r.neighbors.find(n=>regions.find(t=>t.id===n).neighbors.some(k=>board[k].owner!=="computer"));if(n){transfer={type:"move",from:r.id,to:n,count:avail[r.id]};break;}}
+        if(!transfer)break;plan.push(transfer);avail[transfer.from]=0;
       }
+      return {queue:plan,deployments:ds};
+    }
+    function commit(){
+      if(reserves()>0)return respond(`DEPLOY ${reserves()} REINFORCEMENTS FIRST.`);
+      const ai=computerPlan(),human=clone(queue),humanDeploy=clone(deployments),resolution=[];
+      queue=[];deployments=[];pendingStrike=null;
+      const frame=(text,type,who,from,to)=>{remember(text);resolution.push({text,type,who,from,to,war:{...snapshot(),phase:"resolving"}});};
+      frame(`ROUND ${round}: both plans locked. ${factions[round%2?"human":"computer"]} has first action priority.`,"lock");
+      const sides=round%2?["human","computer"]:["computer","human"],plans={human,computer:ai.queue},ds={human:humanDeploy,computer:ai.deployments};
+      for(const who of sides)for(const d of ds[who]){map[d.to].armies+=d.count;frame(`${factions[who]} DEPLOY ${d.to}: +${d.count}.`,"deploy",who,null,d.to);}
+      const movable={human:{},computer:{}};for(const who of sides)for(const r of owned(who))movable[who][r.id]=map[r.id].armies-1;
+      const shields={human:new Set(),computer:new Set()};
+      for(const who of sides)for(const o of plans[who].filter(o=>o.type==="shield")){if(map[o.to].owner===who){shields[who].add(o.to);frame(`${factions[who]} SHIELD ${o.to}: interception active this round.`,"shield",who,null,o.to);}}
+      let launches=0,newHumanLaunch=null;
+      for(let slot=0;slot<4&&!outcome;slot++)for(const who of (slot%2?[...sides].reverse():sides)){
+        if(outcome)break;const o=plans[who][slot];if(!o||o.type==="shield")continue;
+        const other=who==="human"?"computer":"human";
+        if(o.type==="strike"){
+          if(arsenal[who]<1){frame(`${factions[who]} LAUNCH CANCELLED: arsenal empty.`,"cancel",who,null,o.to);continue;}
+          if(map[o.to].owner!==other){frame(`${factions[who]} LAUNCH ${o.to} CANCELLED: target no longer hostile.`,"cancel",who,null,o.to);continue;}
+          arsenal[who]--;launches++;defcon=Math.max(1,defcon-1);if(who==="human")newHumanLaunch=o.to;
+          const blocked=shields[other].delete(o.to);if(!blocked){map[o.to].armies=Math.max(1,Math.ceil(map[o.to].armies/2));movable[other][o.to]=Math.min(movable[other][o.to]||0,map[o.to].armies-1);}
+          if(defcon===1)outcome="mutual";
+          frame(`${factions[who]} LAUNCH > ${o.to}: ${blocked?"INTERCEPTED":"army halved"}. DEFCON ${defcon}.${outcome?" MUTUAL DESTRUCTION. NO WINNER.":""}`,blocked?"intercept":"strike",who,who==="human"?"US":"CH",o.to);continue;
+        }
+        const source=map[o.from],target=map[o.to];
+        if(source.owner!==who){frame(`${factions[who]} ${o.from} > ${o.to} CANCELLED: source captured.`,"cancel",who,o.from,o.to);continue;}
+        if(o.type==="move"&&target.owner!==who || o.type==="attack"&&target.owner===who){frame(`${factions[who]} ${o.from} > ${o.to} CANCELLED: target ownership changed.`,"cancel",who,o.from,o.to);continue;}
+        const count=Math.min(o.count,movable[who][o.from]||0,source.armies-1);
+        if(count<1){frame(`${factions[who]} ${o.from} > ${o.to} CANCELLED: no available troops.`,"cancel",who,o.from,o.to);continue;}
+        source.armies-=count;movable[who][o.from]-=count;
+        if(o.type==="move"){target.armies+=count;frame(`${factions[who]} TRANSFER ${o.from} > ${o.to}: ${count}. Arrivals can move next round.`,"move",who,o.from,o.to);continue;}
+        const fight=previewBattle(o.from,o.to,count);let text;
+        if(fight.capture){target.owner=who;target.armies=fight.remaining;movable[who][o.to]=0;movable[other][o.to]=0;text=`${factions[who]} CAPTURE ${o.from} > ${o.to}: ${fight.remaining} survivors.`;}
+        else{target.armies=Math.max(1,fight.defending);source.armies+=fight.remaining;movable[other][o.to]=Math.min(movable[other][o.to]||0,target.armies-1);text=`${factions[who]} ATTACK ${o.from} > ${o.to}: repelled; ${fight.remaining} return, ${target.armies} defend.`;}
+        checkVictory();frame(text+(count<o.count?` Sent ${count}/${o.count}: earlier losses reduced troops.`:""),fight.capture?"capture":"attack",who,o.from,o.to);
+      }
+      lastHumanLaunch=newHumanLaunch;
+      if(!launches&&!outcome){defcon=Math.min(5,defcon+1);frame(`NO LAUNCHES: tension eases to DEFCON ${defcon}.`,"cooldown");}
+      if(!outcome){round++;if(round>40)outcome="stalemate";budget=income("human");}
+      const text=outcome?({victory:"CAMPAIGN WON",defeat:"WOPR WINS",mutual:"MUTUAL DESTRUCTION. NO WINNER",stalemate:"FORTY ROUNDS: STALEMATE"}[outcome]):`ROUND ${round}: planning your orders. Deploy ${budget} reinforcements.`;
+      remember(text);return respond(text,{resolution});
     }
     function handle(raw){
       const text=String(raw).toLowerCase().trim().replace(/\s+/g," ");
       if(/^(help|rules|how to play)$/.test(text))return respond(rules);
-      if(/^(status|map|sitrep)$/.test(text))return respond(`ROUND ${round} // ${reserves} TO DEPLOY // ${orders} ORDERS\nYOU ${owned("human").length}/18 regions · WOPR ${owned("computer").length}/18\nObjective: capture CH or control 12 regions.`);
-      if(outcome)return respond("CAMPAIGN COMPLETE. Type restart for a new map, or exit to disconnect.");
+      if(/^(status|map|sitrep)$/.test(text))return respond(`ROUND ${round}: planning / ${reserves()} to deploy / ${queue.length}/4 actions queued / DEFCON ${defcon}. Nothing executes until commit.`);
+      const inspect=text.match(/^(?:inspect|info) (.+)$/);if(inspect){const id=resolve(inspect[1]);if(!id)return respond("UNKNOWN REGION.");const r=regions.find(r=>r.id===id);return respond(`${id} / ${r.name} / ${factions[map[id].owner]}\n${map[id].armies} total + ${planned(id)} planned deployment / ${assigned(id)} assigned / ${available(id)} available\nConnected: ${r.neighbors.join(" / ")}\n${r.group}: +${groups[r.group]} when fully controlled.`);}
+      if(outcome)return respond("CAMPAIGN COMPLETE. Type restart or exit.");
+      if(/^(commit|end|end turn|done|next)$/.test(text))return commit();
+      if(text==="reset orders"){queue=[];deployments=[];pendingStrike=null;return respond("PLAN CLEARED. The real board is unchanged.");}
       if(text==="cancel"){pendingStrike=null;return respond("LAUNCH REQUEST CANCELLED.");}
-      const strike=text.match(/^(?:strike|nuke|launch) ([a-z]{2})$/);
-      if(strike){const to=resolve(strike[1]);if(!to || map[to].owner!=="computer")return respond("SELECT A WOPR REGION BY ITS MAP CODE.");pendingStrike=to;return respond(`NUCLEAR OPTION REQUESTED: ${to}.\nWOPR will retaliate. DEFCON 1 ends the campaign for both sides.\nType confirm strike to proceed, or cancel to keep playing conventionally.`);}
-      if(text==="confirm strike"){
-        if(!pendingStrike)return respond("NO LAUNCH REQUEST. Type strike [region] or cancel.");
-        const target=pendingStrike;pendingStrike=null;map[target].armies=1;defcon=1;outcome="mutual";
-        remember(`YOU LAUNCH > ${target}. WOPR RETALIATES > US.`);remember("DEFCON 1 // MUTUAL DESTRUCTION. NO WINNER.");
-        return respond("LAUNCH DETECTED. WOPR RETALIATES.\nDEFCON 1 // MUTUAL DESTRUCTION. NO WINNER.\nThe conventional board was winnable. Escalation was not.\nType restart to try again.");
-      }
-      const inspect=text.match(/^(?:inspect|info) (.+)$/);
-      if(inspect){const id=resolve(inspect[1]);if(!id)return respond("UNKNOWN REGION. Use the two-letter code printed on the map.");const r=regions.find(r=>r.id===id);return respond(`${id} / ${r.name.toUpperCase()}\n${factions[map[id].owner]} · ${map[id].armies} armies · ${map[id].ready} ready\nConnected: ${r.neighbors.join(" / ")}\n${r.group}: +${groups[r.group]} income when fully controlled.`);}
+      const edit=text.match(/^(remove|up|down) (\d+)$/);
+      if(edit){const i=Number(edit[2])-1;if(!queue[i])return respond("NO ORDER AT THAT POSITION.");if(edit[1]==="remove")queue.splice(i,1);else{const j=i+(edit[1]==="up"?-1:1);if(j>=0&&j<queue.length)[queue[i],queue[j]]=[queue[j],queue[i]];}pendingStrike=null;return respond("ORDER QUEUE UPDATED. Nothing has executed.");}
+      if(text==="undo"){if(queue.length)queue.pop();else deployments.pop();pendingStrike=null;return respond("LAST PLANNED ORDER REMOVED.");}
+      const undeploy=text.match(/^undeploy (\d+)$/);if(undeploy){const i=Number(undeploy[1])-1,d=deployments[i];if(!d)return respond("NO DEPLOYMENT AT THAT POSITION.");if(assigned(d.to)>map[d.to].armies+planned(d.to)-d.count-1)return respond("REMOVE THAT REGION’S MOVEMENT ORDERS FIRST.");deployments.splice(i,1);return respond("DEPLOYMENT REMOVED.");}
       const deploy=text.match(/^(?:deploy|reinforce|place) ([a-z]{2}) (\d+)$/);
-      if(deploy){
-        const id=resolve(deploy[1]),count=Number(deploy[2]);if(!id || map[id].owner!=="human")return respond("DEPLOY ONLY TO YOUR REGIONS. They are bright green.");
-        if(!Number.isSafeInteger(count) || count<1 || count>reserves)return respond(`INVALID DEPLOYMENT. You have ${reserves} reinforcements remaining.`);
-        map[id].armies+=count;map[id].ready+=count;reserves-=count;pendingStrike=null;const msg=`YOU DEPLOY ${id}: +${count}. ${reserves} remaining.`;remember(msg);return respond(msg+(reserves===0?"\nReinforcements placed. Attack or transfer; type end when finished.":""));
-      }
-      const order=text.match(/^(attack|move|transfer) ([a-z]{2}) (?:to )?([a-z]{2}) (\d+)$/);
-      if(order){
-        if(reserves>0)return respond(`DEPLOY ${reserves} REINFORCEMENTS FIRST. Example: deploy CA ${reserves}`);
-        if(orders===0)return respond("NO ORDERS LEFT. Type end to resolve WOPR’s turn.");
-        const from=resolve(order[2]),to=resolve(order[3]),count=Number(order[4]);
-        if(!from || !to)return respond("UNKNOWN REGION. Use two-letter map codes.");
-        if(order[1]==="attack" && map[to].owner==="human")return respond("FRIENDLY TARGET. Use move to transfer armies.");
-        if(order[1]!=="attack" && map[to].owner!=="human")return respond("HOSTILE TARGET. Use attack for enemy or neutral regions.");
-        const action=move("human",from,to,count);
-        if(action.ok){orders--;pendingStrike=null;}
-        return respond(action.text+(outcome?"\n"+events.at(-1):`\n${orders} orders left. Type end when finished.`));
-      }
-      if(/^(end|end turn|done|next|commit)$/.test(text)){
-        if(reserves>0)return respond(`DEPLOY ${reserves} REINFORCEMENTS FIRST.`);
-        pendingStrike=null;computerTurn();
-        if(!outcome){round++;orders=4;resetReady("human");reserves=income("human");if(round>40){outcome="stalemate";remember("FORTY ROUNDS // STALEMATE. Both command networks remain intact.");}}
-        return respond(events.slice(-4).join("\n")+(outcome?"\nCAMPAIGN COMPLETE. Type restart.":`\nROUND ${round}. Deploy ${reserves} reinforcements.`));
-      }
-      return respond("ORDER NOT RECOGNIZED.\ndeploy CA 4 / attack CA EU 6 / move US CA 3 / inspect EU / end\nType rules for the full manual.");
+      if(deploy){const id=resolve(deploy[1]),count=Number(deploy[2]);if(!id||map[id].owner!=="human")return respond("DEPLOY ONLY TO YOUR REGIONS.");if(!Number.isSafeInteger(count)||count<1||count>reserves())return respond(`INVALID DEPLOYMENT: ${reserves()} remaining.`);deployments.push({id:++serial,type:"deploy",to:id,count});return respond(`QUEUED: deploy ${id} +${count}. ${reserves()} remain. Board changes on commit.`);}
+      const strike=text.match(/^(?:strike|nuke|launch) ([a-z]{2})$/);
+      if(strike){const id=resolve(strike[1]);if(!id||map[id].owner!=="computer")return respond("SELECT A WOPR TERRITORY.");if(!arsenal.human)return respond("ARSENAL EMPTY.");if(queue.some(o=>o.type==="strike"))return respond("ONE LAUNCH PER ROUND.");if(queue.length===4)return respond("FOUR ACTIONS QUEUED. Remove one before requesting a launch.");pendingStrike=id;return respond(`LAUNCH REQUEST: ${id}. Costs 1 missile and 1 action. Lowers DEFCON by 1, even if intercepted.\n${defcon<=2?"WARNING: this launch reaches DEFCON 1; both sides lose.":"WOPR may retaliate this or a later round."}\nconfirm strike queues it; cancel withdraws it.`);}
+      if(text==="confirm strike"){if(!pendingStrike)return respond("NO LAUNCH REQUEST.");if(queue.length===4)return respond("FOUR ACTIONS QUEUED.");const id=pendingStrike;pendingStrike=null;queue.push({id:++serial,type:"strike",to:id});return respond(`QUEUED LAUNCH > ${id}. Nothing fires until commit.`);}
+      const shield=text.match(/^shield ([a-z]{2})$/);
+      if(shield){const id=resolve(shield[1]);if(!id||map[id].owner!=="human")return respond("SHIELD ONLY YOUR TERRITORIES.");if(queue.some(o=>o.type==="shield"))return respond("ONE SHIELD PER ROUND.");if(queue.length===4)return respond("FOUR ACTIONS QUEUED.");queue.push({id:++serial,type:"shield",to:id});pendingStrike=null;return respond(`QUEUED SHIELD ${id}. Blocks 1 missile this round; activates before launches.`);}
+      const action=text.match(/^(attack|move|transfer) ([a-z]{2}) (?:to )?([a-z]{2}) (\d+)$/);
+      if(action){const type=action[1]==="transfer"?"move":action[1],from=resolve(action[2]),to=resolve(action[3]),count=Number(action[4]);if(reserves()>0)return respond(`DEPLOY ${reserves()} REINFORCEMENTS FIRST.`);if(queue.length===4)return respond("FOUR ACTIONS QUEUED. Review, then commit.");if(!from||!to)return respond("UNKNOWN REGION.");if(map[from].owner!=="human")return respond("SOURCE NOT OWNED.");if(!adjacent(from,to))return respond("NO DIRECT ROUTE.");if(type==="move"&&map[to].owner!=="human" || type==="attack"&&map[to].owner==="human")return respond("TARGET OWNERSHIP DOES NOT MATCH ORDER TYPE.");if(!Number.isSafeInteger(count)||count<1||count>available(from))return respond(`NOT ENOUGH AVAILABLE TROOPS: ${available(from)}. Leave one guard; assigned armies move once.`);queue.push({id:++serial,type,from,to,count});pendingStrike=null;return respond(`QUEUED ${type.toUpperCase()} ${from} > ${to}: ${count}. ${queue.length}/4 actions. Review, then commit.`);}
+      return respond("ORDER NOT RECOGNIZED. deploy / attack / move / shield / strike / commit / rules");
     }
-    remember("COMMAND LINK OPEN. YOUR HQ: US. WOPR HQ: CH.");
-    return {handle,snapshot,income,previewBattle,opening:()=>respond(`GLOBAL THERMONUCLEAR WAR // ${difficulty.toUpperCase()}\nCapture WOPR HQ (CH), or control 12 regions.\nDeploy ${reserves} reinforcements. Try: deploy CA ${reserves}\nType rules for the manual. Click map regions to prepare orders.`)};
+    return {handle,snapshot,income,previewBattle,opening:()=>respond(`GLOBAL THERMONUCLEAR WAR / ${difficulty.toUpperCase()}\nPLAN → COMMIT → WATCH\nDeploy ${budget} reinforcements. Queue up to 4 actions, then commit.\nClick a territory to start. The real board stays unchanged while planning.\nCapture CH or control 12 regions. Type rules for the manual.`)};
   }
   globalThis.RizvisionsWar={createGame,regions,groups,rules};
 })();

@@ -3668,3 +3668,97 @@ button.conversation.active { background: #087dff; color: #fff; }
 .mac-window[data-app-window="terminal"] .war-mode .terminal-input-row { flex:0 0 47px; }
 .mac-window[data-app-window="terminal"] .war-launch-path { fill:none; stroke:#ffd291; stroke-width:4; stroke-dasharray:8 5; }
 .mac-window[data-app-window="terminal"] .war-end-overlay { fill:#eeffc8; font:700 34px Menlo,monospace; text-anchor:middle; paint-order:stroke; stroke:#06120c; stroke-width:8; }
+
+/* Queued campaign: clear factions, expanded viewport and readable order controls. */
+.mac-window[data-app-window="terminal"] .terminal-wordmark { font-size:11px; line-height:1.12; letter-spacing:0; overflow:visible; padding:0 7px 8px 0; }
+.mac-window[data-app-window="terminal"] .terminal-wordmark-face { color:#fff; position:relative; text-shadow:none; }
+.mac-window[data-app-window="terminal"] .terminal-wordmark-shadow { left:4px; top:6px; color:#0b0b0c; opacity:1; -webkit-text-stroke:.55px #9ba1ac; text-shadow:2px 2px 0 #0b0b0c,3px 3px 0 #656b76; }
+.os:has(.war-immersive) > :not(.desktop) { visibility:hidden; }
+.os:has(.war-immersive) .desktop { inset:0; background:#06120a; }
+.os:has(.war-immersive) .desktop > :not(.windows) { visibility:hidden; }
+.os:has(.war-immersive) .windows { z-index:10001; visibility:visible; }
+.mac-window[data-app-window="terminal"].war-immersive { position:fixed!important; inset:0!important; width:100vw!important; height:100dvh!important; min-width:0; min-height:0; border:0; border-radius:0; animation:none; box-shadow:none; }
+.mac-window[data-app-window="terminal"].war-immersive > .window-titlebar,
+.mac-window[data-app-window="terminal"].war-immersive > .window-resize-handle { display:none; }
+.mac-window[data-app-window="terminal"] .terminal-shell.war-mode .terminal-scroll { padding:64px 20px 8px; overflow:hidden; }
+.mac-window[data-app-window="terminal"].war-immersive .terminal-shell.war-mode .terminal-scroll { padding:18px 26px 8px; }
+.mac-window[data-app-window="terminal"] .war-mode .terminal-link-status { display:none!important; }
+.mac-window[data-app-window="terminal"] .terminal-war-panel { flex:1; min-height:0; gap:9px; position:relative; }
+.mac-window[data-app-window="terminal"] .war-heading { min-height:46px; align-items:center; gap:15px; border-bottom:1px solid #274a34; padding:0 0 10px; font-size:12px; }
+.mac-window[data-app-window="terminal"] .war-heading > div { display:grid; gap:4px; }
+.mac-window[data-app-window="terminal"] .war-heading strong { font-size:16px; letter-spacing:.12em; }
+.mac-window[data-app-window="terminal"] .war-heading nav { display:flex; gap:8px; flex-wrap:wrap; }
+.mac-window[data-app-window="terminal"] .war-score { min-height:40px; padding:9px 0; gap:12px; font-size:11px; }
+.mac-window[data-app-window="terminal"] .war-score > strong { color:#e4ffe9; text-align:center; }
+.mac-window[data-app-window="terminal"] .war-workspace { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:22px; }
+.mac-window[data-app-window="terminal"] .war-map-area { min-width:0; min-height:0; display:flex; flex-direction:column; }
+.mac-window[data-app-window="terminal"] .war-world { flex:1; min-height:0; width:100%; }
+.mac-window[data-app-window="terminal"] .war-legend { display:flex; gap:18px; flex-wrap:wrap; font-size:11px; }
+.mac-window[data-app-window="terminal"] .war-legend .human { color:#87ffb0; }
+.mac-window[data-app-window="terminal"] .war-legend .computer { color:#ffd07b; }
+.mac-window[data-app-window="terminal"] .war-legend .neutral { color:#b2b9c0; }
+.mac-window[data-app-window="terminal"] .war-legend > span:last-child { margin-left:auto; color:#a4b8a9; }
+.mac-window[data-app-window="terminal"] .war-region.neutral polygon { fill:#22272d; stroke:#78828c; }
+.mac-window[data-app-window="terminal"] .war-region.neutral text { fill:#cad0d5; }
+.mac-window[data-app-window="terminal"] .war-region.human polygon { fill:#145232; stroke:#8cffa9; }
+.mac-window[data-app-window="terminal"] .war-region.computer polygon { fill:#61451b; stroke:#ffd079; }
+.mac-window[data-app-window="terminal"] .war-region.human:hover polygon,
+.mac-window[data-app-window="terminal"] .war-region.human.selected polygon,
+.mac-window[data-app-window="terminal"] .war-region.human:focus polygon { fill:#145232; }
+.mac-window[data-app-window="terminal"] .war-region.computer:hover polygon,
+.mac-window[data-app-window="terminal"] .war-region.computer.selected polygon,
+.mac-window[data-app-window="terminal"] .war-region.computer:focus polygon { fill:#61451b; }
+.mac-window[data-app-window="terminal"] .war-region.neutral:hover polygon,
+.mac-window[data-app-window="terminal"] .war-region.neutral.selected polygon,
+.mac-window[data-app-window="terminal"] .war-region.neutral:focus polygon { fill:#22272d; }
+.mac-window[data-app-window="terminal"] .war-region:hover polygon,
+.mac-window[data-app-window="terminal"] .war-region.selected polygon,
+.mac-window[data-app-window="terminal"] .war-region:focus polygon { stroke:#fff; stroke-width:3; }
+.mac-window[data-app-window="terminal"] .war-code { font-size:18px; }
+.mac-window[data-app-window="terminal"] .war-armies { font-size:25px; }
+.mac-window[data-app-window="terminal"] .war-region text.war-planned-count { font-size:11px; fill:#b6e7c8; }
+.mac-window[data-app-window="terminal"] .war-selected { min-height:32px; font-size:12px; padding:8px 0; }
+.mac-window[data-app-window="terminal"] .war-map-objective { margin:0 0 8px; font-size:10px; color:#8ca895; }
+.mac-window[data-app-window="terminal"] .war-territory-actions { display:flex; gap:8px; min-height:32px; }
+.mac-window[data-app-window="terminal"] .war-plan { min-height:0; overflow:auto; border-left:1px solid #2a4a35; padding-left:18px; display:flex; flex-direction:column; gap:12px; font-size:12px; }
+.mac-window[data-app-window="terminal"] .war-plan > small { color:#9bb2a3; line-height:1.5; }
+.mac-window[data-app-window="terminal"] .war-phase-copy { min-height:40px; line-height:1.5; color:#d4ffdf; }
+.mac-window[data-app-window="terminal"] .war-order-editor { padding:13px; background:#0d2618; border:1px solid #355e44; }
+.mac-window[data-app-window="terminal"] .war-order-editor p { font-size:11px; line-height:1.55; color:#b1cebb; }
+.mac-window[data-app-window="terminal"] .war-amount-label { display:flex; align-items:center; gap:9px; margin-top:12px; }
+.mac-window[data-app-window="terminal"] .war-amount-label input { width:65px; padding:6px; background:#03120a; border:1px solid #4b785a; color:#dbffe5; border-radius:0; font:inherit; }
+.mac-window[data-app-window="terminal"] .war-deployments { border-bottom:1px solid #274932; padding-bottom:8px; font-size:11px; }
+.mac-window[data-app-window="terminal"] .war-deployments > div { display:flex; justify-content:space-between; align-items:center; margin-top:5px; }
+.mac-window[data-app-window="terminal"] .war-order-list { margin:0; padding:0; list-style:none; display:grid; gap:8px; }
+.mac-window[data-app-window="terminal"] .war-order-list li { display:flex; align-items:center; justify-content:space-between; gap:7px; background:#0b1d12; padding:8px; font-size:11px; }
+.mac-window[data-app-window="terminal"] .war-order-list li > div { display:flex; gap:3px; }
+.mac-window[data-app-window="terminal"] .war-empty { color:#8caa95; }
+.mac-window[data-app-window="terminal"] .terminal-war-panel button { min-height:30px; padding:5px 9px; border:1px solid #416d4e; border-radius:2px; background:#122c1c; color:#d3ffdf; font:inherit; font-size:11px; cursor:pointer; }
+.mac-window[data-app-window="terminal"] .terminal-war-panel button:hover:not(:disabled) { background:#20412b; border-color:#a2ffb7; }
+.mac-window[data-app-window="terminal"] .terminal-war-panel button:focus-visible { outline:2px solid #e3ffec; outline-offset:2px; }
+.mac-window[data-app-window="terminal"] .terminal-war-panel button:disabled { opacity:.4; cursor:default; }
+.mac-window[data-app-window="terminal"] .terminal-war-panel .war-commit { min-height:42px; background:#a1f8b9; color:#06170d; border-color:#a1f8b9; font-weight:700; }
+.mac-window[data-app-window="terminal"] .terminal-war-panel .war-subtle { background:transparent; }
+.mac-window[data-app-window="terminal"] .war-order-path { fill:none; stroke:#a3c0ac; stroke-width:3; pointer-events:none; }
+.mac-window[data-app-window="terminal"] .war-order-path.planned { stroke-dasharray:5 8; opacity:.6; }
+.mac-window[data-app-window="terminal"] .war-order-path.human { stroke:#8cffa9; }
+.mac-window[data-app-window="terminal"] .war-order-path.computer { stroke:#ffd079; }
+.mac-window[data-app-window="terminal"] .war-order-path.live { stroke-width:5; stroke-dasharray:12 8; animation:war-march .65s linear; }
+.mac-window[data-app-window="terminal"] .war-order-path.missile { stroke:#ff917d; stroke-width:6; }
+.mac-window[data-app-window="terminal"] .war-impact polygon { animation:war-impact .65s ease-out; }
+.mac-window[data-app-window="terminal"] .war-shield-ring { fill:none; stroke:#84d7ff; stroke-width:4; stroke-dasharray:6 5; }
+.mac-window[data-app-window="terminal"] .war-help { position:absolute; inset:0; z-index:5; padding:24px; background:#07180e; border:1px solid #5a9b70; overflow:auto; }
+.mac-window[data-app-window="terminal"] .war-help pre { font:12px/1.65 Menlo,monospace; white-space:pre-wrap; color:#d0ecda; }
+.mac-window[data-app-window="terminal"] .war-help button { position:sticky; top:0; float:right; }
+.mac-window[data-app-window="terminal"] .war-mode .terminal-history { flex:0 0 60px; font-size:11px; }
+@keyframes war-march { from { stroke-dashoffset:40; } to { stroke-dashoffset:0; } }
+@keyframes war-impact { from { stroke-width:8; stroke:#fff; } to { stroke-width:1.2; } }
+@media (max-width:1000px) {
+  .mac-window[data-app-window="terminal"] .war-workspace { grid-template-columns:minmax(0,1fr) 270px; gap:12px; }
+  .mac-window[data-app-window="terminal"] .war-heading strong { font-size:12px; }
+  .mac-window[data-app-window="terminal"] .war-score { font-size:9px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .mac-window[data-app-window="terminal"] .war-order-path.live,
+  .mac-window[data-app-window="terminal"] .war-impact polygon { animation:none; }
+}

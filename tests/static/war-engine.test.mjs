@@ -4,95 +4,91 @@ import "../../war-engine.js";
 import "../../terminal-engine.js";
 const {createGame,regions}=globalThis.RizvisionsWar;
 const region=(g,id)=>g.snapshot().regions.find(r=>r.id===id);
+const deployAll=g=>{const s=g.snapshot(),id=s.regions.find(r=>r.owner==="human").id;g.handle(`deploy ${id} ${s.reserves}`);};
 
-test("the campaign graph is connected, reciprocal, and has 18 unique regions",()=>{
+test("the campaign graph remains reciprocal and connected",()=>{
   assert.equal(new Set(regions.map(r=>r.id)).size,18);
-  for(const r of regions)for(const n of r.neighbors)assert.ok(regions.find(t=>t.id===n)?.neighbors.includes(r.id),`${r.id} <-> ${n}`);
-  const seen=new Set(),queue=[regions[0].id];while(queue.length){const id=queue.shift();if(seen.has(id))continue;seen.add(id);queue.push(...regions.find(r=>r.id===id).neighbors);}
-  assert.equal(seen.size,18);
+  for(const r of regions)for(const n of r.neighbors)assert.ok(regions.find(t=>t.id===n).neighbors.includes(r.id));
+  const seen=new Set(),queue=["US"];while(queue.length){const id=queue.shift();if(seen.has(id))continue;seen.add(id);queue.push(...regions.find(r=>r.id===id).neighbors);}assert.equal(seen.size,18);
 });
-
-test("deployment obeys ownership, budget, and the turn phase",()=>{
+test("planning never changes the real board and guards against overassignment",()=>{
   const g=createGame({seed:7}),before=g.snapshot();
-  assert.match(g.handle("deploy CH 4").text,/ONLY TO YOUR/);
-  assert.match(g.handle("deploy CA 999").text,/INVALID/);
-  assert.match(g.handle("attack CA EU 4").text,/FIRST/);
-  assert.match(g.handle("end").text,/FIRST/);
-  assert.deepEqual(g.snapshot(),before);
-  g.handle("deploy CA 4");assert.equal(g.snapshot().reserves,0);assert.equal(region(g,"CA").armies,9);
-  assert.match(g.handle("deploy CA 1").text,/INVALID/);
-});
-
-test("attacks require adjacency and leave a guard; arrived armies cannot move twice",()=>{
-  const g=createGame({seed:7});g.handle("deploy CA 4");
+  assert.match(g.handle("deploy CH 4").text,/ONLY TO YOUR/);assert.match(g.handle("commit").text,/FIRST/);
+  g.handle("deploy CA 4");assert.equal(region(g,"CA").armies,5);assert.equal(region(g,"CA").plannedDeploy,4);assert.equal(region(g,"CA").available,8);
   assert.match(g.handle("attack CA CH 4").text,/NO DIRECT ROUTE/);
   assert.match(g.handle("attack CA EU 9").text,/NOT ENOUGH/);
-  const capture=g.handle("attack CA EU 6");assert.match(capture.text,/CAPTURE/);
-  assert.equal(region(g,"EU").owner,"human");assert.equal(region(g,"EU").ready,0);
-  assert.equal(region(g,"CA").armies,3);assert.equal(g.snapshot().orders,3);
-  assert.match(g.handle("attack EU EE 1").text,/NOT ENOUGH/);
-  const transferred=g.handle("move US CA 3");assert.match(transferred.text,/TRANSFER/);
-  assert.equal(region(g,"CA").armies,6);assert.equal(region(g,"CA").ready,2);
+  g.handle("attack CA EU 6");assert.equal(region(g,"EU").owner,"neutral");assert.equal(region(g,"CA").available,2);
+  assert.match(g.handle("attack CA AL 3").text,/NOT ENOUGH/);
+  assert.match(g.handle("attack EU EE 1").text,/SOURCE NOT OWNED/);
+  assert.deepEqual(g.snapshot().regions.map(r=>[r.id,r.owner,r.armies]),before.regions.map(r=>[r.id,r.owner,r.armies]));
+  assert.match(g.handle("undeploy 1").text,/MOVEMENT ORDERS FIRST/);
 });
-
-test("computer follows the same budgets and completed turns refresh human readiness",()=>{
-  const g=createGame({seed:7});g.handle("deploy CA 4");g.handle("attack CA EU 6");
-  const before=g.snapshot(),total=before.regions.reduce((s,r)=>s+r.armies,0);
-  const after=g.handle("end").war;
-  assert.equal(after.round,2);assert.equal(after.orders,4);assert.equal(after.reserves,after.human.income);
-  assert.ok(after.events.some(e=>e.startsWith("WOPR DEPLOY")));
-  assert.ok(after.events.some(e=>e.startsWith("WOPR CAPTURE")));
-  assert.ok(after.regions.reduce((s,r)=>s+r.armies,0)<=total+before.computer.income);
-  for(const r of after.regions){assert.ok(Number.isInteger(r.armies)&&r.armies>=1);assert.ok(r.ready>=0&&r.ready<r.armies);}
-  for(const r of after.regions.filter(r=>r.owner==="human"))assert.equal(r.ready,r.armies-1);
+test("queues can be removed and reordered; the fourth action never auto commits",()=>{
+  const g=createGame({seed:7});g.handle("deploy CA 4");
+  for(const order of ["attack CA EU 3","attack CA AL 2","move US CA 3","shield US"])g.handle(order);
+  assert.equal(g.snapshot().queue.length,4);assert.equal(g.snapshot().round,1);assert.equal(region(g,"EU").owner,"neutral");
+  assert.match(g.handle("move MX US 1").text,/FOUR ACTIONS/);
+  g.handle("up 4");assert.equal(g.snapshot().queue[2].type,"shield");g.handle("down 3");assert.equal(g.snapshot().queue[3].type,"shield");
+  g.handle("remove 1");assert.equal(region(g,"CA").available,6);g.handle("reset orders");assert.equal(g.snapshot().reserves,4);assert.equal(g.snapshot().queue.length,0);
 });
-
-test("nuclear ending requires confirmation, can be cancelled, and ends both sides",()=>{
-  const g=createGame({seed:7});assert.match(g.handle("confirm strike").text,/NO LAUNCH/);
-  g.handle("strike CH");assert.equal(g.snapshot().defcon,5);assert.equal(g.snapshot().pendingStrike,"CH");
-  g.handle("cancel");assert.equal(g.snapshot().pendingStrike,null);
-  g.handle("strike CH");const finish=g.handle("confirm strike");
-  assert.equal(finish.war.outcome,"mutual");assert.equal(finish.war.defcon,1);
-  assert.match(finish.text,/NO WINNER/);
-  assert.match(g.handle("deploy CA 1").text,/CAMPAIGN COMPLETE/);
+test("combat follows simultaneous 60/70 nearest-round losses and no 1 vs 1 capture",()=>{
+  const g=createGame({seed:7});
+  assert.deepEqual(g.previewBattle("CA","EU",3),{remaining:2,defending:0,capture:true});
+  assert.deepEqual(g.previewBattle("CA","EU",2),{remaining:1,defending:1,capture:false});
+  const one=g.snapshot().regions.find(r=>r.armies===1);if(one)assert.deepEqual(g.previewBattle("CA",one.id,1),{remaining:0,defending:1,capture:false});
 });
-
-test("terminal starts, restarts, and disconnects a campaign while preserving other games",()=>{
-  const s=globalThis.RizvisionsTerminal.createSession();
-  s.handle("games");assert.equal(s.handle("3").mode,"war");
-  const first=s.handle("deploy CA 4");assert.equal(first.war.reserves,0);
-  assert.equal(s.handle("restart").war.round,1);assert.equal(s.handle("exit").mode,"normal");
-  assert.equal(s.handle("war easy").war.human.income,6);
-  s.handle("exit");s.handle("tic tac toe");assert.equal(s.mode,"game");
+test("commit produces deployment-first playback, interleaved actions and next-round resources",()=>{
+  const g=createGame({seed:7});g.handle("deploy CA 4");g.handle("attack CA EU 6");g.handle("move US CA 3");
+  const r=g.handle("commit");assert.equal(r.war.round,2);assert.equal(r.war.first,"computer");assert.equal(r.war.queue.length,0);assert.equal(r.war.reserves,r.war.human.income);
+  assert.equal(region(g,"EU").owner,"human");assert.equal(region(g,"EU").armies,5);
+  assert.equal(region(g,"CA").armies,6);assert.equal(region(g,"CA").available,5);
+  const kinds=r.resolution.map(f=>f.type),firstAction=kinds.findIndex(k=>["attack","capture","move"].includes(k));assert.ok(firstAction>0);
+  assert.ok(!kinds.slice(firstAction).includes("deploy"));assert.ok(r.resolution.some(f=>f.who==="computer"&&["attack","capture"].includes(f.type)));
+  assert.equal(r.resolution.find(f=>["attack","capture","move"].includes(f.type)).who,"human");
+  assert.ok(r.resolution.every(f=>f.war.phase==="resolving"));
 });
-
-test("seeded campaigns replay identically and snapshots cannot mutate game state",()=>{
-  const a=createGame({seed:12}),b=createGame({seed:12});
-  assert.deepEqual(a.snapshot(),b.snapshot());
-  const state=a.snapshot();state.regions[0].armies=9999;state.regions[0].neighbors.length=0;
-  assert.notEqual(region(a,"AL").armies,9999);assert.equal(region(a,"AL").neighbors.length,2);
+test("computer plan is independent of the visitor's pending plan",()=>{
+  const a=createGame({seed:19}),b=createGame({seed:19});
+  a.handle("deploy CA 4");a.handle("attack CA EU 6");b.handle("deploy US 4");b.handle("shield US");
+  const ar=a.handle("commit"),br=b.handle("commit");
+  const deployments=r=>r.resolution.filter(f=>f.who==="computer"&&f.type==="deploy").map(f=>f.text);
+  assert.deepEqual(deployments(ar),deployments(br));
+  assert.deepEqual(ar.resolution.filter(f=>f.who==="computer").map(f=>[f.type,f.from,f.to]),br.resolution.filter(f=>f.who==="computer").map(f=>[f.type,f.from,f.to]));
 });
-
-test("many legal campaigns remain valid and terminate with an explicit outcome",()=>{
-  for(let seed=1;seed<=12;seed++){
-    const g=createGame({seed,difficulty:seed%2?"easy":"standard"});
-    for(let turn=0;turn<41 && !g.snapshot().outcome;turn++){
-      let st=g.snapshot();
-      const own=st.regions.filter(r=>r.owner==="human");
-      const front=own.filter(r=>r.neighbors.some(n=>st.regions.find(t=>t.id===n).owner!=="human"));
-      const deploy=(front.length?front:own).sort((a,b)=>b.armies-a.armies)[0];
-      g.handle(`deploy ${deploy.id} ${st.reserves}`);
-      for(let o=0;o<4 && !g.snapshot().outcome;o++){
-        st=g.snapshot();let plan=null;
-        for(const r of st.regions.filter(r=>r.owner==="human"))for(const n of r.neighbors){
-          const target=st.regions.find(t=>t.id===n),count=Math.min(r.ready,r.armies-1);
-          if(target.owner!=="human" && count>0 && g.previewBattle(r.id,n,count).capture)plan={from:r.id,to:n,count};
-        }
-        if(!plan)break;g.handle(`attack ${plan.from} ${plan.to} ${plan.count}`);
-      }
-      if(!g.snapshot().outcome)g.handle("end");
-      for(const r of g.snapshot().regions){assert.ok(r.armies>=1&&Number.isInteger(r.armies));assert.ok(r.ready>=0&&r.ready<r.armies);}
+test("nuclear launches are queued, limited, interceptable and followed by cooling",()=>{
+  const g=createGame({seed:7});deployAll(g);g.handle("strike CH");assert.equal(g.snapshot().pendingStrike,"CH");g.handle("cancel");assert.equal(g.snapshot().pendingStrike,null);
+  g.handle("strike CH");g.handle("confirm strike");assert.equal(g.snapshot().arsenal.human,3);assert.equal(g.snapshot().defcon,5);assert.match(g.handle("strike SI").text,/ONE LAUNCH/);
+  const r=g.handle("commit");assert.equal(r.war.defcon,4);assert.equal(r.war.arsenal.human,2);assert.equal(r.war.outcome,null);assert.ok(r.resolution.some(f=>f.type==="strike"));
+  deployAll(g);g.handle("shield CA");assert.match(g.handle("shield US").text,/ONE SHIELD/);const intercepted=g.handle("commit");
+  assert.equal(intercepted.war.defcon,3);assert.equal(intercepted.war.arsenal.computer,2);assert.ok(intercepted.resolution.some(f=>f.type==="intercept"&&f.to==="CA"));
+  const shieldIndex=intercepted.resolution.findIndex(f=>f.type==="shield"&&f.who==="human"),launchIndex=intercepted.resolution.findIndex(f=>f.type==="intercept");assert.ok(shieldIndex<launchIndex);
+  let cooled=false;
+  for(let i=0;i<3&&!cooled;i++){const before=g.snapshot().defcon;deployAll(g);const r=g.handle("commit");if(r.resolution.some(f=>f.type==="cooldown")){cooled=true;assert.equal(r.war.defcon,Math.min(5,before+1));}}
+  assert.ok(cooled);
+});
+test("repeated escalation can reach mutual destruction without ending at the first launch",()=>{
+  let found=false;
+  for(let seed=1;seed<=15&&!found;seed++){
+    const g=createGame({seed});for(let t=0;t<8&&!g.snapshot().outcome;t++){
+      deployAll(g);const s=g.snapshot(),target=s.regions.find(r=>r.owner==="computer");
+      if(s.arsenal.human&&target){g.handle(`strike ${target.id}`);g.handle("confirm strike");}
+      g.handle("commit");
     }
-    assert.ok(["victory","defeat","stalemate"].includes(g.snapshot().outcome));
+    if(g.snapshot().outcome==="mutual"){found=true;assert.equal(g.snapshot().defcon,1);assert.match(g.handle("deploy CA 1").text,/COMPLETE/);}
+  }
+  assert.equal(found,true);
+});
+test("seeded sessions are isolated and restart/exit preserve other Terminal games",()=>{
+  const a=createGame({seed:12}),b=createGame({seed:12});assert.deepEqual(a.snapshot(),b.snapshot());
+  const state=a.snapshot();state.regions[0].armies=9999;state.queue.push({type:"strike"});assert.notEqual(region(a,"AL").armies,9999);assert.equal(a.snapshot().queue.length,0);
+  const s=globalThis.RizvisionsTerminal.createSession();assert.equal(s.handle("war easy").war.reserves,6);s.handle("deploy CA 6");assert.equal(s.handle("restart").war.queue.length,0);s.handle("exit");s.handle("tic tac toe");assert.equal(s.mode,"game");
+});
+test("many complete campaigns preserve positive armies and resolve explicitly",()=>{
+  for(let seed=1;seed<=12;seed++){
+    const g=createGame({seed,difficulty:"easy"});for(let t=0;t<41&&!g.snapshot().outcome;t++){
+      const st=g.snapshot(),front=st.regions.filter(r=>r.owner==="human"&&r.neighbors.some(n=>st.regions.find(t=>t.id===n).owner!=="human"));const d=(front.length?front:st.regions.filter(r=>r.owner==="human")).sort((a,b)=>b.armies-a.armies)[0];g.handle(`deploy ${d.id} ${st.reserves}`);
+      for(let o=0;o<4;o++){const s=g.snapshot();let plan=null;for(const r of s.regions.filter(r=>r.owner==="human"))for(const n of r.neighbors){const target=s.regions.find(t=>t.id===n);if(target.owner!=="human"&&r.available>0&&g.previewBattle(r.id,n,r.available).capture)plan={from:r.id,to:n,count:r.available};}if(!plan)break;g.handle(`attack ${plan.from} ${plan.to} ${plan.count}`);}
+      const r=g.handle("commit");for(const f of [...r.resolution,{war:r.war}])for(const region of f.war.regions){assert.ok(Number.isInteger(region.armies)&&region.armies>=1);assert.ok(Number.isInteger(region.available)&&region.available>=0);}
+    }assert.ok(["victory","defeat","stalemate"].includes(g.snapshot().outcome));
   }
 });

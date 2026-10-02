@@ -50,23 +50,55 @@ Unknown questions receive a topic suggestion. The interpreter does not invent an
 
 ## Global Thermonuclear War campaign
 
-`war` or game-menu option `3` opens an original 18-region territory game. `war easy` adds two reinforcements to your income; `war hard` adds two to the computer’s. Standard mode uses equal rules and budgets.
+`war` or game-menu option `3` opens an original 18-region territory game across the website viewport. `war easy` adds two reinforcements to your income; `war hard` adds two to WOPR's. Chrome's real browser bar stays visible. Escape returns to the desktop without ending the campaign; Expand brings the game back. `exit` disconnects. Closing Terminal ends the session.
 
-Win by capturing WOPR’s HQ in China (`CH`) or controlling 12 regions. Your HQ is `US`. The world map shows ownership and troop counts, while dotted routes show allowed movements. Alaska–Siberia is a wraparound connection. Green regions belong to you; amber belongs to WOPR; dim green is neutral.
+Win by capturing China (`CH`, WOPR HQ) or controlling 12 regions. WOPR wins by capturing `US` or controlling 12. Green is YOU, amber is WOPR, and gray is NEUTRAL. Selection adds a white outline without changing the faction color. Dotted routes show neighboring regions, including Alaska–Siberia.
 
-1. Deploy all reinforcements to regions you own. First-turn example: `deploy CA 4`.
-2. Attack a neighboring enemy or neutral region: `attack CA EU 6`.
-3. Transfer troops between your regions: `move US CA 3`.
-4. Type `end` to give WOPR its turn. It reinforces, expands, transfers interior troops toward its borders, and protects its HQ.
+### Plan, commit, watch
 
-Every region retains one guard. Armies can move once per turn, so arriving troops cannot immediately attack onward. You get four move orders per turn. Income is three armies, plus one per three regions and bonuses for controlling a complete continent: Americas +3, Europe +2, Africa +2, Asia +3, Pacific +2.
+1. Queue every reinforcement on regions you own. First-round example: `deploy CA 4`. The real troop count stays unchanged; planned deployment appears separately.
+2. Queue up to four actions. `attack CA EU 6` attacks a neighboring hostile or neutral region. `move US CA 3` transfers between regions you own. Launches and shields also occupy one action slot.
+3. Review your queue. Remove or reorder actions; clear the whole plan if needed. You may commit fewer than four actions. Queuing the fourth never commits automatically.
+4. Click Commit turn or type `commit`. Both sides' plans lock. WOPR chose its orders independently from the real start-of-round board, without reading your pending plan.
+5. Watch both sides resolve. Deployments happen first, then shields activate. Other actions interleave. YOU has first action priority on odd rounds, WOPR on even rounds; priority also reverses between action slots. Skip animation jumps to the result. Replay last round changes no game state.
 
-Combat is deterministic. Attackers remove 70% of their number from the defending force, rounded down. Defenders remove 60% of their number from the attacking force, rounded down with a minimum of one. A territory is captured when all defenders are eliminated and attackers survive. Surviving attackers return when the attack fails. These are fictional game mechanics.
+Click an owned region to deploy, or select a source followed by an adjacent destination to prepare movement. The numeric editor starts with a small useful troop count, not automatically the maximum. Max is an explicit choice. It shows troops available, troops left defending, and estimated combat losses. Estimates use the current board; earlier orders or the opponent can change the result.
 
-Click your region to prepare a deployment. Once deployment is complete, select a source and then an adjacent target to prepare an attack or transfer. You may edit the troop count before pressing Enter. `inspect [code]` lists a region’s borders; `rules` shows the complete manual.
+One army stays behind to hold a region. Available means its current army plus planned deployment, minus the guard and troops already assigned to other actions. Each army moves once per round. Arriving troops, returning survivors, and newly captured territories cannot attack onward until next round. You can issue multiple orders from the same source using different unassigned troops. If an earlier action captures a source, its later orders cancel. If casualties leave fewer troops, a later order sends only what remains available. Changed target ownership can also cancel an order; playback explains why.
 
-`strike CH` requests the nuclear ending. `confirm strike` triggers a launch and WOPR’s retaliation: DEFCON 1, mutual destruction, no winner. `cancel` withdraws the request. Nuclear escalation is a deliberate losing branch; the conventional campaign can be won.
+Income is three armies, plus one per three regions and full-continent bonuses: Americas +3, Europe +2, Africa +2, Asia +3, Pacific +2. A campaign ends in stalemate after 40 rounds if neither side wins.
 
-`restart` starts a fresh campaign, `exit` or Escape disconnects. A campaign ends after 40 rounds if neither side has won. Game state lasts for the current Terminal session.
+### Combat
 
-Reference mechanics: [War.app gameplay basics](https://war.app/wiki/Gameplay_Basics). This implementation uses an original map, combat model, AI, rules, and visual assets.
+Attackers eliminate 60% of their number from the defending force. Defenders eliminate 70% of their number from the attacking force. Both losses are rounded to the nearest whole army and applied simultaneously. Capture requires all defenders eliminated and at least one attacker surviving. If both forces are eliminated, one defender remains. Failed attacks return surviving attackers to their source; they have used their move for that round.
+
+Example: three attackers against two defenders eliminate two defenders and lose one attacker, capturing with two survivors. Two against two eliminate one defender and lose one attacker, leaving one defender and returning one survivor.
+
+### Nuclear escalation
+
+Each side begins with three missiles. Each can queue at most one launch and one shield per round.
+
+- `strike CH` requests a launch; `confirm strike` queues it, while `cancel` withdraws the request. Nothing fires or consumes a missile until resolution.
+- A strike halves the target army, rounded up with at least one survivor. It does not capture territory. A target that is no longer hostile cancels the launch.
+- `shield US` protects that owned region from one missile during this round. Shields activate before launches regardless of queue position. A shield occupies one action slot, as does a launch.
+- Every fired missile lowers shared DEFCON by one, including intercepted missiles. A round without launches restores one level, up to DEFCON 5.
+- Reaching DEFCON 1 ends the campaign in mutual destruction. Neither side wins.
+- WOPR can defend, retaliate, and initiate escalation. It considers previous launches, strong opposing armies, and later-round opportunities; it does not inspect your current queue.
+
+These are fictional game rules. Nuclear escalation is a playable risk, rather than an immediate ending on the first launch.
+
+### Commands and controls
+
+| Purpose | Commands |
+| --- | --- |
+| Reinforce | `deploy CA 4`, `reinforce CA 4`, `place CA 4` |
+| Move or attack | `attack CA EU 6`, `move US CA 3`, `transfer US CA 3` |
+| Nuclear actions | `strike CH`, `confirm strike`, `cancel`, `shield US` |
+| Edit plan | `remove 1`, `up 2`, `down 1`, `undo`, `undeploy 1`, `reset orders` |
+| Inspect | `inspect EU`, `info Western Europe`, `status`, `map`, `sitrep` |
+| Resolve | `commit`, `end`, `end turn`, `done`, `next` |
+| Manual or session | `rules`, `help`, `how to play`, `restart`, `exit` |
+
+Sound toggles locally synthesized movement and launch cues. Rules opens the full manual in the game. Escape closes the manual first if it is open, otherwise returns the expanded game to the desktop. All campaign state remains local to the current Terminal session.
+
+Reference mechanics: [War.app combat basics](https://war.app/wiki/Combat_Basics) and [move order](https://war.app/wiki/Move_Order). The map, AI, nuclear rules, and visual assets are original to this implementation.

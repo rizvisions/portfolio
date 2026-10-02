@@ -63,7 +63,7 @@
       }
       if(mode==="war"){
         if(/^(restart|again|new game)$/.test(text)){war=globalThis.RizvisionsWar.createGame({difficulty:war.snapshot().difficulty});return result(war.opening().text,{war:war.snapshot()});}
-        const response=war.handle(text);return result(response.text,{war:response.war});
+        const response=war.handle(text);return result(response.text,{war:response.war,resolution:response.resolution});
       }
       if(/\b(shall we play a game|play a game|lets play|games|wargames|war games|wopr|joshua|global thermonuclear war)\b/.test(text)){
         mode="menu";return result(menu);
@@ -134,6 +134,6 @@
     }
     return {handle,observe,get mode(){return mode;}};
   }
-  const completions=["help","help parker","help photography","games","shall we play a game?","tic tac toe","war","war easy","war hard","deploy ","attack ","move ","inspect ","end","rules","restart","exit","tell me more","history","clear",... ["photos","work","parker","spotify","safari","messages","notes","about","instagram","calendar","settings","trash"].map(a=>`open ${a}`)];
+  const completions=["help","help parker","help photography","games","shall we play a game?","tic tac toe","war","war easy","war hard","deploy ","attack ","move ","inspect ","commit","shield ","strike ","remove ","reset orders","end","rules","restart","exit","tell me more","history","clear",... ["photos","work","parker","spotify","safari","messages","notes","about","instagram","calendar","settings","trash"].map(a=>`open ${a}`)];
   globalThis.RizvisionsTerminal={createSession,topics,normalize,bestMove,winner,completions};
 })();
