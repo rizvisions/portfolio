@@ -274,14 +274,14 @@ test("campaign queues editable orders, fills the site, animates commit and prese
   await send("war");const panel=win.locator(".terminal-war-panel");
   await expect(win).toHaveClass(/war-immersive/);
   const rect=await win.boundingBox(),viewport=page.viewportSize();expect(rect.width).toBe(viewport.width);expect(rect.height).toBe(viewport.height);
-  await expect(page.locator(".dock-wrap")).toBeHidden();expect((await panel.locator("svg.war-world").boundingBox()).height).toBeGreaterThan(300);
+  await expect(page.locator(".dock-wrap")).toBeHidden();expect((await panel.locator("svg.war-world").boundingBox()).height).toBeGreaterThan(240);
   await expect(panel.locator(".war-legend")).toContainText("NEUTRAL");
   const neutral=panel.locator('[data-war-region="EU"] polygon'),human=panel.locator('[data-war-region="CA"] polygon');
   const neutralFill=await neutral.evaluate(el=>getComputedStyle(el).fill);expect(neutralFill).not.toBe(await human.evaluate(el=>getComputedStyle(el).fill));
   await panel.locator('[data-war-region="EU"]').click();await expect(neutral).toHaveCSS("fill",neutralFill);
   await panel.locator('[data-war-region="CA"]').click();await expect(panel.locator("[data-war-amount]")).toHaveValue("1");
   await panel.locator("[data-war-max]").click();await expect(panel.locator("[data-war-amount]")).toHaveValue("4");await panel.locator("[data-war-queue]").click();
-  await expect(panel.locator('[data-war-region="CA"] .war-armies')).toHaveText("5");await expect(panel.locator('[data-war-region="CA"] .war-planned-count')).toContainText("+4 planned");
+  await expect(panel.locator('[data-war-region="CA"] .war-armies')).toHaveText("9");await expect(panel.locator('[data-war-region="CA"] .war-planned-count')).toContainText("+4 deployed");
   await panel.locator('[data-war-region="CA"]').click();await panel.locator('[data-war-region="EU"]').click();
   await expect(panel.locator("[data-war-amount]")).toHaveValue("3");await expect(panel.locator("[data-war-preview]")).toContainText("capture with 2 survivors");
   await panel.locator("[data-war-amount]").fill("6");await expect(panel.locator("[data-war-preview]")).toContainText("5 survivors");await panel.locator("[data-war-queue]").click();
@@ -290,13 +290,18 @@ test("campaign queues editable orders, fills the site, animates commit and prese
   await panel.getByRole("button",{name:"Move order 2 up",exact:true}).click();await expect(panel.locator(".war-order-list li").first()).toContainText("Transfer");
   await panel.getByRole("button",{name:"Move order 1 down",exact:true}).click();
   await panel.locator('[data-war-command="commit"]').click();await expect(input).toBeDisabled();
-  await expect(panel.locator(".war-phase-copy")).toContainText("plans locked");
-  await expect(panel.locator(".war-order-path.live")).toBeVisible({timeout:5000});
-  await expect(input).toBeEnabled({timeout:15_000});await expect(panel.locator(".war-heading")).toContainText("ROUND 2");
+  await expect(panel.locator(".war-event-card")).toContainText("PLANS LOCKED");
+  await panel.locator("[data-war-pause]").click();await expect(panel.locator(".war-phase-copy")).toContainText("PAUSED");
+  await panel.locator("[data-war-next]").click();await expect(panel.locator(".war-event-card")).toContainText("REINFORCEMENTS");
+  await panel.locator("[data-war-next]").click();await expect(panel.locator(".war-event-card")).toContainText("ATTACK IN MOTION");
+  await expect(panel.locator(".war-order-path.live")).toBeVisible();await expect(panel.locator('[data-war-region="EU"] .war-armies')).toHaveText("2");
+  await panel.locator("[data-war-next]").click();await expect(panel.locator(".war-event-card")).toContainText("TERRITORY CAPTURED");
+  await expect(panel.locator(".war-region-changes")).toContainText("2 → 5");await expect(panel.locator(".war-battle-math")).toContainText("Attacker losses 1");
+  await panel.locator("[data-war-skip]").click();await expect(input).toBeEnabled();await expect(panel.locator(".war-heading")).toContainText("ROUND 2");
   await expect(panel.locator('[data-war-region="EU"]')).toHaveClass(/human/);
   await send("deploy CA 4");await send("shield US");
   await panel.locator("[data-war-replay]").click();await expect(input).toBeDisabled();await panel.locator("[data-war-skip]").click();await expect(input).toBeEnabled();
-  await expect(panel.locator(".war-order-list")).toContainText("Shield US");await expect(panel.locator('[data-war-region="CA"] .war-planned-count')).toContainText("+4 planned");
+  await expect(panel.locator(".war-order-list")).toContainText("Shield US");await expect(panel.locator('[data-war-region="CA"] .war-planned-count')).toContainText("+4 deployed");
   await input.evaluate(el=>el.blur());await page.keyboard.press("Escape");await expect(win).not.toHaveClass(/war-immersive/);await expect(panel).toBeVisible();await expect(page.locator(".dock-wrap")).toBeVisible();
   await panel.locator("[data-war-view]").click();await expect(win).toHaveClass(/war-immersive/);
   await panel.locator("[data-war-sound]").click();await expect(panel.locator("[data-war-sound]")).toHaveAttribute("aria-pressed","false");
@@ -313,4 +318,35 @@ test("nuclear launch confirms into the queue and survives one round", async ({ p
   await send("shield US");await panel.locator('[data-war-command="commit"]').click();await panel.locator("[data-war-skip]").click();
   await expect(panel.locator(".war-heading")).toContainText("DEFCON 4");await expect(panel.locator(".war-score")).not.toContainText("MUTUAL DESTRUCTION");
   await expect(panel.locator(".war-human")).toContainText("2 MISSILES");await expect(panel.locator("[data-war-command=commit]")).toBeDisabled();
+});
+
+
+test("campaign can be played without commands and has adjustable event log and edge routes", async ({ page }) => {
+  const win=await openDesktopApp(page,"terminal"),input=win.locator(".terminal-input");await input.fill("war");await input.press("Enter");const panel=win.locator(".terminal-war-panel");
+  await expect(panel.locator(".war-wrap-route")).toBeVisible();await expect(panel.locator(".war-map-objective")).toContainText("Alaska ↔ Siberia");
+  await expect(win.locator(".terminal-history")).toHaveCSS("flex-basis","160px");
+  await win.locator("[data-war-log-height]").evaluate(el=>{el.value="240";el.dispatchEvent(new Event("input",{bubbles:true}));});await expect(win.locator(".terminal-history")).toHaveCSS("flex-basis","240px");
+  const grip=win.locator(".war-console-grip");await grip.focus();await grip.press("ArrowDown");await expect(win.locator(".terminal-history")).toHaveCSS("flex-basis","224px");
+  await win.locator("[data-war-console-toggle]").click();await expect(input).toBeHidden();await expect(win.locator(".terminal-history")).toBeHidden();
+  await panel.locator('[data-war-region="CA"]').click();await panel.locator("[data-war-max]").click();await panel.locator("[data-war-queue]").click();
+  await expect(panel.locator('[data-war-region="CA"] .war-armies')).toHaveText("9");
+  await panel.locator('[data-war-region="US"]').click();await expect(panel.locator(".war-order-editor")).toContainText("Your neighbors are friendly");
+  await panel.locator('[data-war-target="CA"]').click();await expect(panel.locator(".war-order-editor")).toContainText("Transfer US → CA");await panel.locator("[data-war-queue]").click();
+  await panel.locator('[data-war-region="CA"]').click();await panel.locator('[data-war-target="EU"]').click();await panel.locator("[data-war-queue]").click();
+  await panel.locator('[data-war-command="commit"]').click();await panel.locator("[data-war-speed]").selectOption("4000");await expect(panel.locator("[data-war-speed]")).toHaveValue("4000");
+  await panel.locator("[data-war-skip]").click();await expect(panel.locator(".war-round-summary")).toContainText("ROUND 1 COMPLETE");
+  await panel.locator("[data-war-music]").click();await expect(panel.locator("[data-war-music]")).toHaveAttribute("aria-pressed","true");await panel.locator("[data-war-music]").click();await expect(panel.locator("[data-war-music]")).toHaveAttribute("aria-pressed","false");
+  await win.locator("[data-war-console-toggle]").click();await expect(input).toBeVisible();await expect(win.locator(".terminal-history")).toContainText("WOPR");
+  await panel.locator("[data-war-leave]").click();await expect(panel).toBeHidden();await expect(input).toBeVisible();
+});
+
+test("missile effects happen during firing and reduced motion removes launch shake", async ({ page }) => {
+  const win=await openDesktopApp(page,"terminal"),input=win.locator(".terminal-input");const send=async text=>{await input.fill(text);await input.press("Enter");};await send("war");const panel=win.locator(".terminal-war-panel"),shell=win.locator(".terminal-shell");
+  await send("deploy CA 4");await send("strike CH");await send("confirm strike");await expect(shell).not.toHaveClass(/war-launch-active/);
+  await panel.locator('[data-war-command="commit"]').click();await panel.locator("[data-war-pause]").click();await panel.locator("[data-war-next]").click();await panel.locator("[data-war-next]").click();
+  await expect(panel.locator(".war-event-card")).toContainText("MISSILE IN FLIGHT");await expect(shell).toHaveClass(/war-launch-active/);
+  await expect(panel.locator('[data-war-region="CH"] .war-armies')).toHaveText("11");
+  await page.emulateMedia({reducedMotion:"reduce"});await expect(panel.locator(".war-map-area")).toHaveCSS("animation-name","none");
+  await panel.locator("[data-war-next]").click();await expect(panel.locator(".war-event-card")).toContainText("MISSILE IMPACT");await expect(panel.locator(".war-region-changes")).toContainText("11 → 6");
+  await panel.locator("[data-war-skip]").click();await expect(shell).not.toHaveClass(/war-launch-active/);
 });

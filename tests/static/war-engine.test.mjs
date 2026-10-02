@@ -11,16 +11,18 @@ test("the campaign graph remains reciprocal and connected",()=>{
   for(const r of regions)for(const n of r.neighbors)assert.ok(regions.find(t=>t.id===n).neighbors.includes(r.id));
   const seen=new Set(),queue=["US"];while(queue.length){const id=queue.shift();if(seen.has(id))continue;seen.add(id);queue.push(...regions.find(r=>r.id===id).neighbors);}assert.equal(seen.size,18);
 });
-test("planning never changes the real board and guards against overassignment",()=>{
+test("deployments apply instantly while movement stays queued and guards against overassignment",()=>{
   const g=createGame({seed:7}),before=g.snapshot();
   assert.match(g.handle("deploy CH 4").text,/ONLY TO YOUR/);assert.match(g.handle("commit").text,/FIRST/);
-  g.handle("deploy CA 4");assert.equal(region(g,"CA").armies,5);assert.equal(region(g,"CA").plannedDeploy,4);assert.equal(region(g,"CA").available,8);
+  g.handle("deploy CA 4");assert.equal(region(g,"CA").armies,9);assert.equal(region(g,"CA").deployed,4);assert.equal(region(g,"CA").available,8);
   assert.match(g.handle("attack CA CH 4").text,/NO DIRECT ROUTE/);
   assert.match(g.handle("attack CA EU 9").text,/NOT ENOUGH/);
   g.handle("attack CA EU 6");assert.equal(region(g,"EU").owner,"neutral");assert.equal(region(g,"CA").available,2);
   assert.match(g.handle("attack CA AL 3").text,/NOT ENOUGH/);
   assert.match(g.handle("attack EU EE 1").text,/SOURCE NOT OWNED/);
-  assert.deepEqual(g.snapshot().regions.map(r=>[r.id,r.owner,r.armies]),before.regions.map(r=>[r.id,r.owner,r.armies]));
+  assert.equal(region(g,"CA").armies,9);assert.equal(region(g,"EU").armies,2);
+  g.handle("remove 1");g.handle("undeploy 1");assert.deepEqual(g.snapshot().regions.map(r=>[r.id,r.owner,r.armies]),before.regions.map(r=>[r.id,r.owner,r.armies]));
+  g.handle("deploy CA 4");g.handle("attack CA EU 6");
   assert.match(g.handle("undeploy 1").text,/MOVEMENT ORDERS FIRST/);
 });
 test("queues can be removed and reordered; the fourth action never auto commits",()=>{
@@ -37,7 +39,7 @@ test("combat follows simultaneous 60/70 nearest-round losses and no 1 vs 1 captu
   assert.deepEqual(g.previewBattle("CA","EU",2),{remaining:1,defending:1,capture:false});
   const one=g.snapshot().regions.find(r=>r.armies===1);if(one)assert.deepEqual(g.previewBattle("CA",one.id,1),{remaining:0,defending:1,capture:false});
 });
-test("commit produces deployment-first playback, interleaved actions and next-round resources",()=>{
+test("commit reveals AI deployment, avoids duplicate human reinforcements and carries before/after results",()=>{
   const g=createGame({seed:7});g.handle("deploy CA 4");g.handle("attack CA EU 6");g.handle("move US CA 3");
   const r=g.handle("commit");assert.equal(r.war.round,2);assert.equal(r.war.first,"computer");assert.equal(r.war.queue.length,0);assert.equal(r.war.reserves,r.war.human.income);
   assert.equal(region(g,"EU").owner,"human");assert.equal(region(g,"EU").armies,5);
@@ -46,6 +48,11 @@ test("commit produces deployment-first playback, interleaved actions and next-ro
   assert.ok(!kinds.slice(firstAction).includes("deploy"));assert.ok(r.resolution.some(f=>f.who==="computer"&&["attack","capture"].includes(f.type)));
   assert.equal(r.resolution.find(f=>["attack","capture","move"].includes(f.type)).who,"human");
   assert.ok(r.resolution.every(f=>f.war.phase==="resolving"));
+  assert.ok(r.resolution.filter(f=>f.type==="deploy").every(f=>f.who==="computer"));
+  const capture=r.resolution.find(f=>f.type==="capture"&&f.who==="human");
+  assert.equal(capture.beforeWar.regions.find(r=>r.id==="EU").armies,2);assert.equal(capture.war.regions.find(r=>r.id==="EU").armies,5);
+  assert.equal(capture.detail.sent,6);assert.equal(capture.detail.attackersLost,1);assert.equal(capture.detail.defendersLost,2);
+  assert.deepEqual(capture.changes.find(c=>c.id==="EU"),{id:"EU",name:"Western Europe",armiesBefore:2,armiesAfter:5,ownerBefore:"neutral",ownerAfter:"human"});
 });
 test("computer plan is independent of the visitor's pending plan",()=>{
   const a=createGame({seed:19}),b=createGame({seed:19});
@@ -91,4 +98,13 @@ test("many complete campaigns preserve positive armies and resolve explicitly",(
       const r=g.handle("commit");for(const f of [...r.resolution,{war:r.war}])for(const region of f.war.regions){assert.ok(Number.isInteger(region.armies)&&region.armies>=1);assert.ok(Number.isInteger(region.available)&&region.available>=0);}
     }assert.ok(["victory","defeat","stalemate"].includes(g.snapshot().outcome));
   }
+});
+
+
+test("immediate reinforcement can be undone and reset without creating extra armies",()=>{
+  const g=createGame({seed:7});g.handle("deploy CA 2");g.handle("deploy US 2");assert.equal(region(g,"CA").armies,7);assert.equal(region(g,"US").armies,9);
+  g.handle("undo");assert.equal(region(g,"US").armies,7);assert.equal(g.snapshot().reserves,2);
+  g.handle("deploy CA 2");g.handle("attack CA EU 8");assert.match(g.handle("undeploy 1").text,/MOVEMENT ORDERS FIRST/);
+  g.handle("reset orders");assert.equal(region(g,"CA").armies,5);assert.equal(region(g,"US").armies,7);assert.equal(g.snapshot().reserves,4);
+  g.handle("deploy CA 4");assert.equal(region(g,"CA").armies,9);g.handle("commit");assert.equal(region(g,"CA").armies,9);assert.equal(region(g,"CA").deployed,0);
 });

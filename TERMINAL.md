@@ -56,15 +56,17 @@ Win by capturing China (`CH`, WOPR HQ) or controlling 12 regions. WOPR wins by c
 
 ### Plan, commit, watch
 
-1. Queue every reinforcement on regions you own. First-round example: `deploy CA 4`. The real troop count stays unchanged; planned deployment appears separately.
+1. Deploy reinforcements immediately to regions you own. First-round example: `deploy CA 4` changes Canada from five armies to nine right away. Deploy now does the same through the map editor. Undo or reset deployment before committing if you change your mind.
 2. Queue up to four actions. `attack CA EU 6` attacks a neighboring hostile or neutral region. `move US CA 3` transfers between regions you own. Launches and shields also occupy one action slot.
 3. Review your queue. Remove or reorder actions; clear the whole plan if needed. You may commit fewer than four actions. Queuing the fourth never commits automatically.
-4. Click Commit turn or type `commit`. Both sides' plans lock. WOPR chose its orders independently from the real start-of-round board, without reading your pending plan.
-5. Watch both sides resolve. Deployments happen first, then shields activate. Other actions interleave. YOU has first action priority on odd rounds, WOPR on even rounds; priority also reverses between action slots. Skip animation jumps to the result. Replay last round changes no game state.
+4. Click Commit turn or type `commit`. Both sides' action plans lock. WOPR chose its orders independently from the start-of-round board, without reading your deployments or pending actions.
+5. Watch both sides resolve. WOPR reveals and applies its deployment, then shields activate. Your deployment has already happened and is not added again. Other actions interleave. YOU has first action priority on odd rounds, WOPR on even rounds; priority also reverses between action slots. Each moving action first shows its route and starting troops, then its result with casualties and before/after counts. Pause stops playback; Show result and Next event advance it manually. Slow, Normal, and Fast control timing. Skip to summary jumps to the result while preserving the full event log. Review this round changes no game state and preserves any newly edited deployment or actions.
 
-Click an owned region to deploy, or select a source followed by an adjacent destination to prepare movement. The numeric editor starts with a small useful troop count, not automatically the maximum. Max is an explicit choice. It shows troops available, troops left defending, and estimated combat losses. Estimates use the current board; earlier orders or the opponent can change the result.
+Click an owned region to deploy, or select a source followed by an adjacent destination to prepare movement. After deploying, clicking another owned region selects it as a new source. Friendly transfers can be prepared with the Transfer destination buttons; enemy or neutral neighbors can be clicked on the map or selected using Attack buttons. The US starts with only friendly neighbors, so its initial role is to send troops toward the frontier. Alaska–Siberia is drawn as two connected routes across the left and right map edges.
 
-One army stays behind to hold a region. Available means its current army plus planned deployment, minus the guard and troops already assigned to other actions. Each army moves once per round. Arriving troops, returning survivors, and newly captured territories cannot attack onward until next round. You can issue multiple orders from the same source using different unassigned troops. If an earlier action captures a source, its later orders cancel. If casualties leave fewer troops, a later order sends only what remains available. Changed target ownership can also cancel an order; playback explains why.
+The numeric editor starts with a small useful troop count, not automatically the maximum. Max is an explicit choice. It shows troops available, troops left defending, and estimated combat losses. Estimates use the current board; earlier orders or the opponent can change the result.
+
+One army stays behind to hold a region. Available means its current army, which already includes deployed troops, minus the guard and troops already assigned to other actions. Each army moves once per round. Arriving troops, returning survivors, and newly captured territories cannot attack onward until next round. You can issue multiple orders from the same source using different unassigned troops. If an earlier action captures a source, its later orders cancel. If casualties leave fewer troops, a later order sends only what remains available. Changed target ownership can also cancel an order; playback explains why.
 
 Income is three armies, plus one per three regions and full-continent bonuses: Americas +3, Europe +2, Africa +2, Asia +3, Pacific +2. A campaign ends in stalemate after 40 rounds if neither side wins.
 
@@ -99,6 +101,8 @@ These are fictional game rules. Nuclear escalation is a playable risk, rather th
 | Resolve | `commit`, `end`, `end turn`, `done`, `next` |
 | Manual or session | `rules`, `help`, `how to play`, `restart`, `exit` |
 
-Sound toggles locally synthesized movement and launch cues. Rules opens the full manual in the game. Escape closes the manual first if it is open, otherwise returns the expanded game to the desktop. All campaign state remains local to the current Terminal session.
+SFX toggles locally synthesized movement and launch cues. Music toggles an original quiet analog-style synth loop; it starts only when enabled and pauses on returning to the desktop. Missile flight and impact have distinct event cards and a brief map shake only during actual firing. Reduced-motion settings suppress the shake.
+
+The event log accumulates the turn history. Its default height is 160 pixels; drag its separator, use the Height slider, or focus the separator and press Up/Down to resize it. Hide console hides the log and command input while retaining all map, order, playback, rules, restart, and Leave game controls. Commands are optional during the campaign. Rules opens the full manual in the game. Escape closes the manual first if it is open, otherwise returns the expanded game to the desktop. All campaign state remains local to the current Terminal session.
 
 Reference mechanics: [War.app combat basics](https://war.app/wiki/Combat_Basics) and [move order](https://war.app/wiki/Move_Order). The map, AI, nuclear rules, and visual assets are original to this implementation.
