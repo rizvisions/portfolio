@@ -82,7 +82,7 @@ Each side begins with three missiles. Each can queue at most one launch and one 
 
 - `strike CH` requests a launch; `confirm strike` queues it, while `cancel` withdraws the request. Nothing fires or consumes a missile until resolution.
 - A strike halves the target army, rounded up with at least one survivor. It does not capture territory. A target that is no longer hostile cancels the launch.
-- `shield US` protects that owned region from one missile during this round. Shields activate before launches regardless of queue position. A shield occupies one action slot, as does a launch.
+- `shield US` protects that owned region from one missile during this round. Shields activate before any launch or movement, regardless of queue position. Shield orders are excluded from movement-slot numbering, so moving a shield in the list does not delay other actions. You can queue one every round, with no shield stock limit; the cost is one of four order slots. It stops one missile, not conventional troop attacks. You can shield a friendly transfer destination, but cannot shield a territory you only plan to capture. A shield occupies one action slot, as does a launch.
 - Every fired missile lowers shared DEFCON by one, including intercepted missiles. A round without launches restores one level, up to DEFCON 5.
 - Reaching DEFCON 1 ends the campaign in mutual destruction. Neither side wins.
 - WOPR can defend, retaliate, and initiate escalation. It considers previous launches, strong opposing armies, and later-round opportunities; it does not inspect your current queue.
@@ -101,10 +101,16 @@ These are fictional game rules. Nuclear escalation is a playable risk, rather th
 | Resolve | `commit`, `end`, `end turn`, `done`, `next` |
 | Manual or session | `rules`, `help`, `how to play`, `restart`, `exit` |
 
-SFX toggles locally synthesized movement and launch cues. Music toggles an original analog-style synth loop with bass and sustained harmony; it starts only when enabled and pauses on returning to the desktop. Music starts off; enable Music on and adjust its dedicated Volume slider (default 65%). Missile flight and impact have distinct event cards and a brief map shake only during actual firing. Reduced-motion settings suppress the shake.
+SFX toggles locally synthesized movement and launch cues. Music toggles an original 2:59 arranged synth score, Night Watch, with a sparse intro, melodic theme, suspended bridge, development, climax, and coda; it starts only when enabled and pauses on returning to the desktop. Music starts off; enable Music on and adjust its dedicated Volume slider (default 65%). Missile flight and impact have distinct event cards and a brief map shake only during actual firing. Reduced-motion settings suppress the shake.
 
 The event log accumulates the turn history. Its default height is 160 pixels; drag its separator, use the Height slider, or focus the separator and press Up/Down to resize it. Hide console hides the log and command input while retaining all map, order, playback, rules, restart, and Leave game controls. Commands are optional during the campaign. Rules opens the full manual in the game. Escape closes the manual first if it is open, otherwise returns the expanded game to the desktop. All campaign state remains local to the current Terminal session.
 
 Reference mechanics: [War.app combat basics](https://war.app/wiki/Combat_Basics) and [move order](https://war.app/wiki/Move_Order). The map, AI, nuclear rules, and visual assets are original to this implementation.
 
 Victory opens a mission-complete debrief with the winning objective, rounds fought, territories held and captured, troop losses, missiles launched, and final DEFCON. Inspect final map dismisses it without ending the campaign; New campaign starts fresh. The completion sound respects SFX. The 32-region map retains reciprocal world routes and expands continent bonuses; world-control victory requires 22 territories.
+
+Map selection is separate from movement. Click a region to inspect it; click it again, Clear selection, or the empty map to deselect. Attack/Transfer buttons preview their destination on hover or keyboard focus. Use Pick destination on map to explicitly enter movement targeting. Enemy selection exposes a single Queue launch action with casualties and DEFCON shown in advance. Already queued launches and shields are labeled and disabled; remove their queue entry to replace them.
+
+The bonus buttons show each group’s reward and your held/required territory counts. Click one to list missing regions; hover highlights its territories. Income is broken down into base, territory and continent armies. Geographic shapes use public-domain Natural Earth data, grouped into fictional game regions; travel routes remain explicit game rules.
+
+On-map troop receipts distinguish reinforcements, transferred armies, attacking armies, defender losses and occupying survivors. Playback pace and pause/step controls remain unchanged. The final debrief is presented as a restrained text transmission instead of neon statistic cards.

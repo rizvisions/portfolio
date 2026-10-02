@@ -117,8 +117,21 @@ test("expanded campaign has a scaled victory objective and trustworthy final sta
     const st=g.snapshot(),front=st.regions.filter(r=>r.owner==="human"&&r.neighbors.some(n=>st.regions.find(t=>t.id===n).owner!=="human"));
     const source=(front.length?front:st.regions.filter(r=>r.owner==="human")).sort((a,b)=>b.armies-a.armies)[0];g.handle(`deploy ${source.id} ${st.reserves}`);
     for(let order=0;order<4;order++){const s=g.snapshot();let best=null;for(const r of s.regions.filter(r=>r.owner==="human"))for(const id of r.neighbors){const t=s.regions.find(t=>t.id===id);if(t.owner!=="human"&&g.previewBattle(r.id,id,r.available).capture)best={from:r.id,to:id,count:r.available};}if(!best)break;g.handle(`attack ${best.from} ${best.to} ${best.count}`);}
-    const result=g.handle("commit");for(const f of result.resolution){if(f.type==="capture"&&f.who==="human")captured++;if(f.detail.attackersLost!==undefined)lost+=f.who==="human"?f.detail.attackersLost:f.beforeWar.regions.find(r=>r.id===f.to).owner==="human"?f.detail.defendersLost:0;if(["strike","intercept"].includes(f.type)&&f.who==="human")launches++;}
+    const result=g.handle("commit");for(const f of result.resolution){if(f.type==="capture"&&f.who==="human")captured++;if(f.detail.attackersLost!==undefined)lost+=f.who==="human"?f.detail.attackersLost:f.beforeWar.regions.find(r=>r.id===f.to).owner==="human"?f.detail.defendersLost:0;if(["strike","intercept"].includes(f.type)){if(f.who==="human")launches++;else lost+=f.detail.defendersLost;}}
     assert.equal(result.war.stats.captures,captured);assert.equal(result.war.stats.troopsLost,lost);assert.equal(result.war.stats.launches,launches);
     if(result.war.outcome==="victory")assert.ok(result.war.human.regions>=22||result.war.regions.find(r=>r.id==="CH").owner==="human");
   }assert.ok(g.snapshot().outcome);
 });
+
+
+test("shield phase ignores list position, can renew each round and cannot shield future captures",()=>{
+ const a=createGame({seed:7}),b=createGame({seed:7});
+ for(const g of [a,b]){g.handle("deploy CA 4");assert.match(g.handle("shield EU").text,/ONLY YOUR/);}
+ a.handle("shield CA");a.handle("attack CA EU 6");b.handle("attack CA EU 6");b.handle("shield CA");
+ const ar=a.handle("commit"),br=b.handle("commit");
+ assert.deepEqual(ar.war.regions,br.war.regions);assert.deepEqual(ar.resolution.map(f=>[f.type,f.who,f.from,f.to]),br.resolution.map(f=>[f.type,f.who,f.from,f.to]));
+ assert.match(a.handle("shield EU").text,/QUEUED SHIELD/);assert.match(a.handle("shield CA").text,/ONE SHIELD/);
+ assert.ok(ar.war.bonusGroups.find(g=>g.name==="EUROPE").missing.includes("EE"));
+});
+
+test("every territory uses geographic paths with visible labels in map bounds",()=>{for(const r of regions){assert.match(r.path,/^M/);assert.ok(r.path.length>80);assert.ok(r.x>0&&r.x<1100&&r.y>0&&r.y<560);}});

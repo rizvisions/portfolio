@@ -277,13 +277,13 @@ test("campaign queues editable orders, fills the site, animates commit and prese
   await expect(page.locator(".dock-wrap")).toBeHidden();expect((await panel.locator("svg.war-world").boundingBox()).height).toBeGreaterThan(240);
   await expect(panel.locator(".war-legend")).toContainText("NEUTRAL");
   expect(await panel.locator(".war-phase-copy").evaluate(el=>el.scrollHeight<=el.clientHeight+1)).toBe(true);
-  const neutral=panel.locator('[data-war-region="EU"] polygon'),human=panel.locator('[data-war-region="CA"] polygon');
+  const neutral=panel.locator('[data-war-region="EU"] .war-land'),human=panel.locator('[data-war-region="CA"] .war-land');
   const neutralFill=await neutral.evaluate(el=>getComputedStyle(el).fill);expect(neutralFill).not.toBe(await human.evaluate(el=>getComputedStyle(el).fill));
-  await panel.locator('[data-war-region="EU"]').click();await expect(neutral).toHaveCSS("fill",neutralFill);
-  await panel.locator('[data-war-region="CA"]').click();await expect(panel.locator("[data-war-amount]")).toHaveValue("1");
+  await panel.locator('[data-war-region="EU"] .war-region-badge').click();await expect(neutral).toHaveCSS("fill",neutralFill);
+  await panel.locator('[data-war-region="CA"] .war-region-badge').click();await expect(panel.locator("[data-war-amount]")).toHaveValue("1");
   await panel.locator("[data-war-max]").click();await expect(panel.locator("[data-war-amount]")).toHaveValue("4");await panel.locator("[data-war-queue]").click();
   await expect(panel.locator('[data-war-region="CA"] .war-armies')).toHaveText("9");await expect(panel.locator('[data-war-region="CA"] .war-planned-count')).toContainText("+4 deployed");
-  await panel.locator('[data-war-region="CA"]').click();await panel.locator('[data-war-region="EU"]').click();
+  await panel.locator("[data-war-map-target]").click();await panel.locator('[data-war-region="EU"] .war-region-badge').click();
   await expect(panel.locator("[data-war-amount]")).toHaveValue("3");await expect(panel.locator("[data-war-preview]")).toContainText("capture with 2 survivors");
   await panel.locator("[data-war-amount]").fill("6");await expect(panel.locator("[data-war-preview]")).toContainText("5 survivors");await panel.locator("[data-war-queue]").click();
   await expect(panel.locator('[data-war-region="EU"]')).toHaveClass(/neutral/);
@@ -313,8 +313,8 @@ test("campaign queues editable orders, fills the site, animates commit and prese
 test("nuclear launch confirms into the queue and survives one round", async ({ page }) => {
   const win=await openDesktopApp(page,"terminal"),input=win.locator(".terminal-input");
   const send=async text=>{await input.fill(text);await input.press("Enter");};await send("war");const panel=win.locator(".terminal-war-panel");
-  await send("deploy CA 4");await panel.locator('[data-war-region="CH"]').click();await panel.locator('[data-war-editor="strike"]').click();
-  await expect(panel.locator("[data-war-preview]")).toContainText("DEFCON 5 → 4");await panel.locator("[data-war-queue]").click();
+  await send("deploy CA 4");await panel.locator('[data-war-region="CH"] .war-region-badge').click();
+  await expect(panel.locator(".war-launch-preview")).toContainText("DEFCON 5 → 4");await panel.locator("[data-war-launch]").click();
   await expect(panel.locator(".war-order-list")).toContainText("Launch → CH");await expect(panel.locator(".war-heading")).toContainText("DEFCON 5");
   await send("shield US");await panel.locator('[data-war-command="commit"]').click();await panel.locator("[data-war-skip]").click();
   await expect(panel.locator(".war-heading")).toContainText("DEFCON 4");await expect(panel.locator(".war-score")).not.toContainText("MUTUAL DESTRUCTION");
@@ -329,11 +329,11 @@ test("campaign can be played without commands and has adjustable event log and e
   await win.locator("[data-war-log-height]").evaluate(el=>{el.value="240";el.dispatchEvent(new Event("input",{bubbles:true}));});await expect(win.locator(".terminal-history")).toHaveCSS("flex-basis","240px");
   const grip=win.locator(".war-console-grip");await grip.focus();await grip.press("ArrowDown");await expect(win.locator(".terminal-history")).toHaveCSS("flex-basis","224px");
   await win.locator("[data-war-console-toggle]").click();await expect(input).toBeHidden();await expect(win.locator(".terminal-history")).toBeHidden();
-  await panel.locator('[data-war-region="CA"]').click();await panel.locator("[data-war-max]").click();await panel.locator("[data-war-queue]").click();
+  await panel.locator('[data-war-region="CA"] .war-region-badge').click();await panel.locator("[data-war-max]").click();await panel.locator("[data-war-queue]").click();
   await expect(panel.locator('[data-war-region="CA"] .war-armies')).toHaveText("9");
-  await panel.locator('[data-war-region="US"]').click();await expect(panel.locator(".war-order-editor")).toContainText("Your neighbors are friendly");
+  await panel.locator('[data-war-region="US"] .war-region-badge').click();await expect(panel.locator(".war-order-editor")).toContainText("Your neighbors are friendly");
   await panel.locator('[data-war-target="CA"]').click();await expect(panel.locator(".war-order-editor")).toContainText("Transfer US → CA");await panel.locator("[data-war-queue]").click();
-  await panel.locator('[data-war-region="CA"]').click();await panel.locator('[data-war-target="EU"]').click();await panel.locator("[data-war-queue]").click();
+  await panel.locator('[data-war-region="CA"] .war-region-badge').click();await panel.locator('[data-war-target="EU"]').click();await panel.locator("[data-war-queue]").click();
   await panel.locator('[data-war-command="commit"]').click();await panel.locator("[data-war-speed]").selectOption("4000");await expect(panel.locator("[data-war-speed]")).toHaveValue("4000");
   await panel.locator("[data-war-skip]").click();await expect(panel.locator(".war-round-summary")).toContainText("ROUND 1 COMPLETE");
   await panel.locator("[data-war-music]").click();await expect(panel.locator("[data-war-music]")).toHaveAttribute("aria-pressed","true");await panel.locator("[data-war-music]").click();await expect(panel.locator("[data-war-music]")).toHaveAttribute("aria-pressed","false");
@@ -352,24 +352,15 @@ test("missile effects happen during firing and reduced motion removes launch sha
   await panel.locator("[data-war-skip]").click();await expect(shell).not.toHaveClass(/war-launch-active/);
 });
 
-test("expanded campaign renders 32 regions and produces audible music with independent volume", async ({page})=>{
-  await page.evaluate(()=>{
-    window.__warAudio={contexts:[],peaks:[]};
-    const Original=window.AudioContext;
-    window.AudioContext=class extends Original {
-      constructor(...args){super(...args);window.__warAudio.contexts.push(this);}
-      createGain(){const gain=super.createGain(),ramp=gain.gain.exponentialRampToValueAtTime.bind(gain.gain);gain.gain.exponentialRampToValueAtTime=(value,time)=>{window.__warAudio.peaks.push(value);return ramp(value,time);};return gain;}
-    };
-  });
-  const win=await openDesktopApp(page,"terminal"),input=win.locator(".terminal-input");await input.fill("war");await input.press("Enter");
-  const panel=win.locator(".terminal-war-panel");await expect(panel.locator(".war-region")).toHaveCount(32);await expect(panel.locator(".war-map-objective")).toContainText("22 of 32");
-  await panel.locator("[data-war-music]").click();
-  await expect.poll(()=>page.evaluate(()=>window.__warAudio.contexts[0]?.state)).toBe("running");
-  expect(await page.evaluate(()=>Math.max(...window.__warAudio.peaks))).toBeGreaterThan(.04);
-  await panel.locator("[data-war-volume]").focus();await panel.locator("[data-war-volume]").press("End");await page.waitForTimeout(2500);
-  expect(await page.evaluate(()=>Math.max(...window.__warAudio.peaks))).toBeGreaterThan(.08);
-  await page.screenshot({path:`test-results/campaign-map-${page.viewportSize().width}.png`});
-  await panel.locator("[data-war-music]").click();await expect(panel.locator("[data-war-music]")).toHaveAttribute("aria-pressed","false");
+test("geographic campaign renders 32 regions and plays an arranged score with volume", async ({page})=>{
+ await page.evaluate(()=>{window.__warMusic=[];const Original=window.Audio;window.Audio=function(...args){const el=new Original(...args);window.__warMusic.push(el);return el;};});
+ const win=await openDesktopApp(page,"terminal"),input=win.locator(".terminal-input");await input.fill("war");await input.press("Enter");const panel=win.locator(".terminal-war-panel");
+ await expect(panel.locator(".war-region")).toHaveCount(32);await expect(panel.locator(".war-land")).toHaveCount(32);await expect(panel.locator(".war-map-objective")).toContainText("22 of 32");
+ await panel.locator("[data-war-music]").click();await expect.poll(()=>page.evaluate(()=>window.__warMusic[0]?.currentTime||0)).toBeGreaterThan(.2);
+ expect(await page.evaluate(()=>window.__warMusic[0].duration)).toBeGreaterThan(170);expect(await page.evaluate(()=>window.__warMusic[0].volume)).toBe(.65);
+ await panel.locator("[data-war-volume]").focus();await panel.locator("[data-war-volume]").press("End");expect(await page.evaluate(()=>window.__warMusic[0].volume)).toBe(1);
+ await page.screenshot({path:`test-results/campaign-map-${page.viewportSize().width}.png`});
+ await panel.locator("[data-war-music]").click();expect(await page.evaluate(()=>window.__warMusic[0].paused)).toBe(true);
 });
 
 test("victory presents a campaign debrief then retains the final map and restarts cleanly",async({page})=>{
@@ -385,4 +376,16 @@ test("victory presents a campaign debrief then retains the final map and restart
   await page.screenshot({path:`test-results/campaign-victory-${page.viewportSize().width}.png`});
   await debrief.locator("[data-war-victory-close]").click();await expect(debrief).toHaveCount(0);await expect(panel.locator(".war-world")).toBeVisible();
   await panel.locator('[data-war-command="restart"]').click();await expect(panel.locator(".war-score")).toContainText("YOU 3/32");await expect(panel.getByRole("dialog",{name:"Campaign victory"})).toHaveCount(0);
+});
+
+
+test("map selection, destination hover, bonuses and single-click launch show their state",async({page})=>{
+ const win=await openDesktopApp(page,"terminal"),input=win.locator(".terminal-input"),send=async text=>{await input.fill(text);await input.press("Enter");};await send("war");await send("deploy CA 4");
+ const panel=win.locator(".terminal-war-panel");await expect(panel.locator('[data-war-delta="CA"]')).toContainText("+4 troops");
+ await panel.locator('[data-war-region="US"] .war-region-badge').click();await panel.locator('[data-war-target="CA"]').hover();await expect(panel.locator('[data-war-region="CA"]')).toHaveClass(/hover-target/);await expect(panel.locator(".war-hover-route")).toHaveCount(1);
+ await panel.locator('[data-war-region="CH"] .war-region-badge').click();await expect(panel.locator('[data-war-region="CH"]')).toHaveClass(/selected/);await expect(panel.locator('[data-war-launch="CH"]')).toBeVisible();
+ await panel.locator('[data-war-region="CH"] .war-region-badge').click();await expect(panel.locator(".war-region.selected")).toHaveCount(0);
+ await panel.locator('[data-war-region="CH"] .war-region-badge').click();await panel.locator('[data-war-launch="CH"]').click();await expect(panel.locator('[data-war-launch="CH"]')).toBeDisabled();await expect(panel.locator('[data-war-launch="CH"]')).toHaveText("Launch queued here");await expect(panel.locator(".war-order-list li")).toHaveCount(1);
+ await panel.locator('[data-war-region="US"] .war-region-badge').click();await panel.locator('[data-war-shield="US"]').click();await expect(panel.locator('[data-war-shield="US"]')).toBeDisabled();await expect(panel.locator(".war-order-list")).toContainText("BEFORE ACTIONS");
+ await panel.locator('[data-war-bonus="AMERICAS"]').click();await expect(panel.locator(".war-bonus-detail")).toContainText("3/10 controlled");await expect(panel.locator(".war-bonus-detail")).toContainText("Greenland");await expect(panel.locator(".war-income")).toContainText("3 base + 1 territory + 0 bonus = 4/turn");
 });
