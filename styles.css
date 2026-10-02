@@ -3821,3 +3821,6 @@ button.conversation.active { background: #087dff; color: #fff; }
 }
 
 .mac-window[data-app-window="terminal"] .terminal-shell.war-mode::after { background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 3px); }
+
+.mac-window[data-app-window="terminal"] .war-plan .war-selected { min-height:0; padding:0; line-height:1.5; }
+.mac-window[data-app-window="terminal"] .war-plan > * { flex-shrink:0; }

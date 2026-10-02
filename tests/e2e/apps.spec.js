@@ -276,6 +276,7 @@ test("campaign queues editable orders, fills the site, animates commit and prese
   const rect=await win.boundingBox(),viewport=page.viewportSize();expect(rect.width).toBe(viewport.width);expect(rect.height).toBe(viewport.height);
   await expect(page.locator(".dock-wrap")).toBeHidden();expect((await panel.locator("svg.war-world").boundingBox()).height).toBeGreaterThan(240);
   await expect(panel.locator(".war-legend")).toContainText("NEUTRAL");
+  expect(await panel.locator(".war-phase-copy").evaluate(el=>el.scrollHeight<=el.clientHeight+1)).toBe(true);
   const neutral=panel.locator('[data-war-region="EU"] polygon'),human=panel.locator('[data-war-region="CA"] polygon');
   const neutralFill=await neutral.evaluate(el=>getComputedStyle(el).fill);expect(neutralFill).not.toBe(await human.evaluate(el=>getComputedStyle(el).fill));
   await panel.locator('[data-war-region="EU"]').click();await expect(neutral).toHaveCSS("fill",neutralFill);
