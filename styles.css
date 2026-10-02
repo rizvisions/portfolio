@@ -1646,76 +1646,10 @@ body.window-resizing, body.window-resizing * { user-select:none!important; }
 }
 
 /* ========================================================================== */
-/* V10.6 — centered desktop, Apple-like apps, fluid motion, boot hello         */
+/* V10.6 — centered desktop, Apple-like apps, fluid motion                    */
 /* ========================================================================== */
-
-/* First-load handwriting intro. The desktop exists behind it and resolves in. */
-.boot-intro {
-  position: fixed;
-  inset: 0;
-  z-index: 30000;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  background: #f5f5f3;
-  color: #111113;
-  opacity: 1;
-  visibility: visible;
-  transition: opacity .82s cubic-bezier(.22,.61,.36,1), visibility .82s;
-}
-.boot-intro::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 50% 48%, rgba(255,255,255,.96), rgba(255,255,255,.28) 38%, transparent 70%),
-    linear-gradient(180deg, rgba(255,255,255,.7), transparent 55%);
-  pointer-events: none;
-}
-.boot-intro-inner {
-  position: relative;
-  width: min(690px, 76vw);
-  display: grid;
-  justify-items: center;
-  gap: 26px;
-  transform: translateY(-2vh);
-}
-.boot-hello { width: min(638px, 100%); height: auto; overflow: visible; filter: drop-shadow(0 2px 8px rgba(0,0,0,.035)); }
-.boot-hello-path { vector-effect: non-scaling-stroke; }
-.boot-greeting {
-  min-height: 24px;
-  font-size: clamp(16px, 1.35vw, 22px);
-  font-weight: 510;
-  letter-spacing: -.02em;
-  color: rgba(30,30,32,.68);
-  opacity: 0;
-  transform: translateY(7px);
-  transition: opacity .65s ease, transform .8s cubic-bezier(.22,.61,.36,1);
-}
-.boot-intro.greeting-visible .boot-greeting { opacity: 1; transform: none; }
-.boot-skip {
-  position: fixed;
-  right: 24px;
-  bottom: 20px;
-  border: 0;
-  padding: 8px 10px;
-  background: transparent;
-  color: rgba(40,40,44,.34);
-  font: inherit;
-  font-size: 11px;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity .3s;
-}
-.boot-active .boot-skip { opacity: 1; }
-.boot-intro.leaving { opacity: 0; visibility: hidden; pointer-events: none; }
-body.boot-pending #os { opacity: 0; transform: scale(1.012); filter: blur(5px); }
 #os { transition: opacity .9s ease, transform 1.1s cubic-bezier(.22,.61,.36,1), filter 1s ease; }
 body.desktop-ready #os { opacity: 1; transform: none; filter: none; }
-body.boot-active .desktop-item,
-body.boot-active .now-widget,
-body.boot-active .photo-file,
-body.boot-active .dock-wrap { opacity: 0; transform: translateY(8px); }
 body.desktop-ready .desktop-item,
 body.desktop-ready .now-widget,
 body.desktop-ready .photo-file,
@@ -1736,6 +1670,28 @@ body.desktop-ready .desktop-item:nth-child(10) { transition-delay: .32s; }
 body.desktop-ready .desktop-item:nth-child(11) { transition-delay: .35s; }
 body.desktop-ready .desktop-item:nth-child(12) { transition-delay: .38s; }
 body.desktop-ready .dock-wrap { transition-delay: .2s; }
+
+/* A content-free liquid-glass focus transition. No logo, card, or greeting. */
+.focus-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  background:
+    radial-gradient(circle at 46% 42%,rgba(255,255,255,.3),transparent 48%),
+    rgba(241,244,246,.18);
+  backdrop-filter: blur(30px) saturate(145%);
+  -webkit-backdrop-filter: blur(30px) saturate(145%);
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity .95s cubic-bezier(.2,.75,.2,1), backdrop-filter 1.05s ease, -webkit-backdrop-filter 1.05s ease;
+}
+.focus-intro.leaving {
+  opacity: 0;
+  pointer-events: none;
+  backdrop-filter: blur(0) saturate(100%);
+  -webkit-backdrop-filter: blur(0) saturate(100%);
+}
+body.focus-pending #os { opacity:.7; transform:scale(1.025); filter:blur(22px) saturate(.85); }
 
 /* Desktop defaults now form a centered 4 × 3 field rather than leaning left. */
 .desktop-item { will-change: left, top, transform, opacity; }
@@ -2252,7 +2208,6 @@ body.desktop-ready .dock-wrap { transition-delay: .2s; }
   .photos-featured-track { grid-auto-columns: minmax(220px,58%); }
 }
 @media (max-width: 760px) {
-  .boot-intro-inner { width: 84vw; }
   .notes-app { grid-template-columns: 1fr; }
   .notes-folders, .notes-browser { display: none; }
   .finder-shell, .calendar-app { grid-template-columns: 1fr; }
@@ -2334,14 +2289,9 @@ body.desktop-ready .dock-wrap { transition-delay: .2s; }
 .desktop-item[data-id="calendar"] .calendar-weekday { margin-top: 7px; font-size: 10px; }
 .desktop-item[data-id="calendar"] .calendar-day { font-size: 37px; }
 
-/* Boot object transforms preserve each desktop object's own positioning math. */
-body.boot-active .desktop-item { transform: translate(-50%,-50%) scale(.965); }
 body.desktop-ready .desktop-item { transform: translate(-50%,-50%) scale(1); }
-body.boot-active .now-widget { transform: translateX(-50%) translateY(7px) scale(.985); }
 body.desktop-ready .now-widget { transform: translateX(-50%) translateY(0) scale(1); }
-body.boot-active .photo-file { opacity: 0; }
 body.desktop-ready .photo-file { opacity: 1; }
-body.boot-active .dock-wrap { transform: translateX(-50%) translateY(9px); }
 body.desktop-ready .dock-wrap { transform: translateX(-50%) translateY(0); }
 .video-control-primary button svg { width: 21px; height: 21px; display: block; margin: auto; }
 .video-play svg { width: 28px !important; height: 28px !important; }
@@ -3286,9 +3236,9 @@ body.desktop-ready .dock-wrap { transform: translateX(-50%) translateY(0); }
   dynamic-range-limit: standard;
 }
 .media-window .apple-video-element {
-  inset: -1px;
-  width: calc(100% + 2px) !important;
-  height: calc(100% + 2px) !important;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
 }
 .apple-video-controls {
   transform: translateX(-50%);
@@ -3556,3 +3506,378 @@ body.desktop-ready .dock-wrap { transform: translateX(-50%) translateY(0); }
     grid-template-columns: minmax(0,1fr) minmax(240px,36%) !important;
   }
 }
+
+/* ========================================================================== */
+/* V10.10 — functional desktop apps                                           */
+/* ========================================================================== */
+
+.nc-greeting-card { min-height: 122px; padding: 22px 24px; border-radius: 28px; }
+.nc-greeting-card .eyebrow { color: var(--window-muted); font-size: 10px; letter-spacing: .13em; font-weight: 720; }
+.nc-greeting-card strong { display: block; margin: 9px 0 4px; font-size: 28px; letter-spacing: -.045em; }
+.nc-greeting-card p { margin: 0; color: var(--window-muted); font-size: 12px; }
+
+/* Messages mirrors the current three-column rhythm without nonfunctional chrome. */
+.messages-shell { grid-template-columns: 278px minmax(0,1fr); background: #fff; }
+.conversation-list { min-width: 0; padding: 64px 10px 12px !important; background: rgba(242,242,245,.94); }
+.messages-sidebar-title { height: 38px; display: flex; align-items: center; justify-content: space-between; padding: 0 5px 0 7px; }
+.messages-sidebar-title strong { font-size: 21px; letter-spacing: -.035em; }
+.messages-sidebar-title button { width: 30px; height: 30px; border: 0; border-radius: 9px; background: transparent; color: #087dff; font-size: 21px; cursor: pointer; }
+.messages-sidebar-title button:hover { background: rgba(0,0,0,.06); }
+.message-search-wrap { height: 31px; display: flex; align-items: center; gap: 5px; margin: 5px 3px 10px; padding: 0 8px; border-radius: 9px; background: rgba(118,118,128,.12); color: #77777d; }
+.message-search-wrap span { font-size: 17px; line-height: 1; }
+.message-search { width: 100%; height: 100%; margin: 0; padding: 0; border: 0; outline: 0; background: transparent; font: inherit; }
+.conversation-scroll { display: grid; gap: 2px; }
+button.conversation { width: 100%; min-height: 66px; border: 0; border-radius: 10px; background: transparent; color: #1d1d1f; text-align: left; cursor: pointer; }
+button.conversation:hover { background: rgba(0,0,0,.05); }
+button.conversation.active { background: #087dff; color: #fff; }
+.avatar { flex: 0 0 40px; background: linear-gradient(145deg,#3f4146,#18191b); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+.parker-avatar { background: linear-gradient(145deg,#938be3,#5b54a8); }
+.chat-pane { min-width: 0; }
+.chat-header { flex: 0 0 76px; height: 76px; display: grid; grid-template-columns: 32px auto; grid-template-rows: auto auto; place-content: center; column-gap: 9px; padding: 7px 18px 8px; background: rgba(250,250,252,.9); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); }
+.chat-header .avatar { grid-row: 1 / 3; width: 32px; height: 32px; font-size: 12px; }
+.chat-header strong { align-self: end; font-size: 12px; }
+.chat-header small { align-self: start; color: #8b8b91; font-size: 10px; font-weight: 450; }
+.chat-body { justify-content: flex-start; gap: 7px; padding: 24px 28px 14px; }
+.bubble { max-width: min(70%,480px); padding: 8px 12px; border-radius: 18px; font-size: 13px; line-height: 1.36; }
+.bubble.in { border-bottom-left-radius: 5px; background: #e9e9eb; }
+.bubble.out { border-bottom-right-radius: 5px; background: #087dff; }
+.message-contact-links { align-self: flex-start; display: flex; gap: 7px; margin-top: 3px; }
+.message-contact-links button { border: 0; border-radius: 14px; padding: 6px 10px; background: #f0f0f2; color: #087dff; font-size: 11px; cursor: pointer; }
+.chat-input { flex: 0 0 55px; height: 55px; gap: 8px; padding: 8px 14px 12px; border-top: 0; }
+.message-plus { width: 30px; height: 30px; flex: 0 0 30px; border: 0; border-radius: 50%; background: #d7d7db; color: #fff; font-size: 22px; line-height: 1; cursor: pointer; }
+.message-field { flex: 1; min-width: 0; height: 33px; display: flex; align-items: center; padding: 0 3px 0 1px; border: 1px solid #c7c7cc; border-radius: 18px; }
+.message-field input { flex: 1; min-width: 0; height: 100%; padding: 0 11px; border: 0; outline: 0; background: transparent; }
+.message-field button { width: 27px; height: 27px; border: 0; border-radius: 50%; background: #087dff; color: #fff; font-weight: 800; cursor: pointer; }
+
+/* A text-only terminal modeled after modern coding assistants. */
+.terminal-shell { background:#0b0b0c; color:#f4f4f5; font:12.5px/1.55 "SFMono-Regular",Menlo,Monaco,Consolas,monospace; }
+.terminal-scroll { flex:1; min-height:0; overflow:auto; padding:72px 22px 24px; }
+.terminal-wordmark { max-width:100%; margin:0 0 21px; overflow:auto hidden; color:#fff; font:700 clamp(6px,.82vw,9px)/1.08 "SFMono-Regular",Menlo,Monaco,Consolas,monospace; letter-spacing:-.075em; white-space:pre; text-shadow:0 0 24px rgba(255,255,255,.09); }
+.terminal-intro { display:grid; gap:2px; margin-bottom:15px; color:#8e8e95; }
+.terminal-intro strong { color:#f5f5f7; font-weight:650; }
+.terminal-intro b { color:#d9d9dc; font-weight:600; }
+.terminal-suggestions { margin:0 0 22px; padding:10px 12px; overflow:auto hidden; border-left:2px solid #5e5e66; background:rgba(255,255,255,.025); color:#8c8c94; font:inherit; white-space:pre; }
+.terminal-history { display:grid; gap:13px; }
+.terminal-entry { display:grid; grid-template-columns:18px minmax(0,1fr); gap:7px; line-height:1.55; }
+.terminal-entry > span { color:#777780; padding-top:1px; font-size:12px; }
+.terminal-entry.user > span,.terminal-entry.user p { color:#fff; }
+.terminal-entry.assistant > span { color:#a9a9af; }
+.terminal-entry p { margin:0; color:#d3d3d7; white-space:pre-wrap; }
+.terminal-input-row { flex:0 0 52px; margin:0; padding:8px 16px 11px; border-top:1px solid rgba(255,255,255,.1); background:#0f0f11; }
+.terminal-prompt { margin-right:9px; color:#a8e6b8; font-size:11px; }
+.terminal-input { min-width: 0; }
+.terminal-input::placeholder { color: #68686f; }
+
+/* Spotify stays flush; its own top breathing room carries the window controls. */
+.mac-window:not(.media-window) .spotify-only { box-sizing:border-box; padding-top:0; background:#121212; }
+.mac-window:not(.media-window) .spotify-only iframe { height:100%; min-height:100%; }
+.mac-window[data-app-window="spotify"] > .window-titlebar { color: #fff; }
+.mac-window[data-app-window="spotify"] > .window-titlebar {
+  left:0;
+  right:0;
+  width:auto;
+  height:56px;
+  z-index:200;
+  pointer-events:auto;
+  cursor:grab;
+}
+.mac-window[data-app-window="spotify"] > .window-titlebar .traffic-lights { width: 126px; }
+
+/* Raised ASCII lettering; the depth is drawn from characters in the wordmark. */
+.mac-window[data-app-window="terminal"] .terminal-wordmark {
+  font:700 clamp(8px, .85vw, 12px)/1.04 "SFMono-Regular",Menlo,Monaco,Consolas,monospace;
+  letter-spacing:0;
+  text-shadow:0 0 16px rgba(255,255,255,.16);
+  margin-bottom:22px;
+}
+.mac-window[data-app-window="terminal"] .terminal-scroll { padding-top:64px; }
+.mac-window[data-app-window="terminal"] .terminal-suggestions { white-space:pre-wrap; }
+.mac-window[data-app-window="terminal"] .terminal-link-status {
+  margin-bottom:24px; padding-bottom:10px; border-bottom:1px solid #285b3b;
+  color:#6cad7d; font-size:10px; letter-spacing:.08em;
+}
+.mac-window[data-app-window="terminal"] .terminal-link-status span { float:right; color:#acffc0; }
+.mac-window[data-app-window="terminal"] .terminal-shell.wopr-active {
+  position:relative; isolation:isolate; background:#06120c; color:#a2ffb7;
+  box-shadow:inset 0 0 90px rgba(0,0,0,.72);
+}
+.mac-window[data-app-window="terminal"] .terminal-shell.wopr-active::after {
+  content:""; position:absolute; inset:0; z-index:5; pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.18) 2px,rgba(0,0,0,.18) 3px);
+  box-shadow:inset 0 0 40px rgba(0,0,0,.5);
+}
+.mac-window[data-app-window="terminal"] .wopr-active .terminal-entry p,
+.mac-window[data-app-window="terminal"] .wopr-active .terminal-entry > span {
+  color:#a2ffb7; text-shadow:0 0 6px rgba(87,255,134,.28);
+}
+.mac-window[data-app-window="terminal"] .wopr-active .terminal-entry.user p { color:#68b77d; }
+.mac-window[data-app-window="terminal"] .wopr-active .terminal-input-row { background:#08190f; border-top-color:#23452e; }
+.mac-window[data-app-window="terminal"] .wopr-active .terminal-prompt,
+.os .mac-window[data-app-window="terminal"] .wopr-active .terminal-input { color:#a2ffb7; caret-color:#a2ffb7; }
+.mac-window[data-app-window="terminal"] .wopr-active .terminal-input::placeholder { color:#569768; }
+.mac-window[data-app-window="terminal"].wopr-window { background:#06120c; }
+
+/* Clear letter faces; a separately offset ASCII layer supplies shallow depth. */
+.mac-window[data-app-window="terminal"] .terminal-wordmark {
+  position:relative; width:100%; padding:0 5px 7px 0;
+  font:650 15px/1.16 "SFMono-Regular",Menlo,Monaco,Consolas,monospace;
+  letter-spacing:0; color:#fafafa; text-shadow:none;
+}
+.mac-window[data-app-window="terminal"] .terminal-wordmark-face { position:relative; display:block; width:max-content; }
+.mac-window[data-app-window="terminal"] .terminal-wordmark-shadow {
+  position:absolute; left:3px; top:4px; color:#59616d; opacity:.5;
+  white-space:pre; pointer-events:none;
+}
+/* Campaign uses a tactical map in the terminal, with the same command line. */
+.mac-window[data-app-window="terminal"] .terminal-shell.war-mode .terminal-scroll {
+  display:flex; flex-direction:column; gap:8px; overflow:hidden; padding:60px 20px 8px;
+}
+.mac-window[data-app-window="terminal"] .war-mode .terminal-link-status { flex:0 0 auto; margin:0; padding-bottom:6px; }
+.mac-window[data-app-window="terminal"] .terminal-war-panel:not([hidden]) {
+  flex:1; min-height:190px; display:flex; flex-direction:column;
+}
+.mac-window[data-app-window="terminal"] .war-heading,
+.mac-window[data-app-window="terminal"] .war-score { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.mac-window[data-app-window="terminal"] .war-heading { min-height:25px; font-size:12px; letter-spacing:.07em; }
+.mac-window[data-app-window="terminal"] .war-heading span { color:#7ba78b; font-size:10px; }
+.mac-window[data-app-window="terminal"] .war-score { min-height:27px; border-bottom:1px solid #23432e; font-size:10px; }
+.mac-window[data-app-window="terminal"] .war-score strong { color:#deffe3; font-weight:550; }
+.mac-window[data-app-window="terminal"] .war-human { color:#a2ffb7; }
+.mac-window[data-app-window="terminal"] .war-computer { color:#f7c779; }
+.mac-window[data-app-window="terminal"] .war-world { flex:1; min-height:100px; width:100%; margin:6px 0; }
+.mac-window[data-app-window="terminal"] .war-grid-globe { fill:none; stroke:#254332; stroke-width:1; }
+.mac-window[data-app-window="terminal"] .war-routes { stroke:#4d6852; stroke-width:1.2; stroke-dasharray:4 7; opacity:.55; }
+.mac-window[data-app-window="terminal"] .war-region { cursor:pointer; outline:none; }
+.mac-window[data-app-window="terminal"] .war-region .war-land { fill:#0c2016; stroke:#5b8163; stroke-width:1.2; transition:fill .16s,stroke .16s; }
+.mac-window[data-app-window="terminal"] .war-region.human .war-land { fill:#123c26; stroke:#91ecac; }
+.mac-window[data-app-window="terminal"] .war-region.computer .war-land { fill:#322b19; stroke:#bf9863; }
+.mac-window[data-app-window="terminal"] .war-region text { fill:#90b098; text-anchor:middle; pointer-events:none; font-family:"SFMono-Regular",Menlo,monospace; }
+.mac-window[data-app-window="terminal"] .war-region.human text { fill:#c1ffd2; }
+.mac-window[data-app-window="terminal"] .war-region.computer text { fill:#ffdf9d; }
+.mac-window[data-app-window="terminal"] .war-code { font-size:16px; }
+.mac-window[data-app-window="terminal"] .war-armies { font-size:21px; font-weight:700; }
+.mac-window[data-app-window="terminal"] .war-region:hover .war-land,
+.mac-window[data-app-window="terminal"] .war-region:focus .war-land,
+.mac-window[data-app-window="terminal"] .war-region.selected .war-land { fill:#235b37; stroke:#e0ffeb; stroke-width:3; }
+.mac-window[data-app-window="terminal"] .war-region.adjacent .war-land { stroke-width:2.4; }
+.mac-window[data-app-window="terminal"] .war-map-caption { fill:#7caa89; font:12px Menlo,monospace; letter-spacing:1px; }
+.mac-window[data-app-window="terminal"] .war-selected { min-height:20px; color:#bbf3c7; font-size:10px; letter-spacing:.04em; }
+.mac-window[data-app-window="terminal"] .war-manual { display:flex; gap:14px; flex-wrap:wrap; border-top:1px solid #23432e; padding-top:7px; color:#769d81; font-size:10px; }
+.mac-window[data-app-window="terminal"] .war-mode .terminal-history { flex:0 0 82px; min-height:0; display:block; overflow:auto; border-top:1px solid #23432e; padding-top:5px; }
+.mac-window[data-app-window="terminal"] .war-mode .terminal-entry { font-size:11px; }
+.mac-window[data-app-window="terminal"] .war-mode .terminal-input-row { flex:0 0 47px; }
+.mac-window[data-app-window="terminal"] .war-launch-path { fill:none; stroke:#ffd291; stroke-width:4; stroke-dasharray:8 5; }
+.mac-window[data-app-window="terminal"] .war-end-overlay { fill:#eeffc8; font:700 34px Menlo,monospace; text-anchor:middle; paint-order:stroke; stroke:#06120c; stroke-width:8; }
+
+/* Queued campaign: clear factions, expanded viewport and readable order controls. */
+.mac-window[data-app-window="terminal"].war-session-window { animation:none; }
+.mac-window[data-app-window="terminal"] .terminal-wordmark { font-size:11px; line-height:1.12; letter-spacing:0; overflow:visible; padding:0 7px 8px 0; }
+.mac-window[data-app-window="terminal"] .terminal-wordmark-face { color:#fff; position:relative; text-shadow:none; }
+.mac-window[data-app-window="terminal"] .terminal-wordmark-shadow { left:4px; top:6px; color:#0b0b0c; opacity:1; -webkit-text-stroke:.55px #9ba1ac; text-shadow:2px 2px 0 #0b0b0c,3px 3px 0 #656b76; }
+.os:has(.war-immersive) > :not(.desktop) { visibility:hidden; }
+.os:has(.war-immersive) .desktop { inset:0; background:#06120a; }
+.os:has(.war-immersive) .desktop > :not(.windows) { visibility:hidden; }
+.os:has(.war-immersive) .windows { z-index:10001; visibility:visible; }
+.mac-window[data-app-window="terminal"].war-immersive { position:fixed!important; inset:0!important; width:100vw!important; height:100dvh!important; min-width:0; min-height:0; border:0; border-radius:0; animation:none; box-shadow:none; }
+.mac-window[data-app-window="terminal"].war-immersive > .window-titlebar,
+.mac-window[data-app-window="terminal"].war-immersive > .window-resize-handle { display:none; }
+.mac-window[data-app-window="terminal"] .terminal-shell.war-mode .terminal-scroll { padding:64px 20px 8px; overflow:hidden; }
+.mac-window[data-app-window="terminal"].war-immersive .terminal-shell.war-mode .terminal-scroll { padding:18px 26px 8px; }
+.mac-window[data-app-window="terminal"] .war-mode .terminal-link-status { display:none!important; }
+.mac-window[data-app-window="terminal"] .terminal-war-panel { flex:1; min-height:0; gap:9px; position:relative; }
+.mac-window[data-app-window="terminal"] .war-heading { min-height:46px; align-items:center; gap:15px; border-bottom:1px solid #274a34; padding:0 0 10px; font-size:12px; }
+.mac-window[data-app-window="terminal"] .war-heading > div { display:grid; gap:4px; }
+.mac-window[data-app-window="terminal"] .war-heading strong { font-size:16px; letter-spacing:.12em; }
+.mac-window[data-app-window="terminal"] .war-heading nav { display:flex; gap:8px; flex-wrap:wrap; }
+.mac-window[data-app-window="terminal"] .war-score { min-height:40px; padding:9px 0; gap:12px; font-size:11px; }
+.mac-window[data-app-window="terminal"] .war-score > strong { color:#e4ffe9; text-align:center; }
+.mac-window[data-app-window="terminal"] .war-workspace { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:22px; }
+.mac-window[data-app-window="terminal"] .war-map-area { min-width:0; min-height:0; display:flex; flex-direction:column; }
+.mac-window[data-app-window="terminal"] .war-world { flex:1; min-height:0; width:100%; }
+.mac-window[data-app-window="terminal"] .war-legend { display:flex; gap:18px; flex-wrap:wrap; font-size:11px; }
+.mac-window[data-app-window="terminal"] .war-legend .human { color:#87ffb0; }
+.mac-window[data-app-window="terminal"] .war-legend .computer { color:#ffd07b; }
+.mac-window[data-app-window="terminal"] .war-legend .neutral { color:#b2b9c0; }
+.mac-window[data-app-window="terminal"] .war-legend > span:last-child { margin-left:auto; color:#a4b8a9; }
+.mac-window[data-app-window="terminal"] .war-region.neutral .war-land { fill:#22272d; stroke:#78828c; }
+.mac-window[data-app-window="terminal"] .war-region.neutral text { fill:#cad0d5; }
+.mac-window[data-app-window="terminal"] .war-region.human .war-land { fill:#145232; stroke:#8cffa9; }
+.mac-window[data-app-window="terminal"] .war-region.computer .war-land { fill:#61451b; stroke:#ffd079; }
+.mac-window[data-app-window="terminal"] .war-region.human:hover .war-land,
+.mac-window[data-app-window="terminal"] .war-region.human.selected .war-land,
+.mac-window[data-app-window="terminal"] .war-region.human:focus .war-land { fill:#145232; }
+.mac-window[data-app-window="terminal"] .war-region.computer:hover .war-land,
+.mac-window[data-app-window="terminal"] .war-region.computer.selected .war-land,
+.mac-window[data-app-window="terminal"] .war-region.computer:focus .war-land { fill:#61451b; }
+.mac-window[data-app-window="terminal"] .war-region.neutral:hover .war-land,
+.mac-window[data-app-window="terminal"] .war-region.neutral.selected .war-land,
+.mac-window[data-app-window="terminal"] .war-region.neutral:focus .war-land { fill:#22272d; }
+.mac-window[data-app-window="terminal"] .war-region:hover .war-land,
+.mac-window[data-app-window="terminal"] .war-region.selected .war-land,
+.mac-window[data-app-window="terminal"] .war-region:focus .war-land { stroke:#fff; stroke-width:3; }
+.mac-window[data-app-window="terminal"] .war-code { font-size:18px; }
+.mac-window[data-app-window="terminal"] .war-armies { font-size:25px; }
+.mac-window[data-app-window="terminal"] .war-region text.war-planned-count { font-size:11px; fill:#b6e7c8; }
+.mac-window[data-app-window="terminal"] .war-selected { min-height:32px; font-size:12px; padding:8px 0; }
+.mac-window[data-app-window="terminal"] .war-map-objective { margin:0 0 8px; font-size:10px; color:#8ca895; }
+.mac-window[data-app-window="terminal"] .war-territory-actions { display:flex; gap:8px; min-height:32px; }
+.mac-window[data-app-window="terminal"] .war-plan { min-height:0; overflow:auto; border-left:1px solid #2a4a35; padding-left:18px; display:flex; flex-direction:column; gap:12px; font-size:12px; }
+.mac-window[data-app-window="terminal"] .war-plan > small { color:#9bb2a3; line-height:1.5; }
+.mac-window[data-app-window="terminal"] .war-phase-copy { min-height:40px; line-height:1.5; color:#d4ffdf; }
+.mac-window[data-app-window="terminal"] .war-order-editor { padding:13px; background:#0d2618; border:1px solid #355e44; }
+.mac-window[data-app-window="terminal"] .war-order-editor p { font-size:11px; line-height:1.55; color:#b1cebb; }
+.mac-window[data-app-window="terminal"] .war-amount-label { display:flex; align-items:center; gap:9px; margin-top:12px; }
+.mac-window[data-app-window="terminal"] .war-amount-label input { width:65px; padding:6px; background:#03120a; border:1px solid #4b785a; color:#dbffe5; border-radius:0; font:inherit; }
+.mac-window[data-app-window="terminal"] .war-deployments { border-bottom:1px solid #274932; padding-bottom:8px; font-size:11px; }
+.mac-window[data-app-window="terminal"] .war-deployments > div { display:flex; justify-content:space-between; align-items:center; margin-top:5px; }
+.mac-window[data-app-window="terminal"] .war-order-list { margin:0; padding:0; list-style:none; display:grid; gap:8px; }
+.mac-window[data-app-window="terminal"] .war-order-list li { display:flex; align-items:center; justify-content:space-between; gap:7px; background:#0b1d12; padding:8px; font-size:11px; }
+.mac-window[data-app-window="terminal"] .war-order-list li > div { display:flex; gap:3px; }
+.mac-window[data-app-window="terminal"] .war-empty { color:#8caa95; }
+.mac-window[data-app-window="terminal"] .terminal-war-panel button { min-height:30px; padding:5px 9px; border:1px solid #416d4e; border-radius:2px; background:#122c1c; color:#d3ffdf; font:inherit; font-size:11px; cursor:pointer; }
+.mac-window[data-app-window="terminal"] .terminal-war-panel button:hover:not(:disabled) { background:#20412b; border-color:#a2ffb7; }
+.mac-window[data-app-window="terminal"] .terminal-war-panel button:focus-visible { outline:2px solid #e3ffec; outline-offset:2px; }
+.mac-window[data-app-window="terminal"] .terminal-war-panel button:disabled { opacity:.4; cursor:default; }
+.mac-window[data-app-window="terminal"] .terminal-war-panel .war-commit { min-height:42px; background:#a1f8b9; color:#06170d; border-color:#a1f8b9; font-weight:700; }
+.mac-window[data-app-window="terminal"] .terminal-war-panel .war-subtle { background:transparent; }
+.mac-window[data-app-window="terminal"] .war-order-path { fill:none; stroke:#a3c0ac; stroke-width:3; pointer-events:none; }
+.mac-window[data-app-window="terminal"] .war-order-path.planned { stroke-dasharray:5 8; opacity:.6; }
+.mac-window[data-app-window="terminal"] .war-order-path.human { stroke:#8cffa9; }
+.mac-window[data-app-window="terminal"] .war-order-path.computer { stroke:#ffd079; }
+.mac-window[data-app-window="terminal"] .war-order-path.live { stroke-width:5; stroke-dasharray:12 8; animation:war-march .65s linear; }
+.mac-window[data-app-window="terminal"] .war-order-path.missile { stroke:#ff917d; stroke-width:6; }
+.mac-window[data-app-window="terminal"] .war-impact polygon { animation:war-impact .65s ease-out; }
+.mac-window[data-app-window="terminal"] .war-shield-ring { fill:none; stroke:#84d7ff; stroke-width:4; stroke-dasharray:6 5; }
+.mac-window[data-app-window="terminal"] .war-help { position:absolute; inset:0; z-index:5; padding:24px; background:#07180e; border:1px solid #5a9b70; overflow:auto; }
+.mac-window[data-app-window="terminal"] .war-help pre { font:12px/1.65 Menlo,monospace; white-space:pre-wrap; color:#d0ecda; }
+.mac-window[data-app-window="terminal"] .war-help button { position:sticky; top:0; float:right; }
+.mac-window[data-app-window="terminal"] .war-mode .terminal-history { flex:0 0 60px; font-size:11px; }
+@keyframes war-march { from { stroke-dashoffset:40; } to { stroke-dashoffset:0; } }
+@keyframes war-impact { from { stroke-width:8; stroke:#fff; } to { stroke-width:1.2; } }
+@media (max-width:1000px) {
+  .mac-window[data-app-window="terminal"] .war-workspace { grid-template-columns:minmax(0,1fr) 270px; gap:12px; }
+  .mac-window[data-app-window="terminal"] .war-heading strong { font-size:12px; }
+  .mac-window[data-app-window="terminal"] .war-score { font-size:9px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .mac-window[data-app-window="terminal"] .war-order-path.live,
+  .mac-window[data-app-window="terminal"] .war-impact polygon { animation:none; }
+}
+
+/* Campaign flow: immediate reinforcement, readable event playback, optional console. */
+.mac-window[data-app-window="terminal"] .war-steps { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; list-style:none; margin:0; padding:0; flex:0 0 auto; }
+.mac-window[data-app-window="terminal"] .war-steps li { display:grid; gap:3px; padding:8px 10px; border:1px solid #274333; color:#8ca695; font-size:11px; }
+.mac-window[data-app-window="terminal"] .war-steps li.active { border-color:#a1f8b9; background:#123221; color:#dbffe5; }
+.mac-window[data-app-window="terminal"] .war-steps span { font-size:10px; }
+.mac-window[data-app-window="terminal"] .war-heading nav { justify-content:flex-end; }
+.mac-window[data-app-window="terminal"] .war-region.destination .war-land { stroke:#82d7ff; stroke-width:3; }
+.mac-window[data-app-window="terminal"] .war-routes { opacity:1; }
+.mac-window[data-app-window="terminal"] .war-routes line { opacity:.25; }
+.mac-window[data-app-window="terminal"] .war-routes .connected { stroke:#b7ddc3; stroke-width:2.5; opacity:1; }
+.mac-window[data-app-window="terminal"] .war-wrap-route { fill:none; stroke:#86a5b7; stroke-width:1.6; stroke-dasharray:5 5; }
+.mac-window[data-app-window="terminal"] .war-wrap-route text { fill:#a8c3d4; stroke:none; font:12px Menlo,monospace; }
+.mac-window[data-app-window="terminal"] .war-wrap-route.connected { stroke:#bde7fc; stroke-width:3; }
+.mac-window[data-app-window="terminal"] .war-order-path.preview { stroke:#82d7ff; stroke-width:3; stroke-dasharray:4 6; }
+.mac-window[data-app-window="terminal"] .war-order-path.live { animation:war-march 1s linear infinite; }
+.mac-window[data-app-window="terminal"] .war-neighbor-choices { display:grid; gap:7px; }
+.mac-window[data-app-window="terminal"] .war-neighbor-choices button { text-align:left; }
+.mac-window[data-app-window="terminal"] .war-phase-copy { min-height:0; font-size:12px; }
+.mac-window[data-app-window="terminal"] .war-playback-controls { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.mac-window[data-app-window="terminal"] .war-playback-controls label { display:flex; align-items:center; gap:6px; font-size:11px; }
+.mac-window[data-app-window="terminal"] .war-playback-controls select { min-width:0; background:#0d271a; color:#dcffe8; border:1px solid #416d4e; font:inherit; padding:5px; }
+.mac-window[data-app-window="terminal"] .war-event-card { padding:14px; background:#0b2819; border:1px solid #74c18d; }
+.mac-window[data-app-window="terminal"] .war-event-card.computer { border-color:#cfac68; background:#292416; }
+.mac-window[data-app-window="terminal"] .war-event-card.nuclear { border-color:#eb927e; background:#291713; }
+.mac-window[data-app-window="terminal"] .war-event-card > small { color:#a7bcaf; font-size:10px; }
+.mac-window[data-app-window="terminal"] .war-event-card h3 { margin:9px 0; font-size:14px; line-height:1.4; color:#effff2; }
+.mac-window[data-app-window="terminal"] .war-event-card p { line-height:1.6; font-size:12px; margin:8px 0; }
+.mac-window[data-app-window="terminal"] .war-battle-math { display:grid; gap:5px; margin:12px 0; padding:10px 0; border-top:1px solid #49684f; border-bottom:1px solid #49684f; }
+.mac-window[data-app-window="terminal"] .war-battle-math span { display:flex; justify-content:space-between; gap:8px; }
+.mac-window[data-app-window="terminal"] .war-region-changes { display:grid; gap:8px; }
+.mac-window[data-app-window="terminal"] .war-region-changes > div { display:grid; grid-template-columns:1fr auto; gap:5px; padding:9px; background:rgba(0,0,0,.24); }
+.mac-window[data-app-window="terminal"] .war-region-changes small { grid-column:1/-1; color:#a8c3b0; }
+.mac-window[data-app-window="terminal"] .war-defcon-change { color:#ffb09d; font-weight:700; }
+.mac-window[data-app-window="terminal"] .war-round-summary { border:1px solid #426a4e; padding:12px; font-size:11px; }
+.mac-window[data-app-window="terminal"] .war-round-summary p { line-height:1.65; }
+.mac-window[data-app-window="terminal"] .war-mode .terminal-history { flex:0 0 var(--war-log-height,160px); font-size:13px; padding:10px 4px; border:0; background:#05130b; }
+.mac-window[data-app-window="terminal"] .war-mode .terminal-entry { font-size:12px; line-height:1.65; }
+.mac-window[data-app-window="terminal"] .war-mode .terminal-entry p { margin:0; white-space:pre-wrap; }
+.mac-window[data-app-window="terminal"] .war-console-toolbar { flex:0 0 auto; position:relative; display:flex; align-items:center; gap:14px; padding:15px 4px 5px; border-top:1px solid #52715b; font-size:11px; }
+.mac-window[data-app-window="terminal"] .war-console-toolbar[hidden] { display:none; }
+.mac-window[data-app-window="terminal"] .war-console-toolbar label { display:flex; align-items:center; gap:8px; margin-left:auto; }
+.mac-window[data-app-window="terminal"] .war-console-toolbar input { width:100px; accent-color:#a1f8b9; }
+.mac-window[data-app-window="terminal"] .war-console-toolbar button { background:#10261a; color:#d8f9e1; border:1px solid #416d4e; padding:5px 9px; font:inherit; }
+.mac-window[data-app-window="terminal"] .war-console-grip { position:absolute; inset:0 0 auto; height:12px; cursor:row-resize; touch-action:none; }
+.mac-window[data-app-window="terminal"] .war-console-grip::after { content:""; position:absolute; top:3px; left:calc(50% - 24px); width:48px; height:3px; border-top:1px solid #a3bbae; border-bottom:1px solid #a3bbae; }
+.mac-window[data-app-window="terminal"] .war-console-grip:focus-visible { outline:2px solid #a1f8b9; }
+.mac-window[data-app-window="terminal"] .war-mode.console-hidden .terminal-history,
+.mac-window[data-app-window="terminal"] .war-mode.console-hidden .terminal-input-row { display:none; }
+.mac-window[data-app-window="terminal"] .war-launch-active .war-map-area { animation:war-launch-shock .65s ease-out; }
+.mac-window[data-app-window="terminal"] .war-launch-active .war-world { filter:drop-shadow(0 0 8px rgba(255,115,87,.26)); }
+@keyframes war-launch-shock { 0%,100% { transform:translate(0,0); } 14% { transform:translate(-3px,1px); } 28% { transform:translate(3px,-1px); } 42% { transform:translate(-2px,-1px); } 56% { transform:translate(2px,1px); } 72% { transform:translate(-1px,0); } }
+@media (prefers-reduced-motion:reduce) {
+  .mac-window[data-app-window="terminal"] .war-launch-active .war-map-area,
+  .mac-window[data-app-window="terminal"] .war-order-path.live { animation:none; }
+}
+
+.mac-window[data-app-window="terminal"] .terminal-shell.war-mode::after { background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 3px); }
+
+.mac-window[data-app-window="terminal"] .war-plan .war-selected { min-height:0; padding:0; line-height:1.5; }
+.mac-window[data-app-window="terminal"] .war-plan > * { flex-shrink:0; }
+
+/* Campaign completion and independent soundtrack controls. */
+.mac-window[data-app-window="terminal"] .war-music-volume { display:flex; align-items:center; gap:6px; font-size:12px; }
+.mac-window[data-app-window="terminal"] .war-music-volume input { width:65px; accent-color:#81fbb0; }
+.mac-window[data-app-window="terminal"] .war-victory { position:fixed; inset:0; z-index:6; display:grid; place-items:center; padding:24px; background:rgba(0,10,6,.88); overflow:auto; backdrop-filter:blur(5px); }
+.mac-window[data-app-window="terminal"] .war-victory-card { box-sizing:border-box; max-height:calc(100dvh - 48px); overflow:auto; width:min(640px,100%); padding:32px; border:1px solid #8cf5b0; background:#071b10; box-shadow:0 0 80px #42eb8133,inset 0 0 40px #42eb810d; text-align:center; animation:war-victory-enter .65s ease-out; }
+.mac-window[data-app-window="terminal"] .war-victory-card small { letter-spacing:.16em; color:#98caaa; }
+.mac-window[data-app-window="terminal"] .war-victory-card pre { color:#82ffaf; font-size:clamp(12px,1.5vw,18px); line-height:1.3; margin:20px 0; }
+.mac-window[data-app-window="terminal"] .war-victory h2 { color:#b4ffcf; font-size:clamp(28px,4vw,46px); letter-spacing:.06em; margin:12px 0; text-shadow:0 0 22px #55ff9580; }
+.mac-window[data-app-window="terminal"] .war-victory p { font-size:16px; line-height:1.5; }
+.mac-window[data-app-window="terminal"] .war-victory-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:24px 0; }
+.mac-window[data-app-window="terminal"] .war-victory-stats div { padding:14px 6px; border:1px solid #32563e; display:grid; gap:8px; }
+.mac-window[data-app-window="terminal"] .war-victory-stats b { font-size:26px; color:#afffc9; }
+.mac-window[data-app-window="terminal"] .war-victory-stats span { font-size:14px; color:#bed2c5; }
+.mac-window[data-app-window="terminal"] .war-victory-transmission { color:#87d9a3; }
+.mac-window[data-app-window="terminal"] .war-victory button { margin:8px; padding:12px 16px; }
+@keyframes war-victory-enter { from { opacity:0; transform:translateY(15px); } to { opacity:1; transform:translateY(0); } }
+@media (prefers-reduced-motion:reduce) { .mac-window[data-app-window="terminal"] .war-victory-card { animation:none; } }
+/* Geographic campaign chart, explicit interaction modes, terminal receipts. */
+.mac-window[data-app-window="terminal"] .war-region .war-land { stroke-width:1; vector-effect:non-scaling-stroke; }
+.mac-window[data-app-window="terminal"] .war-region-badge { fill:#09160fe6; stroke:#779682; stroke-width:1; }
+.mac-window[data-app-window="terminal"] .war-region.computer .war-region-badge { stroke:#b59767; }
+.mac-window[data-app-window="terminal"] .war-region.neutral .war-region-badge { stroke:#737f83; }
+.mac-window[data-app-window="terminal"] .war-region.selected .war-region-badge,
+.mac-window[data-app-window="terminal"] .war-region.hover-target .war-region-badge { stroke:#e7eee8; stroke-width:2; }
+.mac-window[data-app-window="terminal"] .war-region.hover-target .war-land,
+.mac-window[data-app-window="terminal"] .war-region.bonus-highlight .war-land { stroke:#d2e2da; stroke-width:2.5; }
+.mac-window[data-app-window="terminal"] .war-queued-marker { fill:#d1dacf; font-size:16px; font-weight:bold; }
+.mac-window[data-app-window="terminal"] .war-queued-marker.missile { fill:#d7b27d; }
+.mac-window[data-app-window="terminal"] .war-bonuses { display:flex; flex-wrap:wrap; gap:5px; margin:6px 0; }
+.mac-window[data-app-window="terminal"] .war-bonuses button { flex:1; font-size:12px; padding:5px 7px; white-space:nowrap; border-color:#354b3c; color:#a6b6ad; }
+.mac-window[data-app-window="terminal"] .war-bonuses b { color:#d0d7cd; }
+.mac-window[data-app-window="terminal"] .war-bonuses span { color:#809b89; }
+.mac-window[data-app-window="terminal"] .war-bonuses .earned { border-color:#a4baa7; background:#24372a; }
+.mac-window[data-app-window="terminal"] .war-bonus-detail { border-bottom:1px solid #425748; padding-bottom:10px; color:#bed0c2; }
+.mac-window[data-app-window="terminal"] .war-bonus-detail p,.mac-window[data-app-window="terminal"] .war-launch-preview { font-size:14px; line-height:1.45; }
+.mac-window[data-app-window="terminal"] .war-selected button { display:block; margin-top:8px; }
+.mac-window[data-app-window="terminal"] .war-phase-rule { color:#a3b2a9; line-height:1.5; border-top:1px solid #314936; padding-top:9px; }
+.mac-window[data-app-window="terminal"] .war-income { color:#cad5ca; line-height:1.5; }
+.mac-window[data-app-window="terminal"] .war-troop-delta { pointer-events:none; animation:war-number-receipt 2.4s ease-out both; }
+.mac-window[data-app-window="terminal"] .war-troop-delta rect { fill:#08160ff5; stroke:#a6c4ae; stroke-width:1; }
+.mac-window[data-app-window="terminal"] .war-troop-delta text { fill:#d8e5d8; text-anchor:middle; font:16px Menlo,monospace; }
+.mac-window[data-app-window="terminal"] .war-troop-delta.loss rect { stroke:#b19770; }
+@keyframes war-number-receipt { 0% { opacity:0; } 15%,80% { opacity:1; } 100% { opacity:0; } }
+.mac-window[data-app-window="terminal"] .war-victory { background:rgba(2,8,5,.92); backdrop-filter:blur(3px); }
+.mac-window[data-app-window="terminal"] .war-victory-card { width:min(700px,100%); text-align:left; background:#0b110e; border:1px solid #657568; box-shadow:0 15px 70px #000b; padding:30px 34px; color:#b2c1b6; }
+.mac-window[data-app-window="terminal"] .war-victory-card small { color:#7e9283; letter-spacing:.1em; }
+.mac-window[data-app-window="terminal"] .war-victory-card pre { color:#b6cbbb; font-size:clamp(11px,1.6vw,19px); margin:25px 0 20px; line-height:1.4; }
+.mac-window[data-app-window="terminal"] .war-victory h2 { font-size:16px; color:#8da595; letter-spacing:.08em; text-shadow:none; margin:0; }
+.mac-window[data-app-window="terminal"] .war-victory .war-end-objective { font-size:15px; color:#cbd3c9; margin:10px 0 24px; }
+.mac-window[data-app-window="terminal"] .war-victory-report { margin:0 0 24px; border-top:1px dashed #46574a; border-bottom:1px dashed #46574a; padding:12px 0; }
+.mac-window[data-app-window="terminal"] .war-victory-report div { display:flex; justify-content:space-between; gap:16px; padding:6px 0; font-size:15px; }
+.mac-window[data-app-window="terminal"] .war-victory-report dd { margin:0; color:#d0d9cf; }
+.mac-window[data-app-window="terminal"] .war-victory-transmission { font-size:14px; color:#96ac9c; line-height:1.7; }
+.mac-window[data-app-window="terminal"] .war-victory button { color:#b8c9bd; border-color:#596e5f; background:#142119; font-size:14px; margin:14px 12px 0 0; }
+.mac-window[data-app-window="terminal"] .war-end-cursor { animation:terminal-caret 1.2s steps(2,start) infinite; }
+@media (prefers-reduced-motion:reduce) { .mac-window[data-app-window="terminal"] .war-troop-delta,.mac-window[data-app-window="terminal"] .war-end-cursor { animation:none; } }
