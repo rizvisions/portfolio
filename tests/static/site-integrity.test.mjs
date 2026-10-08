@@ -24,11 +24,29 @@ test("frontend files do not contain Supabase service-role credentials", async ()
   frontend.forEach((source) => assert.doesNotMatch(source, forbidden));
 });
 
-test("public version labels agree on V10.9", async () => {
+test("public version labels agree on V10.10", async () => {
   const [readme, app] = await Promise.all([read("README.md"), read("app.js")]);
-  assert.match(readme, /V10\.9/);
-  assert.match(app, /Rizvisions OS 10\.9/);
-  assert.match(app, /Version 10\.9/);
+  assert.match(readme, /V10\.10/);
+  assert.match(app, /Rizvisions OS 10\.10/);
+  assert.match(app, /Version 10\.10/);
+});
+
+test("desktop uses a text-free blur-to-focus intro", async () => {
+  const [html, app] = await Promise.all([read("index.html"), read("app.js")]);
+  assert.match(html, /class="focus-pending"/);
+  assert.match(html, /id="focusIntro"/);
+  assert.match(app, /function playFocusIntro/);
+  assert.doesNotMatch(html, /bootIntro|boot-hello|class="boot-pending"/);
+  assert.doesNotMatch(app, /runBootIntro|rizvisions-intro/);
+});
+
+test("Terminal keeps a text-only natural-language interface", async () => {
+  const app = (await Promise.all([read("app.js"), read("terminal-engine.js")])).join("\n");
+  assert.match(app, /terminal-wordmark/);
+  assert.match(app, /Local portfolio archive/);
+  assert.match(app, /what does Riz do/);
+  assert.match(app, /Natural-language questions/);
+  assert.doesNotMatch(app, /terminal-command-grid|data-terminal-command|Ask Rizvisions anything/);
 });
 
 test("Notes ships only real local-notebook controls", async () => {
